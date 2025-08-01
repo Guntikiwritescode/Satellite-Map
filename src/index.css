@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    /* Deep space background with subtle nebula gradients */
+    /* Deep space background with subtle nebula gradients - ALL HSL VALUES */
     --background: 223 84% 4%;
     --foreground: 210 40% 98%;
 
@@ -26,7 +26,7 @@
 
     /* Muted space tones */
     --muted: 223 71% 8%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted-foreground: 215 20% 65%;
 
     /* Bright cyan accent for active elements */
     --accent: 189 95% 65%;
@@ -43,7 +43,7 @@
 
     --radius: 0.75rem;
 
-    /* Space-themed custom colors */
+    /* Space-themed custom colors - ALL HSL */
     --nebula-purple: 263 70% 50%;
     --cosmic-blue: 217 91% 60%;
     --stellar-cyan: 189 95% 65%;
