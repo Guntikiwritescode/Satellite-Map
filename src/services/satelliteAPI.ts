@@ -366,6 +366,73 @@ class RealSatelliteAPI {
     return Math.sqrt(heightAboveEarth * (heightAboveEarth + 2 * earthRadius));
   }
 
+  // Calculate position from orbital elements directly from CelesTrak data
+  private calculatePositionFromOrbitalElements(sat: CelestrakSatellite, altitude: number): Satellite['position'] | null {
+    try {
+      // Get current time and epoch
+      const now = new Date();
+      const epoch = new Date(sat.EPOCH);
+      const minutesSinceEpoch = (now.getTime() - epoch.getTime()) / (1000 * 60);
+      
+      // Calculate mean anomaly at current time
+      const meanMotion = sat.MEAN_MOTION; // revolutions per day
+      const meanMotionRad = (meanMotion * 2 * Math.PI) / (24 * 60); // radians per minute
+      const currentMeanAnomaly = (sat.MEAN_ANOMALY + meanMotionRad * minutesSinceEpoch * 180 / Math.PI) % 360;
+      
+      // Convert to radians
+      const inclination = sat.INCLINATION * Math.PI / 180;
+      const raan = sat.RA_OF_ASC_NODE * Math.PI / 180;
+      const argPerigee = sat.ARG_OF_PERICENTER * Math.PI / 180;
+      const meanAnomalyRad = currentMeanAnomaly * Math.PI / 180;
+      
+      // Solve Kepler's equation (simplified - assuming circular orbit for performance)
+      const eccentricity = sat.ECCENTRICITY || 0;
+      let eccentricAnomaly = meanAnomalyRad;
+      for (let i = 0; i < 3; i++) { // Limited iterations for performance
+        eccentricAnomaly = meanAnomalyRad + eccentricity * Math.sin(eccentricAnomaly);
+      }
+      
+      // True anomaly
+      const trueAnomaly = 2 * Math.atan2(
+        Math.sqrt(1 + eccentricity) * Math.sin(eccentricAnomaly / 2),
+        Math.sqrt(1 - eccentricity) * Math.cos(eccentricAnomaly / 2)
+      );
+      
+      // Argument of latitude
+      const argLatitude = argPerigee + trueAnomaly;
+      
+      // Position in orbital plane
+      const radius = 6371 + altitude; // Earth radius + altitude
+      const x = radius * Math.cos(argLatitude);
+      const y = radius * Math.sin(argLatitude);
+      
+      // Rotate to Earth-fixed coordinates
+      const longitude = (raan + argLatitude * Math.cos(inclination)) % (2 * Math.PI);
+      const latitude = Math.asin(Math.sin(argLatitude) * Math.sin(inclination));
+      
+      // Convert to degrees and normalize
+      let latDeg = latitude * 180 / Math.PI;
+      let lonDeg = longitude * 180 / Math.PI;
+      
+      // Normalize longitude to -180 to 180
+      while (lonDeg > 180) lonDeg -= 360;
+      while (lonDeg < -180) lonDeg += 360;
+      
+      // Clamp latitude to valid range
+      latDeg = Math.max(-90, Math.min(90, latDeg));
+      
+      return {
+        latitude: latDeg,
+        longitude: lonDeg,
+        altitude: altitude,
+        timestamp: now.getTime()
+      };
+    } catch (error) {
+      console.warn(`Failed to calculate position for ${sat.OBJECT_NAME}:`, error);
+      return null;
+    }
+  }
+
   // Fetch satellites from CelesTrak with realistic altitudes
   private async fetchSatellitesFromGroup(url: string): Promise<Satellite[]> {
     try {
@@ -386,25 +453,13 @@ class RealSatelliteAPI {
         // Use realistic altitude instead of defaulting to 400km
         const realAltitude = this.getRealisticAltitude(sat.OBJECT_NAME, type);
         
-        // Try to calculate position from TLE, but use realistic altitude
-        let position;
-        const tle1 = sat.TLE_LINE1 || '';
-        const tle2 = sat.TLE_LINE2 || '';
+        // Calculate position from orbital parameters - CelesTrak provides everything we need
+        const position = this.calculatePositionFromOrbitalElements(sat, realAltitude);
         
-        if (tle1 && tle2 && tle1.length >= 69 && tle2.length >= 69) {
-          try {
-            position = this.calculateSatellitePositionFromTLE(tle1, tle2);
-            // Override the altitude with our realistic value
-            position.altitude = realAltitude;
-          } catch (error) {
-            console.warn(`TLE calculation failed for ${sat.OBJECT_NAME}`);
-          }
-        }
-        
-        // Skip satellites without proper TLE data - only use real positions
+        // Skip satellites only if position calculation completely fails
         if (!position) {
-          console.warn(`Skipping ${sat.OBJECT_NAME} - no valid TLE data for real position calculation`);
-          return null; // Skip this satellite entirely
+          console.warn(`Skipping ${sat.OBJECT_NAME} - position calculation failed`);
+          return null;
         }
         
         return {
@@ -427,8 +482,8 @@ class RealSatelliteAPI {
             altitude: realAltitude // Ensure position has realistic altitude
           },
           tle: {
-            line1: tle1,
-            line2: tle2
+            line1: sat.TLE_LINE1 || '',
+            line2: sat.TLE_LINE2 || ''
           },
           footprint: this.calculateFootprint(realAltitude)
         };
