@@ -42,6 +42,11 @@ const SatelliteTable: React.FC = React.memo(() => {
     setSelectedSatellite(satellite.id);
   };
 
+  const formatNumber = (value: any, decimals: number = 1): string => {
+    const num = typeof value === 'number' ? value : parseFloat(value);
+    return isNaN(num) ? 'N/A' : num.toFixed(decimals);
+  };
+
   const formatAltitude = (altitude: number | undefined) => {
     if (!altitude) return 'N/A';
     return altitude > 1000 ? `${(altitude / 1000).toFixed(1)}K km` : `${altitude.toFixed(0)} km`;
@@ -50,11 +55,6 @@ const SatelliteTable: React.FC = React.memo(() => {
   const formatVelocity = (velocity: number | undefined) => {
     if (!velocity) return 'N/A';
     return `${velocity.toFixed(2)} km/s`;
-  };
-
-  const formatNumber = (value: any, decimals: number = 1): string => {
-    const num = typeof value === 'number' ? value : parseFloat(value);
-    return isNaN(num) ? 'N/A' : num.toFixed(decimals);
   };
 
   const formatPeriod = (period: number) => {
