@@ -42,11 +42,13 @@ const SatelliteTable: React.FC = React.memo(() => {
     setSelectedSatellite(satellite.id);
   };
 
-  const formatAltitude = (altitude: number) => {
+  const formatAltitude = (altitude: number | undefined) => {
+    if (!altitude) return 'N/A';
     return altitude > 1000 ? `${(altitude / 1000).toFixed(1)}K km` : `${altitude.toFixed(0)} km`;
   };
 
-  const formatVelocity = (velocity: number) => {
+  const formatVelocity = (velocity: number | undefined) => {
+    if (!velocity) return 'N/A';
     return `${velocity.toFixed(2)} km/s`;
   };
 
@@ -146,7 +148,7 @@ const SatelliteTable: React.FC = React.memo(() => {
                       <h3 className="font-medium text-xs text-foreground line-clamp-1">
                         {satellite.name}
                       </h3>
-                      <p className="text-xs text-muted-foreground truncate">{satellite.agency}</p>
+                      <p className="text-xs text-muted-foreground truncate">{satellite.metadata?.constellation || 'Unknown'}</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end space-y-1 flex-shrink-0">
@@ -165,13 +167,13 @@ const SatelliteTable: React.FC = React.memo(() => {
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Alt:</span>
                       <span className="font-mono text-primary">
-                        {formatAltitude(satellite.orbital.altitude)}
+                        {formatAltitude(satellite.position.altitude)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Vel:</span>
                       <span className="font-mono text-stellar-cyan">
-                        {formatVelocity(satellite.orbital.velocity)}
+                        {formatVelocity(satellite.velocity)}
                       </span>
                     </div>
                   </div>
@@ -202,30 +204,12 @@ const SatelliteTable: React.FC = React.memo(() => {
                 </div>
 
                 {/* Description - Show if available */}
-                {satellite.description && (
-                  <div className="bg-muted/20 rounded px-2 py-1.5">
-                    <h4 className="text-xs font-medium text-foreground mb-1">About</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
-                      {satellite.description}
-                    </p>
-                  </div>
-                )}
-
-                {/* Wikipedia Link - Show if available */}
-                {satellite.wikipediaUrl && (
-                  <div className="flex justify-end">
-                    <a
-                      href={satellite.wikipediaUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center space-x-1 text-xs text-primary hover:text-primary/80 transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <span>Learn more</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                )}
+                <div className="bg-muted/20 rounded px-2 py-1.5">
+                  <h4 className="text-xs font-medium text-foreground mb-1">About</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
+                    {satellite.metadata?.purpose || 'Satellite tracking and monitoring'}
+                  </p>
+                </div>
               </div>
             </Card>
           ))}
