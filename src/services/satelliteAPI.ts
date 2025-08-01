@@ -5,21 +5,20 @@ import * as satellite from 'satellite.js';
 const CELESTRAK_API = 'https://tle.ivanstanojevic.me/api/tle';
 const LAUNCH_API = 'https://ll.thespacedevs.com/2.2.0/launch';
 
-// Real satellite NORAD IDs - VERIFIED ACTIVE satellites only (tested against TLE API)
+// Real satellite NORAD IDs - ONLY satellites that have been verified to work from network requests
 const KNOWN_SATELLITES = [
-  // Space Stations (verified working)
+  // Space Stations (verified working from network logs)
   { id: 25544, name: 'ISS (ZARYA)', type: 'space-station' as SatelliteType, agency: 'NASA/Roscosmos', country: 'International' },
   { id: 48274, name: 'CSS (TIANHE)', type: 'space-station' as SatelliteType, agency: 'CNSA', country: 'China' },
   
-  // GOES Weather Satellites (verified working)
+  // Weather Satellites (verified working from network logs)
   { id: 41866, name: 'GOES 16', type: 'weather' as SatelliteType, agency: 'NOAA', country: 'USA' },
   { id: 43226, name: 'GOES 17', type: 'weather' as SatelliteType, agency: 'NOAA', country: 'USA' },
   { id: 51850, name: 'GOES 18', type: 'weather' as SatelliteType, agency: 'NOAA', country: 'USA' },
-  { id: 60133, name: 'GOES-19 (GOES-U)', type: 'weather' as SatelliteType, agency: 'NOAA', country: 'USA' },
   { id: 40732, name: 'METEOSAT-11 (MSG-4)', type: 'weather' as SatelliteType, agency: 'EUMETSAT', country: 'Europe' },
   { id: 36411, name: 'EWS-G2 (GOES 15)', type: 'weather' as SatelliteType, agency: 'NOAA', country: 'USA' },
 
-  // Communication Satellites (verified working)  
+  // Communication Satellites (verified working from network logs)
   { id: 42432, name: 'SES-10', type: 'communication' as SatelliteType, agency: 'SES', country: 'Europe' },
   { id: 43175, name: 'SES-14', type: 'communication' as SatelliteType, agency: 'SES', country: 'Europe' },
   { id: 44476, name: 'INTELSAT 39 (IS-39)', type: 'communication' as SatelliteType, agency: 'Intelsat', country: 'International' },
@@ -27,20 +26,20 @@ const KNOWN_SATELLITES = [
   { id: 40874, name: 'INTELSAT 34 (IS-34)', type: 'communication' as SatelliteType, agency: 'Intelsat', country: 'International' },
   { id: 41552, name: 'THAICOM 8', type: 'communication' as SatelliteType, agency: 'Thaicom', country: 'Thailand' },
 
-  // GPS Satellites (verified working)
+  // GPS Navigation (verified working from network logs)
   { id: 40730, name: 'GPS BIIF-10', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
   { id: 43873, name: 'GPS BIII-1', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
   { id: 46826, name: 'GPS BIII-4', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
   { id: 48859, name: 'GPS BIII-5 (PRN 11)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
 
-  // Galileo Navigation (verified working)
+  // Galileo Navigation (verified working from network logs)  
   { id: 37846, name: 'GSAT0101 (GALILEO-PFM)', type: 'navigation' as SatelliteType, agency: 'ESA', country: 'Europe' },
   { id: 37847, name: 'GSAT0102 (GALILEO-FM2)', type: 'navigation' as SatelliteType, agency: 'ESA', country: 'Europe' },
   { id: 40128, name: 'GSAT0201 (GALILEO 5)', type: 'navigation' as SatelliteType, agency: 'ESA', country: 'Europe' },
   { id: 40129, name: 'GSAT0202 (GALILEO 6)', type: 'navigation' as SatelliteType, agency: 'ESA', country: 'Europe' },
   { id: 43564, name: 'GSAT0221 (GALILEO 25)', type: 'navigation' as SatelliteType, agency: 'ESA', country: 'Europe' },
 
-  // Earth Observation (verified working)
+  // Earth Observation (verified working from network logs)
   { id: 25994, name: 'TERRA', type: 'earth-observation' as SatelliteType, agency: 'NASA', country: 'USA' },
   { id: 27424, name: 'AQUA', type: 'earth-observation' as SatelliteType, agency: 'NASA', country: 'USA' },
   { id: 40697, name: 'SENTINEL-2A', type: 'earth-observation' as SatelliteType, agency: 'ESA', country: 'Europe' },
@@ -50,77 +49,18 @@ const KNOWN_SATELLITES = [
   { id: 43613, name: 'ICESAT-2', type: 'earth-observation' as SatelliteType, agency: 'NASA', country: 'USA' },
   { id: 28376, name: 'AURA', type: 'earth-observation' as SatelliteType, agency: 'NASA', country: 'USA' },
 
-  // Scientific Satellites (verified working)
+  // Scientific Satellites (verified working from network logs)
   { id: 40482, name: 'MMS 1', type: 'scientific' as SatelliteType, agency: 'NASA', country: 'USA' },
   { id: 30942, name: 'FENGYUN 1C DEB', type: 'scientific' as SatelliteType, agency: 'CNSA', country: 'China' },
 
-  // Starlink (verified working)
+  // Starlink Constellation (verified working from network logs)
   { id: 44713, name: 'STARLINK-1007', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
   { id: 44714, name: 'STARLINK-1008', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-
-  // Additional verified active satellites
   { id: 47964, name: 'SMOG-1', type: 'constellation' as SatelliteType, agency: 'BME', country: 'Hungary' },
 
-  // More GPS satellites (from Celestrak verified list)
-  { id: 24876, name: 'GPS BIIR-2 (PRN 13)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 26360, name: 'GPS BIIR-4 (PRN 20)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 32384, name: 'GPS BIIRM-5 (PRN 29)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 32711, name: 'GPS BIIRM-6 (PRN 07)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 35752, name: 'GPS BIIRM-8 (PRN 05)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 36585, name: 'GPS BIIF-1 (PRN 25)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 38833, name: 'GPS BIIF-3 (PRN 24)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 39166, name: 'GPS BIIF-4 (PRN 27)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 39533, name: 'GPS BIIF-5 (PRN 30)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 39741, name: 'GPS BIIF-6 (PRN 06)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 40105, name: 'GPS BIIF-7 (PRN 09)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 40294, name: 'GPS BIIF-8 (PRN 03)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 40534, name: 'GPS BIIF-9 (PRN 26)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 41019, name: 'GPS BIIF-11 (PRN 10)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 41328, name: 'GPS BIIF-12 (PRN 32)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-
-  // OneWeb satellites (verified working NORAD IDs)
+  // Additional verified satellites
   { id: 45439, name: 'ONEWEB-0096', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45438, name: 'ONEWEB-0085', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 44713, name: 'ONEWEB-0124', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 44714, name: 'ONEWEB-0125', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45031, name: 'ONEWEB-0126', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45032, name: 'ONEWEB-0127', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45033, name: 'ONEWEB-0128', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45034, name: 'ONEWEB-0129', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45035, name: 'ONEWEB-0130', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45036, name: 'ONEWEB-0131', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45037, name: 'ONEWEB-0132', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45038, name: 'ONEWEB-0133', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45039, name: 'ONEWEB-0134', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45040, name: 'ONEWEB-0135', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45041, name: 'ONEWEB-0136', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45042, name: 'ONEWEB-0137', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45043, name: 'ONEWEB-0138', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45044, name: 'ONEWEB-0139', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45045, name: 'ONEWEB-0140', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45046, name: 'ONEWEB-0141', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-
-  // Additional Starlink satellites (verified working)
-  { id: 44742, name: 'STARLINK-1095', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44743, name: 'STARLINK-1096', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44744, name: 'STARLINK-1097', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44745, name: 'STARLINK-1098', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44746, name: 'STARLINK-1099', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44747, name: 'STARLINK-1100', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44748, name: 'STARLINK-1101', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44749, name: 'STARLINK-1102', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44750, name: 'STARLINK-1103', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44751, name: 'STARLINK-1104', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44752, name: 'STARLINK-1105', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44753, name: 'STARLINK-1106', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44754, name: 'STARLINK-1107', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44755, name: 'STARLINK-1108', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44756, name: 'STARLINK-1109', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44757, name: 'STARLINK-1110', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44758, name: 'STARLINK-1111', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44759, name: 'STARLINK-1112', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44760, name: 'STARLINK-1113', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44761, name: 'STARLINK-1114', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' }
+  { id: 45438, name: 'ONEWEB-0085', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' }
 ];
 
 interface TLEData {
@@ -218,10 +158,14 @@ class RealSatelliteAPI {
 
   async getSatellites(): Promise<Satellite[]> {
     console.log('Attempting to load real satellite data...');
+    console.log(`Total satellites to process: ${KNOWN_SATELLITES.length}`);
     const satellites: Satellite[] = [];
+    let successCount = 0;
+    let failCount = 0;
     
     for (const satInfo of KNOWN_SATELLITES) {
       try {
+        console.log(`Processing satellite ${successCount + failCount + 1}/${KNOWN_SATELLITES.length}: ${satInfo.name} (ID: ${satInfo.id})`);
         const tleData = await this.fetchTLEData(satInfo.id);
         if (tleData) {
           const position = this.calculateSatellitePosition(tleData);
@@ -245,14 +189,20 @@ class RealSatelliteAPI {
           };
           
           satellites.push(satellite);
+          successCount++;
+          console.log(`✅ Successfully loaded: ${satInfo.name}`);
+        } else {
+          failCount++;
+          console.log(`❌ Failed to load: ${satInfo.name} (no TLE data)`);
         }
       } catch (error) {
-        console.error(`Failed to process satellite ${satInfo.name}:`, error);
+        failCount++;
+        console.error(`❌ Failed to process satellite ${satInfo.name}:`, error);
         // Continue processing other satellites instead of failing completely
       }
     }
     
-    console.log(`Successfully loaded ${satellites.length} real satellites`);
+    console.log(`🎯 Final Results: ${successCount} successful, ${failCount} failed, ${satellites.length} total loaded`);
     this.cachedSatellites = satellites;
     return satellites;
   }
@@ -411,68 +361,15 @@ class RealSatelliteAPI {
     };
   }
 
-  // Load real satellite data with fallback to reduced set if needed
+  // Load all real satellite data - no more fallback restrictions
   async getSatellitesWithFallback(): Promise<Satellite[]> {
-    try {
-      console.log('Loading real satellite data...');
-      const realSatellites = await this.getSatellites();
-      if (realSatellites.length > 0) {
-        console.log(`Successfully loaded ${realSatellites.length} real satellites`);
-        return realSatellites;
-      }
-    } catch (error) {
-      console.warn('Real satellite API failed, using reduced set:', error);
-    }
-
-    // Fallback to a smaller set of real satellites if full fetch fails
-    console.log('Using reduced real satellite set as fallback');
-    const reducedSatellites = await this.getReducedRealSatellites();
-    this.cachedSatellites = reducedSatellites;
-    return reducedSatellites;
-  }
-
-  // Reduced set of real satellites when full API fails
-  async getReducedRealSatellites(): Promise<Satellite[]> {
-    console.log('Loading reduced set of real satellites...');
-    const satellites: Satellite[] = [];
+    console.log('Loading all verified satellite data...');
+    console.log(`Attempting to load ${KNOWN_SATELLITES.length} satellites`);
     
-    // Try to fetch a smaller subset of the most important satellites
-    const prioritySatellites = KNOWN_SATELLITES.slice(0, 20); // First 20 satellites
+    const realSatellites = await this.getSatellites();
+    console.log(`Successfully loaded ${realSatellites.length} satellites out of ${KNOWN_SATELLITES.length} attempted`);
     
-    for (const satInfo of prioritySatellites) {
-      try {
-        const tleData = await this.fetchTLEData(satInfo.id);
-        if (tleData) {
-          const position = this.calculateSatellitePosition(tleData);
-          const orbital = this.calculateOrbitalParameters(tleData);
-          
-          const satellite: Satellite = {
-            id: satInfo.id.toString(),
-            name: satInfo.name,
-            type: satInfo.type,
-            country: satInfo.country,
-            agency: satInfo.agency,
-            launchDate: '2000-01-01',
-            status: 'active' as SatelliteStatus,
-            orbital,
-            position,
-            tle: {
-              line1: tleData.line1,
-              line2: tleData.line2
-            },
-            footprint: this.calculateFootprint(orbital.altitude)
-          };
-          
-          satellites.push(satellite);
-        }
-      } catch (error) {
-        console.error(`Failed to process satellite ${satInfo.name}:`, error);
-        // Continue processing other satellites
-      }
-    }
-    
-    console.log(`Successfully loaded ${satellites.length} real satellites (reduced set)`);
-    return satellites;
+    return realSatellites;
   }
 }
 
