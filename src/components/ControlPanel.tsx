@@ -104,14 +104,6 @@ const ControlPanel: React.FC = () => {
             
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-foreground">Orbital Paths</span>
-                <Switch
-                  checked={globeSettings.showOrbits}
-                  onCheckedChange={(checked) => updateGlobeSettings({ showOrbits: checked })}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
                 <span className="text-xs text-foreground">Coverage Areas</span>
                 <Switch
                   checked={globeSettings.showFootprints}

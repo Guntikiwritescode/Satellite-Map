@@ -51,7 +51,6 @@ const defaultFilters: SatelliteFilters = {
 };
 
 const defaultGlobeSettings: Globe3DSettings = {
-  showOrbits: true,
   showFootprints: false,
   showCities: true,
   showTerminator: true,

@@ -415,133 +415,6 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
   );
 });
 
-// Orbital path component
-interface OrbitPathProps {
-  satellite: Satellite;
-}
-
-const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
-  // Calculate orbital path from satellite's current position and velocity
-  const orbitGeometry = useMemo(() => {
-    const points = [];
-    
-    // Don't render path if no real position data
-    if (!satellite?.position?.latitude || !satellite?.position?.longitude || !satellite?.position?.altitude) {
-      return new THREE.BufferGeometry();
-    }
-    
-    const earthRadius = 5;
-    const earthRadiusKm = 6371;
-    
-    // Get satellite's current real position
-    const currentLat = (satellite.position.latitude * Math.PI) / 180;
-    const currentLon = (satellite.position.longitude * Math.PI) / 180;
-    const currentAlt = satellite.position.altitude;
-    
-    // Calculate current position in 3D space
-    const altitudeScale = Math.max(0.01, currentAlt / 50000);
-    const currentRadius = earthRadius + altitudeScale;
-    
-    const currentX = currentRadius * Math.cos(currentLat) * Math.cos(currentLon);
-    const currentY = currentRadius * Math.sin(currentLat);
-    const currentZ = currentRadius * Math.cos(currentLat) * Math.sin(currentLon);
-    
-    // Calculate orbital velocity and direction from satellite data
-    const orbitalVelocity = satellite.orbital?.velocity || Math.sqrt(398600.4418 / (earthRadiusKm + currentAlt));
-    const orbitalPeriod = satellite.orbital?.period || (2 * Math.PI * Math.sqrt(Math.pow(earthRadiusKm + currentAlt, 3) / 398600.4418) / 60);
-    
-    // Calculate velocity vector (simplified - perpendicular to radius vector)
-    const radiusVector = [currentX, currentY, currentZ];
-    const radiusMagnitude = Math.sqrt(currentX * currentX + currentY * currentY + currentZ * currentZ);
-    
-    // Velocity vector perpendicular to radius (simplified circular orbit assumption)
-    // Cross product with Earth's rotation axis (0,1,0) to get tangential direction
-    let velocityX = -currentZ;
-    let velocityY = 0;
-    let velocityZ = currentX;
-    
-    // Normalize velocity vector
-    const velocityMagnitude = Math.sqrt(velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ);
-    if (velocityMagnitude > 0) {
-      velocityX /= velocityMagnitude;
-      velocityY /= velocityMagnitude;
-      velocityZ /= velocityMagnitude;
-    }
-    
-    // Apply inclination to velocity vector
-    const inclination = (satellite.orbital?.inclination || 0) * Math.PI / 180;
-    const inclinedVelocityY = velocityY * Math.cos(inclination) - velocityZ * Math.sin(inclination);
-    const inclinedVelocityZ = velocityY * Math.sin(inclination) + velocityZ * Math.cos(inclination);
-    
-    velocityY = inclinedVelocityY;
-    velocityZ = inclinedVelocityZ;
-    
-    // Generate orbital path points by simulating forward motion
-    const numPoints = 64; // Reduced for performance with 5000 satellites
-    const timeStep = (orbitalPeriod * 60) / numPoints; // seconds per step
-    
-    for (let i = 0; i < numPoints; i++) {
-      const t = i * timeStep;
-      
-      // Simple orbital motion simulation
-      const angle = (t / (orbitalPeriod * 60)) * 2 * Math.PI;
-      
-      // Calculate position along circular orbit at the same altitude
-      const x = currentRadius * Math.cos(angle + Math.atan2(currentZ, currentX));
-      const y = currentRadius * Math.sin(angle) * Math.sin(inclination);
-      const z = currentRadius * Math.sin(angle + Math.atan2(currentZ, currentX));
-      
-      // Validate points
-      if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-        points.push(x, y, z);
-      }
-    }
-    
-    // Close the orbit by connecting back to start
-    if (points.length >= 3) {
-      points.push(points[0], points[1], points[2]);
-    }
-    
-    const geometry = new THREE.BufferGeometry();
-    if (points.length > 0) {
-      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(points), 3));
-    }
-    return geometry;
-  }, [
-    satellite.position?.latitude, 
-    satellite.position?.longitude, 
-    satellite.position?.altitude,
-    satellite.orbital?.inclination,
-    satellite.orbital?.period
-  ]);
-
-  // Stable color based on satellite type  
-  const orbitColor = useMemo(() => {
-    switch (satellite.type) {
-      case 'space-station': return '#00d9ff';
-      case 'constellation': return '#3b82f6';
-      case 'navigation': return '#fbbf24';
-      case 'weather': return '#a855f7';
-      case 'earth-observation': return '#10b981';
-      case 'communication': return '#06b6d4';
-      case 'scientific': return '#8b5cf6';
-      case 'military': return '#ef4444';
-      default: return '#6b7280';
-    }
-  }, [satellite.type]);
-
-  return (
-    <group>
-      <primitive 
-        object={new THREE.Line(orbitGeometry, new THREE.LineBasicMaterial({ 
-          color: orbitColor, 
-          transparent: true, 
-          opacity: 0.3 // Reduced opacity for 5000 satellites
-        }))}
-      />
-    </group>
-  );
-};
 
 // Camera focus controller component with collision detection
 const CameraFocusController: React.FC = () => {
@@ -637,14 +510,29 @@ const Scene: React.FC = () => {
     camera.lookAt(0, 0, 0);
   }, [camera]);
 
-  // Filter satellites based on selection - render all satellites with optimizations
+  // Filter satellites based on selection
   const visibleSatellites = useMemo(() => {
-    if (globeSettings.selectedSatelliteId) {
-      // When a satellite is selected, show only that satellite
-      return filteredSatellites.filter(sat => sat.id === globeSettings.selectedSatelliteId);
+    const { selectedSatelliteId } = globeSettings;
+    
+    // If a satellite is selected, only show that one
+    if (selectedSatelliteId) {
+      const selectedSat = filteredSatellites.find(sat => sat.id === selectedSatelliteId);
+      return selectedSat && 
+        selectedSat?.position?.latitude != null && 
+        selectedSat?.position?.longitude != null && 
+        selectedSat?.position?.altitude != null 
+        ? [selectedSat] 
+        : [];
     }
-    // When no satellite is selected, show all filtered satellites (optimized rendering)
-    return filteredSatellites;
+    
+    // Otherwise show all satellites with valid data (limited for performance)
+    const satellitesWithValidData = filteredSatellites.filter(sat => 
+      sat?.position?.latitude != null && 
+      sat?.position?.longitude != null && 
+      sat?.position?.altitude != null
+    );
+    
+    return satellitesWithValidData.slice(0, 5000);
   }, [filteredSatellites, globeSettings.selectedSatelliteId]);
 
   return (
@@ -689,13 +577,6 @@ const Scene: React.FC = () => {
         />
       ))}
       
-      {/* Orbital path - only for selected satellite to prevent lag */}
-      {globeSettings.showOrbits && globeSettings.selectedSatelliteId && (() => {
-        const selectedSatellite = visibleSatellites.find(sat => sat.id === globeSettings.selectedSatelliteId);
-        return selectedSatellite ? (
-          <OrbitPath key={`orbit-${selectedSatellite.id}`} satellite={selectedSatellite} />
-        ) : null;
-      })()}
       
       {/* Enhanced stars background */}
       <Stars />
