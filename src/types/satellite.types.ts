@@ -88,5 +88,4 @@ export interface Globe3DSettings {
   timeSpeed: number; // multiplier for real-time
   isPaused: boolean;
   selectedSatelliteId: string | null;
-  cameraFollowSatellite: boolean;
 }

@@ -1,9 +1,10 @@
-import React, { useRef, useMemo, useEffect } from 'react';
-import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
-import { OrbitControls, Html, useGLTF } from '@react-three/drei';
+import React, { useRef, useMemo, Suspense } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { Satellite } from '../types/satellite.types';
+import ErrorBoundary from './ErrorBoundary';
 
 // Earth component with realistic texture and proper scaling
 const Earth: React.FC = () => {
@@ -284,24 +285,20 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
 
   const [cameraDistance, setCameraDistance] = React.useState(10);
 
-  // Optimize frame updates with distance-based LOD and performance improvements
+  // Optimized frame updates - reduced frequency for better performance
   useFrame((state) => {
     if (!markerRef.current) return;
 
     const currentDistance = state.camera.position.distanceTo(new THREE.Vector3(...position));
     
-    // Performance optimization: Only update if distance changed significantly or every 10th frame
-    const frameCount = state.clock.getElapsedTime() * 60; // Approximate frame count
-    const shouldUpdate = Math.abs(currentDistance - cameraDistance) > 1.0 || frameCount % 10 === 0;
+    // Update only every 30th frame for performance
+    const frameCount = Math.floor(state.clock.getElapsedTime() * 60);
+    if (frameCount % 30 !== 0) return;
     
-    if (!shouldUpdate) return;
+    setCameraDistance(currentDistance);
     
-    if (Math.abs(currentDistance - cameraDistance) > 1.0) {
-      setCameraDistance(currentDistance);
-    }
-    
-    // Aggressive distance-based visibility culling for 1000 satellites
-    const maxRenderDistance = 200; // Increased for better viewing
+    // Simple distance-based visibility culling
+    const maxRenderDistance = 150;
     const shouldRender = currentDistance < maxRenderDistance;
     setIsVisible(shouldRender);
     
@@ -312,33 +309,28 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     }
     
     if (markerRef.current && modelRef.current) {
-      // Distance-based scaling for marker - scales down as you get closer
-      const baseScale = Math.max(0.01, Math.min(1.5, currentDistance * 0.5));
+      // Simple scaling based on distance
+      const baseScale = Math.max(0.02, Math.min(1.0, currentDistance * 0.3));
       
-      // Show 3D model only when EXTREMELY close - realistic satellite scale
-      const showModel = currentDistance < 0.05;
+      // Only show 3D model when very close
+      const showModel = currentDistance < 0.1;
       
-      // Performance: Use simple visibility toggle
       markerRef.current.visible = !showModel;
       modelRef.current.visible = showModel;
       
-      
       if (showModel) {
-        // Keep 3D model at fixed scale when viewing it
-        const fixedModelScale = 1.0;
-        modelRef.current.scale.setScalar(fixedModelScale);
+        modelRef.current.scale.setScalar(1.0);
       } else {
-        // Optimized pulsing effect for selected satellite (reduced frequency)
+        // Simple pulsing for selected satellite
         if (isSelected) {
-          const pulse = Math.sin(state.clock.getElapsedTime() * 2) * 0.2 + 1.1; // Reduced intensity
+          const pulse = Math.sin(state.clock.getElapsedTime() * 3) * 0.1 + 1.0;
           markerRef.current.scale.setScalar(baseScale * pulse);
         } else {
           markerRef.current.scale.setScalar(baseScale);
         }
         
-        // Billboard effect - always face camera (less frequent updates for performance)
-        // Update every 15th frame for 1000 satellites
-        if (frameCount % 15 === 0) {
+        // Less frequent billboard updates
+        if (frameCount % 60 === 0) {
           markerRef.current.lookAt(state.camera.position);
         }
       }
@@ -358,14 +350,10 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         ref={markerRef}
         onClick={(e) => {
           e.stopPropagation();
-          try {
-            onClick();
-          } catch (error) {
-            console.error('Error selecting satellite:', error);
-          }
+          onClick();
         }}
       >
-        <sphereGeometry args={[0.015, 4, 4]} />  {/* Reduced geometry complexity */}
+        <sphereGeometry args={[0.02, 6, 6]} />
         <meshBasicMaterial 
           color={color} 
           transparent={true}
@@ -373,14 +361,14 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         />
       </mesh>
       
-      {/* Simplified glow effect for better performance with 1000 satellites */}
-      {(isSelected || cameraDistance < 20) && (
+      {/* Simple glow effect only for selected satellites */}
+      {isSelected && (
         <mesh>
-          <sphereGeometry args={[0.025, 4, 4]} />  {/* Reduced geometry complexity */}
+          <sphereGeometry args={[0.03, 6, 6]} />
           <meshBasicMaterial 
             color={color} 
             transparent={true}
-            opacity={0.3}
+            opacity={0.4}
           />
         </mesh>
       )}
@@ -390,127 +378,22 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         ref={modelRef}
         onClick={(e) => {
           e.stopPropagation();
-          try {
-            onClick();
-          } catch (error) {
-            console.error('Error selecting satellite model:', error);
-          }
+          onClick();
         }}
       >
         <SatelliteModel />
       </group>
-      
-      {/* Simple selection indicator - only when selected */}
-      {isSelected && (
-        <mesh position={[0, 0.1, 0]}>
-          <sphereGeometry args={[0.03, 6, 6]} />
-          <meshBasicMaterial 
-            color="#ffffff" 
-            transparent={true}
-            opacity={0.8}
-          />
-        </mesh>
-      )}
     </group>
   );
 });
 
 
-// Camera focus controller component with collision detection
-const CameraFocusController: React.FC = () => {
-  const controlsRef = useRef<any>(null);
-  const { filteredSatellites, globeSettings } = useSatelliteStore();
 
-  // Handle camera focus changes when satellite selection changes
-  useEffect(() => {
-    if (!controlsRef.current) return;
-    
-    if (globeSettings.selectedSatelliteId) {
-      const selectedSatellite = filteredSatellites.find(sat => sat.id === globeSettings.selectedSatelliteId);
-      if (selectedSatellite?.orbital) {
-        try {
-          // Calculate satellite position for camera focus - updated for new Earth scaling
-          const earthRadius = 5; // Updated to match new Earth radius
-          const earthRadiusKm = 6371;
-          const altitudeKm = selectedSatellite.orbital.altitude || 400;
-          const period = selectedSatellite.orbital.period || 90;
-          const inclination = selectedSatellite.orbital.inclination || 0;
-          
-          const orbitalRadiusKm = earthRadiusKm + altitudeKm;
-          const orbitalRadius = (orbitalRadiusKm / earthRadiusKm) * earthRadius; // Scale to new Earth size
-          const safeOrbitalRadius = Math.max(orbitalRadius, earthRadius + 0.1);
-          
-          const inclinationRad = (inclination * Math.PI) / 180;
-          const time = Date.now() / 1000;
-          const orbitPeriodSeconds = period * 60;
-          const orbitSpeed = (2 * Math.PI) / orbitPeriodSeconds;
-          const satelliteIdNum = parseInt(selectedSatellite.id) || 0;
-          const satelliteOffset = (satelliteIdNum % 1000) / 1000 * Math.PI * 2;
-          const angle = (time * orbitSpeed + satelliteOffset) % (Math.PI * 2);
-          
-          let x = safeOrbitalRadius * Math.cos(angle);
-          let y = 0;
-          let z = safeOrbitalRadius * Math.sin(angle);
-          
-          const newY = y * Math.cos(inclinationRad) - z * Math.sin(inclinationRad);
-          const newZ = y * Math.sin(inclinationRad) + z * Math.cos(inclinationRad);
-          
-          // Validate position before setting camera target
-          if (!isNaN(x) && !isNaN(newY) && !isNaN(newZ)) {
-            // Smoothly transition camera focus to satellite
-            controlsRef.current.target.set(x, newY, newZ);
-            controlsRef.current.update();
-          } else {
-            console.warn('Invalid camera target position for satellite:', selectedSatellite.id);
-            // Return focus to Earth center as fallback
-            controlsRef.current.target.set(0, 0, 0);
-            controlsRef.current.update();
-          }
-        } catch (error) {
-          console.error('Error calculating camera focus position:', error);
-          // Return focus to Earth center as fallback
-          controlsRef.current.target.set(0, 0, 0);
-          controlsRef.current.update();
-        }
-      }
-    } else {
-      // Return focus to Earth center
-      controlsRef.current.target.set(0, 0, 0);
-      controlsRef.current.update();
-    }
-  }, [globeSettings.selectedSatelliteId, filteredSatellites]);
-
-  return (
-    <OrbitControls
-      ref={controlsRef}
-      enablePan={true}
-      enableZoom={true}
-      enableRotate={true}
-      minDistance={0.1} // Increased from 0.001 to prevent camera issues
-      maxDistance={200} // Much further zoom out for system overview
-      enableDamping={true}
-      dampingFactor={0.05}
-      rotateSpeed={0.5}
-      zoomSpeed={1.2} // Faster zoom speed for better UX
-      panSpeed={0.8} // Faster pan speed
-      maxPolarAngle={Math.PI}
-      minPolarAngle={0}
-    />
-  );
-};
-
-// Main scene component with improved lighting and camera
+// Optimized scene component
 const Scene: React.FC = () => {
-  const { camera } = useThree();
   const { filteredSatellites, setSelectedSatellite, globeSettings } = useSatelliteStore();
 
-  useEffect(() => {
-    // Set better initial camera position for new Earth scale (radius = 5)
-    camera.position.set(12, 8, 12); // Adjusted for larger Earth
-    camera.lookAt(0, 0, 0);
-  }, [camera]);
-
-  // Filter satellites based on selection
+  // Optimized satellite filtering with performance limits
   const visibleSatellites = useMemo(() => {
     const { selectedSatelliteId } = globeSettings;
     
@@ -525,39 +408,27 @@ const Scene: React.FC = () => {
         : [];
     }
     
-    // Otherwise show all satellites with valid data (limited for performance)
+    // Show all satellites with valid data (limit to 2000 for performance)
     const satellitesWithValidData = filteredSatellites.filter(sat => 
       sat?.position?.latitude != null && 
       sat?.position?.longitude != null && 
       sat?.position?.altitude != null
     );
     
-    return satellitesWithValidData.slice(0, 5000);
+    return satellitesWithValidData.slice(0, 2000); // Reduced from 5000
   }, [filteredSatellites, globeSettings.selectedSatelliteId]);
 
   return (
     <>
-      {/* Improved lighting setup */}
-      <ambientLight intensity={0.3} color="#ffffff" />
+      {/* Simplified lighting setup */}
+      <ambientLight intensity={0.4} color="#ffffff" />
       <directionalLight 
         position={[5, 5, 5]} 
-        intensity={0.8} 
+        intensity={0.7} 
         color="#ffffff"
-        castShadow
-      />
-      <directionalLight 
-        position={[-5, -5, -5]} 
-        intensity={0.3} 
-        color="#3b82f6" 
-      />
-      <pointLight 
-        position={[0, 0, 5]} 
-        intensity={0.4} 
-        color="#22d3ee" 
-        distance={10}
       />
       
-      {/* Earth with better material */}
+      {/* Earth */}
       <Earth />
       
       {/* Satellites with improved rendering - filtered by selection */}
@@ -584,77 +455,71 @@ const Scene: React.FC = () => {
   );
 };
 
-// Enhanced stars background
+// Optimized stars background
 const Stars: React.FC = () => {
   const starsGeometry = useMemo(() => {
     const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(6000); // More stars
-    const colors = new Float32Array(6000);
+    const positions = new Float32Array(3000); // Reduced from 6000
     
-    for (let i = 0; i < 2000; i++) {
-      // Random positions in a sphere around the scene
-      const radius = 50 + Math.random() * 50;
+    for (let i = 0; i < 1000; i++) { // Reduced from 2000
+      const radius = 50 + Math.random() * 30;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.random() * Math.PI;
       
       positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
       positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
       positions[i * 3 + 2] = radius * Math.cos(phi);
-      
-      // Vary star colors - mostly white with some blue/yellow tints
-      const colorVariation = Math.random();
-      if (colorVariation < 0.1) {
-        colors[i * 3] = 0.8; colors[i * 3 + 1] = 0.9; colors[i * 3 + 2] = 1.0; // Blue
-      } else if (colorVariation < 0.2) {
-        colors[i * 3] = 1.0; colors[i * 3 + 1] = 0.9; colors[i * 3 + 2] = 0.7; // Yellow
-      } else {
-        colors[i * 3] = 1.0; colors[i * 3 + 1] = 1.0; colors[i * 3 + 2] = 1.0; // White
-      }
     }
     
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     return geometry;
   }, []);
 
   return (
     <points geometry={starsGeometry}>
       <pointsMaterial 
-        size={0.8} 
+        size={0.5} 
         transparent 
-        opacity={0.8} 
-        vertexColors
+        opacity={0.6} 
+        color="#ffffff"
         sizeAttenuation={false}
       />
     </points>
   );
 };
 
-// Main Globe3D component with improved controls
+// Optimized Globe3D component
 const Globe3D: React.FC = () => {
   return (
     <div className="h-full w-full bg-gradient-cosmic rounded-lg overflow-hidden relative">
       <div className="absolute inset-0">
         <Canvas
           camera={{ 
-            position: [12, 8, 12], // Updated for new Earth scale (radius = 5)
-            fov: 75,
+            position: [12, 8, 12], 
+            fov: 45,
             near: 0.1,
             far: 1000
           }}
-          style={{ background: 'transparent' }}
           gl={{ 
-            antialias: true, 
-            alpha: true,
-            powerPreference: 'high-performance'
+            antialias: false, // Disabled for performance
+            alpha: false,
+            powerPreference: "high-performance"
           }}
-          onCreated={({ gl, camera }) => {
-            gl.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            gl.setClearColor('#000000', 0);
-          }}
+          performance={{ min: 0.8 }} // Maintain good framerate
         >
-          <Scene />
-          <CameraFocusController />
+          <Suspense fallback={null}>
+            <ErrorBoundary fallback={<mesh><boxGeometry /><meshBasicMaterial color="red" /></mesh>}>
+              <Scene />
+              <OrbitControls 
+                enablePan={true}
+                enableZoom={true}
+                enableRotate={true}
+                minDistance={6}
+                maxDistance={50}
+                autoRotate={false}
+              />
+            </ErrorBoundary>
+          </Suspense>
         </Canvas>
       </div>
     </div>
