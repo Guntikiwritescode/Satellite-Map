@@ -173,72 +173,62 @@ interface OrbitPathProps {
 }
 
 const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
-  // Stable orbital path creation - only recreate when orbital parameters actually change
-  const orbitLine = useMemo(() => {
+  // Create stable orbital path geometry - only depends on satellite ID for maximum stability
+  const orbitGeometry = useMemo(() => {
     const points = [];
-    const earthRadius = 1; // Our 3D Earth radius
-    const earthRadiusKm = 6371; // Real Earth radius in km
+    const earthRadius = 1;
+    const earthRadiusKm = 6371;
     
-    // Calculate orbital radius from altitude - this is the distance from Earth's CENTER
     const altitudeKm = satellite.orbital.altitude;
     const orbitalRadiusKm = earthRadiusKm + altitudeKm;
-    const orbitalRadius = orbitalRadiusKm / earthRadiusKm; // Scale to our scene (Earth radius = 1)
+    const orbitalRadius = orbitalRadiusKm / earthRadiusKm;
+    const safeOrbitalRadius = Math.max(orbitalRadius, 1.02);
     
-    // Ensure orbit is always outside Earth
-    const safeOrbitalRadius = Math.max(orbitalRadius, 1.02); // Minimum just above Earth surface
-    
-    // Get orbital inclination in radians
     const inclination = (satellite.orbital.inclination * Math.PI) / 180;
     
-    // Create orbital path centered at Earth's center (0,0,0)
     const numPoints = 128;
     for (let i = 0; i <= numPoints; i++) {
       const angle = (i / numPoints) * Math.PI * 2;
       
-      // Start with circular orbit in the XZ plane (Y=0)
       let x = safeOrbitalRadius * Math.cos(angle);
       let y = 0;
       let z = safeOrbitalRadius * Math.sin(angle);
       
-      // Apply inclination: rotate around X-axis
       const newY = y * Math.cos(inclination) - z * Math.sin(inclination);
       const newZ = y * Math.sin(inclination) + z * Math.cos(inclination);
       
-      // Points are relative to Earth's center (0,0,0)
       points.push(x, newY, newZ);
     }
     
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(points), 3));
-    
-    // Get color based on satellite type
-    const orbitColor = (() => {
-      switch (satellite.type) {
-        case 'space-station': return '#00d9ff'; // bright cyan
-        case 'constellation': return '#3b82f6'; // blue
-        case 'navigation': return '#fbbf24'; // amber
-        case 'weather': return '#a855f7'; // purple
-        case 'earth-observation': return '#10b981'; // emerald
-        case 'communication': return '#06b6d4'; // cyan
-        case 'scientific': return '#8b5cf6'; // violet
-        case 'military': return '#ef4444'; // red
-        default: return '#6b7280'; // gray
-      }
-    })();
-    
-    const material = new THREE.LineBasicMaterial({ 
-      color: orbitColor, 
-      transparent: true, 
-      opacity: 0.4,
-      linewidth: 1
-    });
-    
-    return new THREE.Line(geometry, material);
-  }, [satellite.id, satellite.orbital.altitude, satellite.orbital.inclination, satellite.type]); // Only satellite ID and stable orbital params
+    return geometry;
+  }, [satellite.id]); // Only depend on satellite ID for maximum stability
+
+  // Stable color based on satellite type  
+  const orbitColor = useMemo(() => {
+    switch (satellite.type) {
+      case 'space-station': return '#00d9ff';
+      case 'constellation': return '#3b82f6';
+      case 'navigation': return '#fbbf24';
+      case 'weather': return '#a855f7';
+      case 'earth-observation': return '#10b981';
+      case 'communication': return '#06b6d4';
+      case 'scientific': return '#8b5cf6';
+      case 'military': return '#ef4444';
+      default: return '#6b7280';
+    }
+  }, [satellite.type]);
 
   return (
     <group>
-      <primitive object={orbitLine} />
+      <primitive 
+        object={new THREE.Line(orbitGeometry, new THREE.LineBasicMaterial({ 
+          color: orbitColor, 
+          transparent: true, 
+          opacity: 0.4
+        }))}
+      />
     </group>
   );
 };
