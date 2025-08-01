@@ -340,7 +340,11 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         ref={markerRef}
         onClick={(e) => {
           e.stopPropagation();
-          onClick();
+          try {
+            onClick();
+          } catch (error) {
+            console.error('Error selecting satellite:', error);
+          }
         }}
       >
         <sphereGeometry args={[0.015, 8, 8]} />
@@ -366,7 +370,11 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         ref={modelRef}
         onClick={(e) => {
           e.stopPropagation();
-          onClick();
+          try {
+            onClick();
+          } catch (error) {
+            console.error('Error selecting satellite model:', error);
+          }
         }}
       >
         <SatelliteModel />
@@ -377,14 +385,18 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         <Html 
           position={[0.05, 0.05, 0]} 
           style={{ pointerEvents: 'none' }}
-          distanceFactor={Math.max(1, cameraDistance * 4)} // Dynamic scaling based on camera distance
+          distanceFactor={Math.max(1, Math.min(20, cameraDistance * 4))} // Clamp scaling to prevent crashes
+          transform
+          occlude
         >
           <div className="bg-card/95 backdrop-blur border border-border rounded-lg p-2 text-xs min-w-44 shadow-lg">
-            <div className="font-semibold text-foreground mb-1 text-xs">{satellite.name}</div>
+            <div className="font-semibold text-foreground mb-1 text-xs">
+              {satellite?.name || 'Unknown Satellite'}
+            </div>
             <div className="text-muted-foreground space-y-0.5 text-xs">
-              <div>Alt: {satellite.position.altitude.toFixed(0)} km</div>
-              <div>Vel: {satellite.orbital.velocity.toFixed(2)} km/s</div>
-              <div>Pos: {satellite.position.latitude.toFixed(2)}°, {satellite.position.longitude.toFixed(2)}°</div>
+              <div>Alt: {(satellite?.position?.altitude || 0).toFixed(0)} km</div>
+              <div>Vel: {(satellite?.orbital?.velocity || 0).toFixed(2)} km/s</div>
+              <div>Pos: {(satellite?.position?.latitude || 0).toFixed(2)}°, {(satellite?.position?.longitude || 0).toFixed(2)}°</div>
             </div>
           </div>
         </Html>
