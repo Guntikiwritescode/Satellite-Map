@@ -10,12 +10,19 @@ import { Satellite, SatelliteType } from '../types/satellite.types';
 
 const SatelliteTable: React.FC = () => {
   const { 
+    satellites,
     filteredSatellites, 
     filters, 
     updateFilters, 
     setSelectedSatellite,
     globeSettings 
   } = useSatelliteStore();
+
+  console.log('SatelliteTable render:', { 
+    totalSatellites: satellites.length, 
+    filteredCount: filteredSatellites.length,
+    filters 
+  });
 
   const handleSatelliteSelect = (satellite: Satellite) => {
     setSelectedSatellite(satellite.id);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ChevronDown, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -9,10 +9,28 @@ import { useSatelliteStore } from '../stores/satelliteStore';
 import { satelliteAPI } from '../services/satelliteAPI';
 
 const FilterPanel: React.FC = () => {
-  const { filters, updateFilters } = useSatelliteStore();
+  const { filters, updateFilters, satellites } = useSatelliteStore();
   const [isOpen, setIsOpen] = useState(false);
   
-  const filterOptions = satelliteAPI.getFilterOptions();
+  // Get filter options from the actual loaded satellites
+  const filterOptions = useMemo(() => {
+    if (satellites.length === 0) {
+      return satelliteAPI.getFilterOptions(); // fallback options
+    }
+    
+    const types = [...new Set(satellites.map(s => s.type))].sort();
+    const countries = [...new Set(satellites.map(s => s.country))].sort();
+    const agencies = [...new Set(satellites.map(s => s.agency))].sort();
+    const statuses = [...new Set(satellites.map(s => s.status))].sort();
+    
+    return { types, countries, agencies, statuses };
+  }, [satellites]);
+  
+  console.log('FilterPanel render:', { 
+    satellitesCount: satellites.length, 
+    filterOptions, 
+    currentFilters: filters 
+  });
   
   const activeFilterCount = [
     ...filters.types,

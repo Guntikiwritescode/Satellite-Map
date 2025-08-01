@@ -33,6 +33,7 @@ interface SatelliteStore {
   getSatelliteById: (id: string) => Satellite | undefined;
   getSelectedSatellite: () => Satellite | undefined;
   resetFilters: () => void;
+  applyFilters: (satellites: Satellite[], filters: SatelliteFilters) => Satellite[];
 }
 
 const defaultFilters: SatelliteFilters = {
@@ -69,13 +70,81 @@ export const useSatelliteStore = create<SatelliteStore>()(
     error: null,
     lastUpdate: 0,
     
-    // Computed getter for filtered satellites
-    get filteredSatellites() {
-      const { satellites, filters } = get();
+    // Computed - since Zustand getters don't work well, we'll use a selector
+    filteredSatellites: [],
+    
+    // Actions
+    setSatellites: (satellites) => {
+      const filtered = get().applyFilters(satellites, get().filters);
+      set({ 
+        satellites, 
+        filteredSatellites: filtered,
+        lastUpdate: Date.now(),
+        error: null 
+      });
+    },
+    
+    updateSatellitePosition: (id, position) => set((state) => ({
+      satellites: state.satellites.map(sat =>
+        sat.id === id ? { ...sat, position } : sat
+      ),
+      lastUpdate: Date.now(),
+    })),
+    
+    setLaunches: (launches) => set({ launches }),
+    
+    setUserLocation: (userLocation) => set({ userLocation }),
+    
+    updateFilters: (newFilters) => {
+      const state = get();
+      const updatedFilters = { ...state.filters, ...newFilters };
+      const filtered = state.applyFilters(state.satellites, updatedFilters);
+      set({ 
+        filters: updatedFilters,
+        filteredSatellites: filtered
+      });
+    },
+    
+    updateGlobeSettings: (newSettings) => set((state) => ({
+      globeSettings: { ...state.globeSettings, ...newSettings }
+    })),
+    
+    setSelectedSatellite: (id) => set((state) => ({
+      globeSettings: { ...state.globeSettings, selectedSatelliteId: id }
+    })),
+    
+    setLoading: (isLoading) => set({ isLoading }),
+    
+    setError: (error) => set({ error }),
+    
+    // Utility functions
+    getSatelliteById: (id) => {
+      return get().satellites.find(sat => sat.id === id);
+    },
+    
+    getSelectedSatellite: () => {
+      const { satellites, globeSettings } = get();
+      if (!globeSettings.selectedSatelliteId) return undefined;
+      return satellites.find(sat => sat.id === globeSettings.selectedSatelliteId);
+    },
+    
+    resetFilters: () => {
+      const state = get();
+      const filtered = state.applyFilters(state.satellites, defaultFilters);
+      set({ 
+        filters: defaultFilters,
+        filteredSatellites: filtered
+      });
+    },
+    
+    applyFilters: (satellites, filters) => {
+      console.log('Applying filters to', satellites.length, 'satellites');
       
-      if (satellites.length === 0) return [];
+      if (satellites.length === 0) {
+        return [];
+      }
       
-      return satellites.filter(satellite => {
+      const filtered = satellites.filter(satellite => {
         // Type filter
         if (filters.types.length > 0 && !filters.types.includes(satellite.type)) {
           return false;
@@ -102,17 +171,6 @@ export const useSatelliteStore = create<SatelliteStore>()(
           return false;
         }
         
-        // Launch date range filter
-        if (filters.launchDateRange[0] || filters.launchDateRange[1]) {
-          const launchDate = new Date(satellite.launchDate);
-          if (filters.launchDateRange[0] && launchDate < filters.launchDateRange[0]) {
-            return false;
-          }
-          if (filters.launchDateRange[1] && launchDate > filters.launchDateRange[1]) {
-            return false;
-          }
-        }
-        
         // Search query filter
         if (filters.searchQuery.trim()) {
           const query = filters.searchQuery.toLowerCase();
@@ -126,53 +184,9 @@ export const useSatelliteStore = create<SatelliteStore>()(
         
         return true;
       });
+      
+      console.log('Filter result:', filtered.length, 'satellites');
+      return filtered;
     },
-    
-    // Actions
-    setSatellites: (satellites) => set({ 
-      satellites, 
-      lastUpdate: Date.now(),
-      error: null 
-    }),
-    
-    updateSatellitePosition: (id, position) => set((state) => ({
-      satellites: state.satellites.map(sat =>
-        sat.id === id ? { ...sat, position } : sat
-      ),
-      lastUpdate: Date.now(),
-    })),
-    
-    setLaunches: (launches) => set({ launches }),
-    
-    setUserLocation: (userLocation) => set({ userLocation }),
-    
-    updateFilters: (newFilters) => set((state) => ({
-      filters: { ...state.filters, ...newFilters }
-    })),
-    
-    updateGlobeSettings: (newSettings) => set((state) => ({
-      globeSettings: { ...state.globeSettings, ...newSettings }
-    })),
-    
-    setSelectedSatellite: (id) => set((state) => ({
-      globeSettings: { ...state.globeSettings, selectedSatelliteId: id }
-    })),
-    
-    setLoading: (isLoading) => set({ isLoading }),
-    
-    setError: (error) => set({ error }),
-    
-    // Utility functions
-    getSatelliteById: (id) => {
-      return get().satellites.find(sat => sat.id === id);
-    },
-    
-    getSelectedSatellite: () => {
-      const { satellites, globeSettings } = get();
-      if (!globeSettings.selectedSatelliteId) return undefined;
-      return satellites.find(sat => sat.id === globeSettings.selectedSatelliteId);
-    },
-    
-    resetFilters: () => set({ filters: defaultFilters }),
   }))
 );
