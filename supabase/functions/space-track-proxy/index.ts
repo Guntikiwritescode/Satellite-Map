@@ -12,11 +12,15 @@ serve(async (req) => {
   }
 
   try {
-    const { action, endpoint, credentials } = await req.json()
+    const { action, endpoint } = await req.json()
 
-    if (!action || !credentials) {
+    // Get credentials from environment variables
+    const username = Deno.env.get('SPACE_TRACK_USERNAME')
+    const password = Deno.env.get('SPACE_TRACK_PASSWORD')
+
+    if (!action || !username || !password) {
       return new Response(
-        JSON.stringify({ error: 'Missing required parameters' }),
+        JSON.stringify({ error: 'Missing required parameters or credentials not configured' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -35,7 +39,7 @@ serve(async (req) => {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `identity=${encodeURIComponent(credentials.username)}&password=${encodeURIComponent(credentials.password)}`,
+        body: `identity=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
       })
 
       if (!authResponse.ok) {
@@ -82,7 +86,7 @@ serve(async (req) => {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `identity=${encodeURIComponent(credentials.username)}&password=${encodeURIComponent(credentials.password)}`,
+        body: `identity=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
       })
 
       if (!authResponse.ok) {

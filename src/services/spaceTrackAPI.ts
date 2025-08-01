@@ -46,10 +46,6 @@ interface SpaceTrackGPData {
 
 export class SpaceTrackAPI {
   private proxyUrl = 'https://dnjhvmwznqsunjpabacg.supabase.co/functions/v1/space-track-proxy';
-  private credentials = {
-    username: 'nihanth20@gmail.com',
-    password: 'CS2wTBBW.*LjZeY'
-  };
   private lastRequest = 0;
   private requestQueue: Promise<any> = Promise.resolve();
   
@@ -90,8 +86,7 @@ export class SpaceTrackAPI {
         },
         body: JSON.stringify({
           action: 'fetch',
-          endpoint,
-          credentials: this.credentials
+          endpoint
         })
       });
 
