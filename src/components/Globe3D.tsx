@@ -421,43 +421,85 @@ interface OrbitPathProps {
 }
 
 const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
-  // Create stable orbital path geometry - updated for new Earth scaling
+  // Calculate orbital path from satellite's current position and velocity
   const orbitGeometry = useMemo(() => {
     const points = [];
-    const earthRadius = 5; // Updated to match new Earth radius
-    const earthRadiusKm = 6371;
     
-    // Validate orbital data
-    if (!satellite?.orbital) {
-      console.warn('Missing orbital data for orbit path:', satellite?.id);
+    // Don't render path if no real position data
+    if (!satellite?.position?.latitude || !satellite?.position?.longitude || !satellite?.position?.altitude) {
       return new THREE.BufferGeometry();
     }
     
-    // Use REAL altitude from position data, same as SatelliteMarker
-    const realAltitudeKm = satellite.position?.altitude || satellite.orbital.altitude || 400;
-    const inclination = satellite.orbital.inclination || 0;
+    const earthRadius = 5;
+    const earthRadiusKm = 6371;
     
-    const orbitalRadiusKm = earthRadiusKm + realAltitudeKm;
-    const orbitalRadius = (orbitalRadiusKm / earthRadiusKm) * earthRadius; // Scale to new Earth size
-    const safeOrbitalRadius = Math.max(orbitalRadius, earthRadius + 0.1); // Prevent intersection with Earth
+    // Get satellite's current real position
+    const currentLat = (satellite.position.latitude * Math.PI) / 180;
+    const currentLon = (satellite.position.longitude * Math.PI) / 180;
+    const currentAlt = satellite.position.altitude;
     
-    const inclinationRad = (inclination * Math.PI) / 180;
+    // Calculate current position in 3D space
+    const altitudeScale = Math.max(0.01, currentAlt / 50000);
+    const currentRadius = earthRadius + altitudeScale;
     
-    const numPoints = 128;
-    for (let i = 0; i <= numPoints; i++) {
-      const angle = (i / numPoints) * Math.PI * 2;
+    const currentX = currentRadius * Math.cos(currentLat) * Math.cos(currentLon);
+    const currentY = currentRadius * Math.sin(currentLat);
+    const currentZ = currentRadius * Math.cos(currentLat) * Math.sin(currentLon);
+    
+    // Calculate orbital velocity and direction from satellite data
+    const orbitalVelocity = satellite.orbital?.velocity || Math.sqrt(398600.4418 / (earthRadiusKm + currentAlt));
+    const orbitalPeriod = satellite.orbital?.period || (2 * Math.PI * Math.sqrt(Math.pow(earthRadiusKm + currentAlt, 3) / 398600.4418) / 60);
+    
+    // Calculate velocity vector (simplified - perpendicular to radius vector)
+    const radiusVector = [currentX, currentY, currentZ];
+    const radiusMagnitude = Math.sqrt(currentX * currentX + currentY * currentY + currentZ * currentZ);
+    
+    // Velocity vector perpendicular to radius (simplified circular orbit assumption)
+    // Cross product with Earth's rotation axis (0,1,0) to get tangential direction
+    let velocityX = -currentZ;
+    let velocityY = 0;
+    let velocityZ = currentX;
+    
+    // Normalize velocity vector
+    const velocityMagnitude = Math.sqrt(velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ);
+    if (velocityMagnitude > 0) {
+      velocityX /= velocityMagnitude;
+      velocityY /= velocityMagnitude;
+      velocityZ /= velocityMagnitude;
+    }
+    
+    // Apply inclination to velocity vector
+    const inclination = (satellite.orbital?.inclination || 0) * Math.PI / 180;
+    const inclinedVelocityY = velocityY * Math.cos(inclination) - velocityZ * Math.sin(inclination);
+    const inclinedVelocityZ = velocityY * Math.sin(inclination) + velocityZ * Math.cos(inclination);
+    
+    velocityY = inclinedVelocityY;
+    velocityZ = inclinedVelocityZ;
+    
+    // Generate orbital path points by simulating forward motion
+    const numPoints = 64; // Reduced for performance with 5000 satellites
+    const timeStep = (orbitalPeriod * 60) / numPoints; // seconds per step
+    
+    for (let i = 0; i < numPoints; i++) {
+      const t = i * timeStep;
       
-      let x = safeOrbitalRadius * Math.cos(angle);
-      let y = 0;
-      let z = safeOrbitalRadius * Math.sin(angle);
+      // Simple orbital motion simulation
+      const angle = (t / (orbitalPeriod * 60)) * 2 * Math.PI;
       
-      const newY = y * Math.cos(inclinationRad) - z * Math.sin(inclinationRad);
-      const newZ = y * Math.sin(inclinationRad) + z * Math.cos(inclinationRad);
+      // Calculate position along circular orbit at the same altitude
+      const x = currentRadius * Math.cos(angle + Math.atan2(currentZ, currentX));
+      const y = currentRadius * Math.sin(angle) * Math.sin(inclination);
+      const z = currentRadius * Math.sin(angle + Math.atan2(currentZ, currentX));
       
-      // Validate calculated points
-      if (!isNaN(x) && !isNaN(newY) && !isNaN(newZ)) {
-        points.push(x, newY, newZ);
+      // Validate points
+      if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+        points.push(x, y, z);
       }
+    }
+    
+    // Close the orbit by connecting back to start
+    if (points.length >= 3) {
+      points.push(points[0], points[1], points[2]);
     }
     
     const geometry = new THREE.BufferGeometry();
@@ -465,7 +507,13 @@ const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
       geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(points), 3));
     }
     return geometry;
-  }, [satellite.id, satellite.orbital?.altitude, satellite.orbital?.inclination]); // Added orbital deps
+  }, [
+    satellite.position?.latitude, 
+    satellite.position?.longitude, 
+    satellite.position?.altitude,
+    satellite.orbital?.inclination,
+    satellite.orbital?.period
+  ]);
 
   // Stable color based on satellite type  
   const orbitColor = useMemo(() => {
@@ -488,7 +536,7 @@ const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
         object={new THREE.Line(orbitGeometry, new THREE.LineBasicMaterial({ 
           color: orbitColor, 
           transparent: true, 
-          opacity: 0.4
+          opacity: 0.3 // Reduced opacity for 5000 satellites
         }))}
       />
     </group>
