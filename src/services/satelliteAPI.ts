@@ -313,7 +313,7 @@ class RealSatelliteAPI {
   }
 
   getMockSatellites(): Satellite[] {
-    console.log('Generating mock satellite data...');
+    console.log('Generating comprehensive satellite catalog with 100 satellites...');
     
     // Generate realistic moving positions for mock satellites
     const generatePosition = (baseLatOffset: number, baseLonOffset: number) => {
@@ -329,7 +329,7 @@ class RealSatelliteAPI {
     };
     
     const mockSatellites: Satellite[] = [
-      // SPACE STATIONS
+      // SPACE STATIONS (2)
       {
         id: '25544',
         name: 'ISS (ZARYA)',
@@ -375,15 +375,15 @@ class RealSatelliteAPI {
         footprint: 4200
       },
 
-      // STARLINK CONSTELLATION (Multiple satellites)
-      {
-        id: '44713',
-        name: 'STARLINK-1007',
-        type: 'constellation',
+      // STARLINK CONSTELLATION (20 satellites)
+      ...Array.from({ length: 20 }, (_, i) => ({
+        id: `starlink-${44713 + i}`,
+        name: `STARLINK-${1007 + i}`,
+        type: 'constellation' as const,
         country: 'USA',
         agency: 'SpaceX',
         launchDate: '2019-05-24',
-        status: 'active',
+        status: 'active' as const,
         orbital: {
           altitude: 550,
           period: 95.4,
@@ -391,13 +391,295 @@ class RealSatelliteAPI {
           eccentricity: 0.0001,
           velocity: 7.57
         },
-        position: generatePosition(1, 45),
+        position: generatePosition(1 + i * 0.1, 45 + i * 18),
         tle: {
-          line1: '1 44713U 19074A   23001.00000000  .00001345  00000-0  10270-3 0  9991',
-          line2: '2 44713  53.0536  90.4721 0001425  95.4618 264.6879 15.05444835201234'
+          line1: `1 ${44713 + i}U 19074A   23001.00000000  .00001345  00000-0  10270-3 0  999${i}`,
+          line2: `2 ${44713 + i}  53.0536  90.4721 0001425  95.4618 264.6879 15.05444835201234`
         },
         footprint: 1000
+      })),
+
+      // GPS CONSTELLATION (15 satellites)
+      ...Array.from({ length: 15 }, (_, i) => ({
+        id: `gps-${28361 + i}`,
+        name: `GPS IIF-${i + 1}`,
+        type: 'navigation' as const,
+        country: 'USA',
+        agency: 'US Space Force',
+        launchDate: '2010-05-28',
+        status: 'active' as const,
+        orbital: {
+          altitude: 20200,
+          period: 717.97,
+          inclination: 55.0,
+          eccentricity: 0.02,
+          velocity: 3.87
+        },
+        position: generatePosition(2 + i * 0.3, 60 + i * 24),
+        tle: {
+          line1: `1 ${28361 + i}U 10022A   23001.00000000 -.00000007  00000-0  00000+0 0  999${i}`,
+          line2: `2 ${28361 + i}  55.0000 ${60 + i * 24}.0000 0020000  90.0000 270.0000  2.00563365085000`
+        },
+        footprint: 12000
+      })),
+
+      // GALILEO NAVIGATION (10 satellites)
+      ...Array.from({ length: 10 }, (_, i) => ({
+        id: `galileo-${37846 + i}`,
+        name: `GALILEO-${i + 1}`,
+        type: 'navigation' as const,
+        country: 'Europe',
+        agency: 'ESA',
+        launchDate: '2011-10-21',
+        status: 'active' as const,
+        orbital: {
+          altitude: 23222,
+          period: 844.7,
+          inclination: 56.0,
+          eccentricity: 0.0004,
+          velocity: 3.63
+        },
+        position: generatePosition(3 + i * 0.2, 120 + i * 36),
+        tle: {
+          line1: `1 ${37846 + i}U 11060A   23001.00000000  .00000004  00000-0  00000+0 0  999${i}`,
+          line2: `2 ${37846 + i}  56.0000 ${120 + i * 36}.0000 0004000  90.0000 270.0000  1.70475396000000`
+        },
+        footprint: 15000
+      })),
+
+      // WEATHER SATELLITES (8)
+      {
+        id: '33591',
+        name: 'NOAA-19',
+        type: 'weather',
+        country: 'USA',
+        agency: 'NOAA',
+        launchDate: '2009-02-06',
+        status: 'active',
+        orbital: {
+          altitude: 870,
+          period: 102.12,
+          inclination: 98.7,
+          eccentricity: 0.0014,
+          velocity: 7.35
+        },
+        position: generatePosition(4, 180),
+        tle: {
+          line1: '1 33591U 09005A   23001.00000000  .00000176  00000-0  10226-3 0  9990',
+          line2: '2 33591  98.7123 233.2345 0014123  95.8340 264.3200 14.12270771708546'
+        },
+        footprint: 2800
       },
+      {
+        id: '28654',
+        name: 'METOP-A',
+        type: 'weather',
+        country: 'Europe',
+        agency: 'EUMETSAT',
+        launchDate: '2006-10-19',
+        status: 'active',
+        orbital: {
+          altitude: 817,
+          period: 101.34,
+          inclination: 98.7,
+          eccentricity: 0.0012,
+          velocity: 7.4
+        },
+        position: generatePosition(4.5, 200),
+        tle: {
+          line1: '1 28654U 06044A   23001.00000000  .00000176  00000-0  10226-3 0  9990',
+          line2: '2 28654  98.7123 233.2345 0012123  95.8340 264.3200 14.18270771708546'
+        },
+        footprint: 2700
+      },
+      ...Array.from({ length: 6 }, (_, i) => ({
+        id: `weather-${43013 + i}`,
+        name: `GOES-${16 + i}`,
+        type: 'weather' as const,
+        country: 'USA',
+        agency: 'NOAA',
+        launchDate: '2016-11-19',
+        status: 'active' as const,
+        orbital: {
+          altitude: 35786,
+          period: 1436,
+          inclination: 0.1,
+          eccentricity: 0.0003,
+          velocity: 3.07
+        },
+        position: generatePosition(5 + i * 0.1, 220 + i * 60),
+        tle: {
+          line1: `1 ${43013 + i}U 16071A   23001.00000000  .00000004  00000-0  00000+0 0  999${i}`,
+          line2: `2 ${43013 + i}   0.1000 ${220 + i * 60}.0000 0003000  90.0000 270.0000  1.00271096000000`
+        },
+        footprint: 18000
+      })),
+
+      // EARTH OBSERVATION (12)
+      ...Array.from({ length: 12 }, (_, i) => ({
+        id: `earthobs-${39084 + i}`,
+        name: `LANDSAT-${8 + Math.floor(i/4)}`,
+        type: 'earth-observation' as const,
+        country: 'USA',
+        agency: 'NASA/USGS',
+        launchDate: '2013-02-11',
+        status: 'active' as const,
+        orbital: {
+          altitude: 705,
+          period: 98.9,
+          inclination: 98.2,
+          eccentricity: 0.0001,
+          velocity: 7.5
+        },
+        position: generatePosition(6 + i * 0.3, 240 + i * 30),
+        tle: {
+          line1: `1 ${39084 + i}U 13008A   23001.00000000  .00000345  00000-0  18270-3 0  999${i}`,
+          line2: `2 ${39084 + i}  98.2000 ${240 + i * 30}.0000 0001000  95.0000 265.0000 14.57113027000000`
+        },
+        footprint: 2200
+      })),
+
+      // SCIENTIFIC SATELLITES (8)
+      {
+        id: '43013',
+        name: 'HUBBLE SPACE TELESCOPE',
+        type: 'scientific',
+        country: 'International',
+        agency: 'NASA/ESA',
+        launchDate: '1990-04-24',
+        status: 'active',
+        orbital: {
+          altitude: 547,
+          period: 95.42,
+          inclination: 28.5,
+          eccentricity: 0.0003,
+          velocity: 7.59
+        },
+        position: generatePosition(7, 300),
+        tle: {
+          line1: '1 20580U 90037B   23001.00000000  .00000345  00000-0  18270-3 0  9990',
+          line2: '2 20580  28.4687 123.4567 0002978  95.8340 264.3200 15.09327896000000'
+        },
+        footprint: 1200
+      },
+      ...Array.from({ length: 7 }, (_, i) => ({
+        id: `science-${25544 + 1000 + i}`,
+        name: `SCIENTIFIC-${i + 1}`,
+        type: 'scientific' as const,
+        country: 'International',
+        agency: 'NASA',
+        launchDate: '2018-01-01',
+        status: 'active' as const,
+        orbital: {
+          altitude: 600 + i * 100,
+          period: 96 + i * 2,
+          inclination: 45 + i * 10,
+          eccentricity: 0.0001,
+          velocity: 7.5 - i * 0.1
+        },
+        position: generatePosition(8 + i * 0.2, 320 + i * 45),
+        tle: {
+          line1: `1 ${25544 + 1000 + i}U 18001A   23001.00000000  .00000345  00000-0  18270-3 0  999${i}`,
+          line2: `2 ${25544 + 1000 + i}  ${45 + i * 10}.0000 ${320 + i * 45}.0000 0001000  95.0000 265.0000 15.00000000000000`
+        },
+        footprint: 1500 + i * 200
+      })),
+
+      // COMMUNICATION SATELLITES (15)
+      ...Array.from({ length: 15 }, (_, i) => ({
+        id: `comsat-${25924 + i}`,
+        name: `INTELSAT-${20 + i}`,
+        type: 'communication' as const,
+        country: 'International',
+        agency: 'Intelsat',
+        launchDate: '2019-01-01',
+        status: 'active' as const,
+        orbital: {
+          altitude: 35786,
+          period: 1436,
+          inclination: 0.1,
+          eccentricity: 0.0001,
+          velocity: 3.07
+        },
+        position: generatePosition(9 + i * 0.1, 0 + i * 24),
+        tle: {
+          line1: `1 ${25924 + i}U 19001A   23001.00000000  .00000004  00000-0  00000+0 0  999${i}`,
+          line2: `2 ${25924 + i}   0.1000 ${0 + i * 24}.0000 0001000  90.0000 270.0000  1.00271096000000`
+        },
+        footprint: 18000
+      })),
+
+      // MILITARY/RECONNAISSANCE (5)
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `military-${37348 + i}`,
+        name: `CLASSIFIED-${i + 1}`,
+        type: 'military' as const,
+        country: 'USA',
+        agency: 'US Space Force',
+        launchDate: '2020-01-01',
+        status: 'active' as const,
+        orbital: {
+          altitude: 800 + i * 200,
+          period: 100 + i * 5,
+          inclination: 70 + i * 5,
+          eccentricity: 0.001,
+          velocity: 7.4 - i * 0.1
+        },
+        position: generatePosition(10 + i * 0.5, 90 + i * 72),
+        tle: {
+          line1: `1 ${37348 + i}U 20001A   23001.00000000  .00000345  00000-0  18270-3 0  999${i}`,
+          line2: `2 ${37348 + i}  ${70 + i * 5}.0000 ${90 + i * 72}.0000 0010000  95.0000 265.0000 14.00000000000000`
+        },
+        footprint: 2500 + i * 300
+      })),
+
+      // COMMERCIAL/OTHER (10)
+      ...Array.from({ length: 10 }, (_, i) => ({
+        id: `commercial-${40000 + i}`,
+        name: `COMMERCIAL-${i + 1}`,
+        type: 'commercial' as const,
+        country: 'Various',
+        agency: 'Commercial',
+        launchDate: '2021-01-01',
+        status: 'active' as const,
+        orbital: {
+          altitude: 500 + i * 50,
+          period: 94 + i * 1,
+          inclination: 30 + i * 15,
+          eccentricity: 0.0001,
+          velocity: 7.6 - i * 0.05
+        },
+        position: generatePosition(11 + i * 0.3, 150 + i * 36),
+        tle: {
+          line1: `1 ${40000 + i}U 21001A   23001.00000000  .00000345  00000-0  18270-3 0  999${i}`,
+          line2: `2 ${40000 + i}  ${30 + i * 15}.0000 ${150 + i * 36}.0000 0001000  95.0000 265.0000 15.00000000000000`
+        },
+        footprint: 1200 + i * 100
+      })),
+
+      // PLANET LABS DOVE CONSTELLATION (10)
+      ...Array.from({ length: 10 }, (_, i) => ({
+        id: `dove-${44420 + i}`,
+        name: `DOVE-${i + 1}`,
+        type: 'earth-observation' as const,
+        country: 'USA',
+        agency: 'Planet Labs',
+        launchDate: '2020-01-01',
+        status: 'active' as const,
+        orbital: {
+          altitude: 475,
+          period: 93.4,
+          inclination: 97.4,
+          eccentricity: 0.0001,
+          velocity: 7.62
+        },
+        position: generatePosition(12 + i * 0.2, 270 + i * 36),
+        tle: {
+          line1: `1 ${44420 + i}U 20001A   23001.00000000  .00000845  00000-0  42270-3 0  999${i}`,
+          line2: `2 ${44420 + i}  97.4000 ${270 + i * 36}.0000 0001000  95.0000 265.0000 15.30000000000000`
+        },
+        footprint: 800
+      })),
       {
         id: '44714',
         name: 'STARLINK-1008',
