@@ -6,10 +6,10 @@ import { satelliteAPI } from '../services/satelliteAPI';
 export const useSatelliteData = () => {
   const { setSatellites, setLaunches, setLoading, setError } = useSatelliteStore();
 
-  // Fetch initial satellite data
+  // Fetch initial satellite data with fallback
   const { data: satellites, isLoading: satellitesLoading, error: satellitesError } = useQuery({
     queryKey: ['satellites'],
-    queryFn: () => satelliteAPI.getSatellites(),
+    queryFn: () => satelliteAPI.getSatellitesWithFallback(),
     refetchInterval: 30000, // Refetch every 30 seconds
     staleTime: 10000, // Consider data stale after 10 seconds
   });
