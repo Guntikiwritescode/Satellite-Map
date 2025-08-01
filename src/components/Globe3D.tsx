@@ -296,7 +296,7 @@ const Scene: React.FC = () => {
     
     return filteredSatellites
       .filter(sat => sat?.position?.latitude && sat?.position?.longitude && sat?.position?.altitude)
-      .slice(0, 1000); // Performance limit
+      .slice(0, 10000); // Performance limit increased to 10k
   }, [filteredSatellites, globeSettings.selectedSatelliteId]);
 
   const selectedSatellite = useMemo(() => {
