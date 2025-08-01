@@ -50,34 +50,27 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = ({
   const markerRef = useRef<THREE.Mesh>(null);
   const { globeSettings } = useSatelliteStore();
   
-  // Convert lat/lon to 3D position with proper altitude scaling
+  // Calculate satellite's actual 3D position in space (not ground track)
   const position = useMemo(() => {
-    const lat = (satellite.position.latitude * Math.PI) / 180;
-    const lon = (satellite.position.longitude * Math.PI) / 180;
+    // Ground track coordinates (where satellite projects onto Earth's surface)
+    const groundLat = (satellite.position.latitude * Math.PI) / 180;
+    const groundLon = (satellite.position.longitude * Math.PI) / 180;
     
-    // Earth radius is 1, satellites should be clearly visible above Earth
+    // Earth radius in our 3D scene
     const earthRadius = 1;
-    const minAltitude = 0.1; // Minimum distance above Earth surface
-    const maxAltitude = 1.5; // Maximum distance for very high satellites
     
-    // Scale altitude: LEO satellites (400-2000km) should be close, GEO (35,000km) should be far
-    let altitudeScale;
-    if (satellite.orbital.altitude < 2000) {
-      // Low Earth Orbit - scale from 0.1 to 0.3 above Earth
-      altitudeScale = minAltitude + (satellite.orbital.altitude / 2000) * 0.2;
-    } else if (satellite.orbital.altitude < 20000) {
-      // Medium Earth Orbit - scale from 0.3 to 0.8
-      altitudeScale = 0.3 + ((satellite.orbital.altitude - 2000) / 18000) * 0.5;
-    } else {
-      // Geostationary/High orbits - scale from 0.8 to 1.5
-      altitudeScale = 0.8 + Math.min((satellite.orbital.altitude - 20000) / 20000, 0.7);
-    }
+    // Calculate actual altitude above Earth's surface
+    const actualAltitudeKm = satellite.orbital.altitude;
+    const earthRadiusKm = 6371; // Earth's actual radius in km
     
-    const radius = earthRadius + altitudeScale;
+    // Convert real altitude to our 3D scene scale
+    const altitudeScale = actualAltitudeKm / earthRadiusKm; // Ratio of altitude to Earth radius
+    const actualRadius = earthRadius + altitudeScale; // Total distance from Earth center
     
-    const x = radius * Math.cos(lat) * Math.cos(lon);
-    const y = radius * Math.sin(lat);
-    const z = radius * Math.cos(lat) * Math.sin(lon);
+    // Calculate 3D position: satellite is at ground track lat/lon but at orbital altitude
+    const x = actualRadius * Math.cos(groundLat) * Math.cos(groundLon);
+    const y = actualRadius * Math.sin(groundLat);
+    const z = actualRadius * Math.cos(groundLat) * Math.sin(groundLon);
     
     return [x, y, z] as [number, number, number];
   }, [satellite.position, satellite.orbital.altitude]);
@@ -174,34 +167,31 @@ const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
   const orbitGeometry = useMemo(() => {
     const points = [];
     const earthRadius = 1;
+    const earthRadiusKm = 6371;
     
-    // Use same altitude scaling as satellites
-    let altitudeScale;
-    if (satellite.orbital.altitude < 2000) {
-      altitudeScale = 0.1 + (satellite.orbital.altitude / 2000) * 0.2;
-    } else if (satellite.orbital.altitude < 20000) {
-      altitudeScale = 0.3 + ((satellite.orbital.altitude - 2000) / 18000) * 0.5;
-    } else {
-      altitudeScale = 0.8 + Math.min((satellite.orbital.altitude - 20000) / 20000, 0.7);
-    }
+    // Calculate actual orbital radius from orbital altitude
+    const orbitalAltitudeKm = satellite.orbital.altitude;
+    const orbitalRadiusKm = earthRadiusKm + orbitalAltitudeKm;
+    const orbitalRadius = orbitalRadiusKm / earthRadiusKm; // Scale to our Earth radius of 1
     
-    const radius = earthRadius + altitudeScale;
+    // Get orbital inclination in radians
     const inclination = (satellite.orbital.inclination * Math.PI) / 180;
     
-    // Create proper circular orbital path centered on Earth
-    for (let i = 0; i <= 128; i++) {
-      const angle = (i / 128) * Math.PI * 2;
+    // Create orbital path centered on Earth's center
+    const numPoints = 128;
+    for (let i = 0; i <= numPoints; i++) {
+      const angle = (i / numPoints) * Math.PI * 2;
       
-      // Create orbit in the XZ plane first, then apply inclination
-      const x = radius * Math.cos(angle);
-      const z = radius * Math.sin(angle);
-      const y = 0;
+      // Start with circular orbit in equatorial plane (XZ)
+      let x = orbitalRadius * Math.cos(angle);
+      let y = 0;
+      let z = orbitalRadius * Math.sin(angle);
       
-      // Apply orbital inclination rotation around X axis
-      const rotatedY = y * Math.cos(inclination) - z * Math.sin(inclination);
-      const rotatedZ = y * Math.sin(inclination) + z * Math.cos(inclination);
+      // Apply inclination: rotate around X-axis
+      const newY = y * Math.cos(inclination) - z * Math.sin(inclination);
+      const newZ = y * Math.sin(inclination) + z * Math.cos(inclination);
       
-      points.push(x, rotatedY, rotatedZ);
+      points.push(x, newY, newZ);
     }
     
     const geometry = new THREE.BufferGeometry();
