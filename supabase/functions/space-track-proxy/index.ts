@@ -106,34 +106,33 @@ serve(async (req) => {
           statusText: authResponse.statusText,
           response: errorText
         })
-        throw new Error(`Authentication failed: ${authResponse.status} ${authResponse.statusText} - ${errorText}`)
+        throw new Error(`Authentication failed: ${authResponse.status} ${authResponse.statusText}`)
       }
 
-      // Extract session cookie
+      // According to Space-Track.org docs, successful auth returns empty response
+      const authResponseText = await authResponse.text()
+      console.log('Auth response text:', authResponseText)
+      
+      if (authResponseText !== '""' && authResponseText !== '') {
+        console.error('Authentication may have failed - unexpected response:', authResponseText)
+        throw new Error(`Authentication failed - unexpected response: ${authResponseText}`)
+      }
+
+      // Extract all cookies from the response
       const cookies = authResponse.headers.get('set-cookie')
       console.log('Received cookies:', cookies ? 'Yes' : 'No')
       
-      let sessionCookie = null
-      
-      if (cookies) {
-        const sessionMatch = cookies.match(/JSESSIONID=([^;]+)/)
-        if (sessionMatch) {
-          sessionCookie = sessionMatch[1]
-          console.log('Session cookie extracted successfully')
-        } else {
-          console.error('No JSESSIONID found in cookies:', cookies)
-        }
+      if (!cookies) {
+        console.error('No cookies received from Space-Track.org authentication')
+        throw new Error('No authentication cookies received from Space-Track.org')
       }
 
-      if (!sessionCookie) {
-        console.error('Failed to obtain session cookie from Space-Track.org')
-        throw new Error('Failed to obtain session cookie from Space-Track.org - authentication may have failed')
-      }
+      console.log('Authentication successful, proceeding with data request')
 
-      // Make the actual data request
+      // Make the actual data request using the authenticated session
       const dataResponse = await fetch(`${baseUrl}${endpoint}`, {
         headers: {
-          'Cookie': `JSESSIONID=${sessionCookie}`,
+          'Cookie': cookies, // Use all cookies from auth response
         },
       })
 
