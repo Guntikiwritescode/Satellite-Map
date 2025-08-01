@@ -449,8 +449,7 @@ const Scene: React.FC = () => {
       ))}
       
       
-      {/* Enhanced stars background */}
-      <Stars />
+      {/* Stars background removed */}
     </>
   );
 };
