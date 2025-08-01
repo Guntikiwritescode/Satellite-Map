@@ -433,133 +433,116 @@ class RealSatelliteAPI {
     }
   }
 
-  // Fetch satellites from CelesTrak with realistic altitudes
-  private async fetchSatellitesFromGroup(url: string): Promise<Satellite[]> {
-    try {
-      console.log(`Fetching satellites from: ${url}`);
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  // Remove duplicate satellites based on NORAD ID and name
+  private removeDuplicates(satellites: Satellite[]): Satellite[] {
+    const seen = new Set<string>();
+    const unique: Satellite[] = [];
+    
+    for (const satellite of satellites) {
+      // Create unique key from NORAD ID and name
+      const key = `${satellite.id}-${satellite.name.trim().toUpperCase()}`;
+      
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(satellite);
+      } else {
+        console.log(`Removing duplicate satellite: ${satellite.name} (ID: ${satellite.id})`);
       }
-      
-      const data: CelestrakSatellite[] = await response.json();
-      console.log(`Received ${data.length} satellites from ${url}`);
-      
-      const satellites: Satellite[] = data.map(sat => {
-        const country = this.determineCountry(sat.COUNTRY_CODE, sat.OBJECT_NAME);
-        const type = this.determineSatelliteType(sat.OBJECT_NAME, sat.OBJECT_TYPE, sat.COUNTRY_CODE);
-        const agency = this.determineAgency(sat.OBJECT_NAME, country);
-        
-        // Use realistic altitude instead of defaulting to 400km
-        const realAltitude = this.getRealisticAltitude(sat.OBJECT_NAME, type);
-        
-        // Calculate position from orbital parameters - CelesTrak provides everything we need
-        const position = this.calculatePositionFromOrbitalElements(sat, realAltitude);
-        
-        // Skip satellites only if position calculation completely fails
-        if (!position) {
-          console.warn(`Skipping ${sat.OBJECT_NAME} - position calculation failed`);
-          return null;
-        }
-        
-        return {
-          id: sat.NORAD_CAT_ID.toString(),
-          name: sat.OBJECT_NAME,
-          type,
-          country,
-          agency,
-          launchDate: sat.LAUNCH_DATE || '1957-01-01',
-          status: sat.DECAY_DATE ? 'inactive' : 'active' as SatelliteStatus,
-          orbital: {
-            altitude: realAltitude, // Use realistic altitude
-            period: this.calculateOrbitalPeriod(realAltitude),
-            inclination: sat.INCLINATION || this.getTypicalInclination(type),
-            eccentricity: sat.ECCENTRICITY || 0,
-            velocity: Math.sqrt(398600.4418 / (6371 + realAltitude))
-          },
-          position: {
-            ...position,
-            altitude: realAltitude // Ensure position has realistic altitude
-          },
-          tle: {
-            line1: sat.TLE_LINE1 || '',
-            line2: sat.TLE_LINE2 || ''
-          },
-          footprint: this.calculateFootprint(realAltitude)
-        };
-      });
-      
-      return satellites.filter(sat => sat !== null); // Filter out null satellites
-    } catch (error) {
-      console.error(`Error fetching satellites from ${url}:`, error);
-      return [];
     }
+    
+    return unique;
   }
 
-  // Load satellites from CelesTrak with realistic altitudes
+  // Convert CelesTrak satellite data to our format
+  private processCelestrakSatellite(sat: CelestrakSatellite): Satellite {
+    const country = this.determineCountry(sat.COUNTRY_CODE, sat.OBJECT_NAME);
+    const type = this.determineSatelliteType(sat.OBJECT_NAME, sat.OBJECT_TYPE, sat.COUNTRY_CODE);
+    const agency = this.determineAgency(sat.OBJECT_NAME, country);
+    
+    // Use realistic altitude instead of defaulting to 400km
+    const realAltitude = this.getRealisticAltitude(sat.OBJECT_NAME, type);
+    
+    // Calculate position from orbital parameters - CelesTrak provides everything we need
+    const position = this.calculatePositionFromOrbitalElements(sat, realAltitude) || {
+      latitude: 0,
+      longitude: 0,
+      altitude: realAltitude,
+      timestamp: Date.now()
+    };
+    
+    return {
+      id: sat.NORAD_CAT_ID.toString(),
+      name: sat.OBJECT_NAME,
+      type,
+      country,
+      agency,
+      launchDate: sat.LAUNCH_DATE || '1957-01-01',
+      status: sat.DECAY_DATE ? 'inactive' : 'active' as SatelliteStatus,
+      orbital: {
+        altitude: realAltitude,
+        period: this.calculateOrbitalPeriod(realAltitude),
+        inclination: sat.INCLINATION || this.getTypicalInclination(type),
+        eccentricity: sat.ECCENTRICITY || 0,
+        velocity: Math.sqrt(398600.4418 / (6371 + realAltitude))
+      },
+      position: {
+        ...position,
+        altitude: realAltitude
+      },
+      tle: {
+        line1: sat.TLE_LINE1 || '',
+        line2: sat.TLE_LINE2 || ''
+      },
+      footprint: this.calculateFootprint(realAltitude)
+    };
+  }
+
+  // Load satellites from CelesTrak with realistic altitudes and deduplication
   async getSatellitesWithFallback(): Promise<Satellite[]> {
-    console.log('🚀 Loading satellites from CelesTrak...');
-    const allSatellites: Satellite[] = [];
-    
-    // Fetch from each popular group
-    for (const [index, apiUrl] of POPULAR_CELESTRAK_GROUPS.entries()) {
-      try {
-        console.log(`📡 Fetching group ${index + 1}/${POPULAR_CELESTRAK_GROUPS.length}...`);
-        const satellites = await this.fetchSatellitesFromGroup(apiUrl);
-        allSatellites.push(...satellites);
-        console.log(`✅ Group ${index + 1}: ${satellites.length} satellites loaded`);
-      } catch (error) {
-        console.error(`❌ Failed to fetch group ${index + 1}:`, error);
+    try {
+      const allSatellites: Satellite[] = [];
+      let fetchCount = 0;
+      
+      for (const url of POPULAR_CELESTRAK_GROUPS) {
+        try {
+          console.log(`Fetching from: ${url}`);
+          const response = await fetch(url);
+          
+          if (!response.ok) {
+            console.warn(`Failed to fetch from ${url}: ${response.status}`);
+            continue;
+          }
+          
+          const data: CelestrakSatellite[] = await response.json();
+          console.log(`Fetched ${data.length} satellites from group`);
+          
+          if (Array.isArray(data)) {
+            const processedSatellites = data.map(sat => this.processCelestrakSatellite(sat));
+            allSatellites.push(...processedSatellites);
+            fetchCount += data.length;
+            
+            if (fetchCount >= MAX_SATELLITES) {
+              console.log(`Reached maximum satellite limit of ${MAX_SATELLITES}`);
+              break;
+            }
+          }
+        } catch (error) {
+          console.warn(`Error fetching from ${url}:`, error);
+          continue;
+        }
       }
+      
+      // Remove duplicates based on NORAD ID and name
+      const uniqueSatellites = this.removeDuplicates(allSatellites);
+      
+      console.log(`Total fetched: ${allSatellites.length}, After deduplication: ${uniqueSatellites.length}`);
+      
+      this.cachedSatellites = uniqueSatellites;
+      return uniqueSatellites;
+    } catch (error) {
+      console.error('Error fetching real satellite data:', error);
+      throw error;
     }
-    
-    // Enforce 5000 satellite limit with optimizations
-    if (allSatellites.length > MAX_SATELLITES) {
-      console.log(`⚠️ Limiting satellites from ${allSatellites.length} to ${MAX_SATELLITES} with optimizations`);
-      
-      // Prioritize satellites by importance/popularity  
-      const priorityOrder: SatelliteType[] = [
-        'space-station', 'scientific', 'weather', 'navigation', 
-        'constellation', 'communication', 'earth-observation', 'military'
-      ];
-      
-      const prioritizedSatellites: Satellite[] = [];
-      
-      // Add satellites by priority, keeping a balanced mix
-      for (const type of priorityOrder) {
-        const satellitesOfType = allSatellites.filter(sat => sat.type === type);
-        const maxPerType = Math.min(satellitesOfType.length, Math.floor(MAX_SATELLITES / priorityOrder.length));
-        prioritizedSatellites.push(...satellitesOfType.slice(0, maxPerType));
-        
-        if (prioritizedSatellites.length >= MAX_SATELLITES) break;
-      }
-      
-      // Fill remaining slots with any leftover satellites (most popular first)
-      const remaining = MAX_SATELLITES - prioritizedSatellites.length;
-      if (remaining > 0) {
-        const usedIds = new Set(prioritizedSatellites.map(sat => sat.id));
-        const leftoverSatellites = allSatellites.filter(sat => !usedIds.has(sat.id));
-        prioritizedSatellites.push(...leftoverSatellites.slice(0, remaining));
-      }
-      
-      // Final trim to exactly MAX_SATELLITES
-      allSatellites.splice(0, allSatellites.length, ...prioritizedSatellites.slice(0, MAX_SATELLITES));
-    }
-    
-    console.log(`🎯 FINAL RESULT: ${allSatellites.length} satellites loaded with realistic altitudes!`);
-    console.log(`📊 Breakdown by type:`, this.getTypeBreakdown(allSatellites));
-    
-    this.cachedSatellites = allSatellites;
-    return allSatellites;
-  }
-
-  // Helper method to show satellite type breakdown
-  private getTypeBreakdown(satellites: Satellite[]): Record<string, number> {
-    const breakdown: Record<string, number> = {};
-    satellites.forEach(sat => {
-      breakdown[sat.type] = (breakdown[sat.type] || 0) + 1;
-    });
-    return breakdown;
   }
 
   async getLaunches(): Promise<Launch[]> {
