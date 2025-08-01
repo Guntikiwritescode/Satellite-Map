@@ -1,58 +1,63 @@
 import React, { useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Sphere, Html } from '@react-three/drei';
+import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { Satellite } from '../types/satellite.types';
 
 // Earth component
 const Earth: React.FC = () => {
-  const earthRef = useRef<THREE.Mesh>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
   
-  // Create Earth texture (in production, load real Earth textures)
+  // Create Earth texture
   const earthTexture = useMemo(() => {
     const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d')!;
+    canvas.width = 512;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
     
-    // Create a simple blue marble effect
-    const gradient = ctx.createLinearGradient(0, 0, 0, 512);
-    gradient.addColorStop(0, '#1e3a8a'); // Dark blue
-    gradient.addColorStop(0.3, '#2563eb'); // Blue
-    gradient.addColorStop(0.7, '#3b82f6'); // Light blue
-    gradient.addColorStop(1, '#1e3a8a'); // Dark blue
-    
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 1024, 512);
-    
-    // Add some landmass-like shapes
-    ctx.fillStyle = '#22c55e';
-    for (let i = 0; i < 20; i++) {
-      ctx.beginPath();
-      ctx.arc(
-        Math.random() * 1024, 
-        Math.random() * 512, 
-        Math.random() * 50 + 20, 
-        0, 
-        Math.PI * 2
-      );
-      ctx.fill();
+    if (!ctx) {
+      console.warn('Could not get canvas context');
+      return null;
     }
     
-    return new THREE.CanvasTexture(canvas);
+    // Create a simple blue marble effect
+    const gradient = ctx.createLinearGradient(0, 0, 0, 256);
+    gradient.addColorStop(0, '#1e3a8a');
+    gradient.addColorStop(0.5, '#2563eb');
+    gradient.addColorStop(1, '#1e3a8a');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 512, 256);
+    
+    // Add some simple landmasses
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(50, 80, 80, 60);   // Continent 1
+    ctx.fillRect(200, 50, 100, 80); // Continent 2
+    ctx.fillRect(350, 120, 90, 70); // Continent 3
+    
+    try {
+      return new THREE.CanvasTexture(canvas);
+    } catch (error) {
+      console.warn('Failed to create texture:', error);
+      return null;
+    }
   }, []);
 
-  useFrame((state) => {
-    if (earthRef.current) {
-      earthRef.current.rotation.y += 0.001; // Slow rotation
+  useFrame(() => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y += 0.001;
     }
   });
 
   return (
-    <Sphere ref={earthRef} args={[1, 64, 32]}>
-      <meshPhongMaterial map={earthTexture} />
-    </Sphere>
+    <mesh ref={meshRef}>
+      <sphereGeometry args={[1, 32, 16]} />
+      <meshPhongMaterial 
+        color={earthTexture ? undefined : '#2563eb'} 
+        map={earthTexture || undefined}
+      />
+    </mesh>
   );
 };
 
@@ -171,6 +176,8 @@ interface OrbitPathProps {
 }
 
 const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
+  const lineRef = useRef<THREE.Line>(null);
+  
   const orbitPoints = useMemo(() => {
     const points = [];
     const radius = 1 + (satellite.orbital.altitude / 6371) * 0.5;
@@ -181,25 +188,27 @@ const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
       const x = radius * Math.cos(angle);
       const y = radius * Math.sin(angle) * Math.sin(inclination);
       const z = radius * Math.sin(angle) * Math.cos(inclination);
-      points.push(new THREE.Vector3(x, y, z));
+      points.push(x, y, z);
     }
     
-    return points;
+    return new Float32Array(points);
   }, [satellite.orbital.altitude, satellite.orbital.inclination]);
 
   return (
     <group>
-      <line>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={orbitPoints.length}
-            array={new Float32Array(orbitPoints.flatMap(p => [p.x, p.y, p.z]))}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial color="#3b82f6" transparent opacity={0.6} />
-      </line>
+      <primitive 
+        object={new THREE.Line(
+          new THREE.BufferGeometry().setAttribute(
+            'position', 
+            new THREE.BufferAttribute(orbitPoints, 3)
+          ),
+          new THREE.LineBasicMaterial({ 
+            color: '#3b82f6', 
+            transparent: true, 
+            opacity: 0.6 
+          })
+        )}
+      />
     </group>
   );
 };
