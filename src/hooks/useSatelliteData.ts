@@ -13,10 +13,10 @@ export const useSatelliteData = () => {
     isLoading: satelliteLoading,
     refetch: refetchSatellites 
   } = useQuery({
-    queryKey: ['satellites'],
-    queryFn: () => spaceTrackAPI.getAllActiveSatellites(1000),
+    queryKey: ['satellites', 'unlimited'],
+    queryFn: () => spaceTrackAPI.getAllActiveSatellites(),
     refetchInterval: 5 * 60 * 1000, // 5 minutes
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 0, // Force immediate refresh to see the change
     retry: 3
   });
 

@@ -66,10 +66,10 @@ export class SpaceTrackAPI {
     });
   }
 
-  async getAllActiveSatellites(limit: number = 1000): Promise<Satellite[]> {
+  async getAllActiveSatellites(): Promise<Satellite[]> {
     try {
       // Get all active satellites regardless of orbit type - much more comprehensive
-      const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/orderby/NORAD_CAT_ID asc/limit/${limit}/format/json`;
+      const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/orderby/NORAD_CAT_ID asc/format/json`;
       const data: SpaceTrackGPData[] = await this.makeProxyRequest(endpoint);
       
       if (!data || !Array.isArray(data) || data.length === 0) {
