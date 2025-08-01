@@ -5,9 +5,12 @@ import * as THREE from 'three';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { Satellite } from '../types/satellite.types';
 
-// Earth component with realistic texture
+// Earth component with realistic texture and proper scaling
 const Earth: React.FC = () => {
   const meshRef = useRef<THREE.Mesh>(null);
+  
+  // Scale Earth to be proportional to satellites with visibility multiplier
+  const earthRadius = 5; // Increased from 1 to be more proportional to scaled satellites
   
   // Load real Earth texture
   const earthTexture = useMemo(() => {
@@ -27,7 +30,7 @@ const Earth: React.FC = () => {
 
   return (
     <mesh ref={meshRef}>
-      <sphereGeometry args={[1, 64, 32]} />
+      <sphereGeometry args={[earthRadius, 64, 32]} />
       <meshPhongMaterial 
         map={earthTexture}
         shininess={0.1}
@@ -53,16 +56,16 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
   const modelRef = useRef<THREE.Group>(null);
   const { globeSettings } = useSatelliteStore();
   
-  // Calculate satellite's actual 3D position on its orbital path - now stable with memo
+  // Calculate satellite's actual 3D position on its orbital path - updated for new Earth scaling
   const position = useMemo(() => {
-    const earthRadius = 1;
+    const earthRadius = 5; // Updated to match new Earth radius
     const earthRadiusKm = 6371;
     
     // Calculate orbital radius (same as in OrbitPath)
     const altitudeKm = satellite.orbital.altitude;
     const orbitalRadiusKm = earthRadiusKm + altitudeKm;
-    const orbitalRadius = orbitalRadiusKm / earthRadiusKm;
-    const safeOrbitalRadius = Math.max(orbitalRadius, 1.02);
+    const orbitalRadius = (orbitalRadiusKm / earthRadiusKm) * earthRadius; // Scale to new Earth size
+    const safeOrbitalRadius = Math.max(orbitalRadius, earthRadius + 0.1); // Prevent intersection with Earth
     
     // Get orbital inclination
     const inclination = (satellite.orbital.inclination * Math.PI) / 180;
@@ -388,16 +391,16 @@ interface OrbitPathProps {
 }
 
 const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
-  // Create stable orbital path geometry - only depends on satellite ID for maximum stability
+  // Create stable orbital path geometry - updated for new Earth scaling
   const orbitGeometry = useMemo(() => {
     const points = [];
-    const earthRadius = 1;
+    const earthRadius = 5; // Updated to match new Earth radius
     const earthRadiusKm = 6371;
     
     const altitudeKm = satellite.orbital.altitude;
     const orbitalRadiusKm = earthRadiusKm + altitudeKm;
-    const orbitalRadius = orbitalRadiusKm / earthRadiusKm;
-    const safeOrbitalRadius = Math.max(orbitalRadius, 1.02);
+    const orbitalRadius = (orbitalRadiusKm / earthRadiusKm) * earthRadius; // Scale to new Earth size
+    const safeOrbitalRadius = Math.max(orbitalRadius, earthRadius + 0.1); // Prevent intersection with Earth
     
     const inclination = (satellite.orbital.inclination * Math.PI) / 180;
     
@@ -448,7 +451,7 @@ const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
   );
 };
 
-// Camera focus controller component
+// Camera focus controller component with collision detection
 const CameraFocusController: React.FC = () => {
   const controlsRef = useRef<any>(null);
   const { filteredSatellites, globeSettings } = useSatelliteStore();
@@ -460,13 +463,13 @@ const CameraFocusController: React.FC = () => {
     if (globeSettings.selectedSatelliteId) {
       const selectedSatellite = filteredSatellites.find(sat => sat.id === globeSettings.selectedSatelliteId);
       if (selectedSatellite) {
-        // Calculate satellite position for camera focus
-        const earthRadius = 1;
+        // Calculate satellite position for camera focus - updated for new Earth scaling
+        const earthRadius = 5; // Updated to match new Earth radius
         const earthRadiusKm = 6371;
         const altitudeKm = selectedSatellite.orbital.altitude;
         const orbitalRadiusKm = earthRadiusKm + altitudeKm;
-        const orbitalRadius = orbitalRadiusKm / earthRadiusKm;
-        const safeOrbitalRadius = Math.max(orbitalRadius, 1.02);
+        const orbitalRadius = (orbitalRadiusKm / earthRadiusKm) * earthRadius; // Scale to new Earth size
+        const safeOrbitalRadius = Math.max(orbitalRadius, earthRadius + 0.1);
         
         const inclination = (selectedSatellite.orbital.inclination * Math.PI) / 180;
         const time = Date.now() / 1000;
@@ -499,8 +502,8 @@ const CameraFocusController: React.FC = () => {
       enablePan={true}
       enableZoom={true}
       enableRotate={true}
-      minDistance={0.1} // Allow zooming very close to surface/satellites
-      maxDistance={20} // Allow zooming much further out
+      minDistance={5.2} // Prevent camera from going inside Earth (Earth radius = 5 + small buffer)
+      maxDistance={50} // Increased max distance for new Earth scale
       enableDamping={true}
       dampingFactor={0.05}
       rotateSpeed={0.5}
@@ -518,8 +521,8 @@ const Scene: React.FC = () => {
   const { filteredSatellites, setSelectedSatellite, globeSettings } = useSatelliteStore();
 
   useEffect(() => {
-    // Set better initial camera position
-    camera.position.set(2.5, 1.5, 2.5);
+    // Set better initial camera position for new Earth scale (radius = 5)
+    camera.position.set(12, 8, 12); // Adjusted for larger Earth
     camera.lookAt(0, 0, 0);
   }, [camera]);
 
@@ -625,7 +628,7 @@ const Globe3D: React.FC = () => {
       <div className="absolute inset-0">
         <Canvas
           camera={{ 
-            position: [2.5, 1.5, 2.5], 
+            position: [12, 8, 12], // Updated for new Earth scale (radius = 5)
             fov: 75,
             near: 0.1,
             far: 1000
