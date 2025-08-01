@@ -286,23 +286,31 @@ const CameraController: React.FC = () => {
 const Scene: React.FC = () => {
   const { filteredSatellites, setSelectedSatellite, globeSettings } = useSatelliteStore();
 
+  // Optimized satellite filtering with memoization
   const visibleSatellites = useMemo(() => {
     const { selectedSatelliteId } = globeSettings;
     
+    // Filter valid satellites and limit to 10,000 for performance
+    let satellites = filteredSatellites
+      .filter(sat => sat?.position?.latitude && sat?.position?.longitude && sat?.position?.altitude)
+      .slice(0, 10000);
+    
+    // Ensure selected satellite is always visible
     if (selectedSatelliteId) {
-      const selected = filteredSatellites.find(sat => sat.id === selectedSatelliteId);
-      return selected ? [selected] : [];
+      const selectedSat = filteredSatellites.find(sat => sat.id === selectedSatelliteId);
+      if (selectedSat && !satellites.find(sat => sat.id === selectedSatelliteId)) {
+        satellites = [selectedSat, ...satellites.slice(0, 9999)];
+      }
     }
     
-    return filteredSatellites
-      .filter(sat => sat?.position?.latitude && sat?.position?.longitude && sat?.position?.altitude)
-      .slice(0, 10000); // Performance limit increased to 10k
+    return satellites;
   }, [filteredSatellites, globeSettings.selectedSatelliteId]);
 
+  // Memoize selected satellite lookup
   const selectedSatellite = useMemo(() => {
     if (!globeSettings.selectedSatelliteId) return null;
-    return filteredSatellites.find(sat => sat.id === globeSettings.selectedSatelliteId);
-  }, [filteredSatellites, globeSettings.selectedSatelliteId]);
+    return visibleSatellites.find(sat => sat.id === globeSettings.selectedSatelliteId);
+  }, [visibleSatellites, globeSettings.selectedSatelliteId]);
 
   return (
     <>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { Search, ExternalLink, ArrowUpDown, ChevronRight, ChevronDown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,8 +21,18 @@ const SatelliteSpreadsheet: React.FC = () => {
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  const toggleRowExpansion = (satelliteId: string, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent row selection when clicking arrow
+  // Optimized event handlers with useCallback
+  const handleSort = useCallback((field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  }, [sortField, sortDirection]);
+
+  const toggleRowExpansion = useCallback((satelliteId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
     setExpandedRows(prev => {
       const newSet = new Set(prev);
       if (newSet.has(satelliteId)) {
@@ -32,16 +42,7 @@ const SatelliteSpreadsheet: React.FC = () => {
       }
       return newSet;
     });
-  };
-
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
+  }, []);
 
   const sortedSatellites = useMemo(() => {
     if (!sortField) return filteredSatellites;

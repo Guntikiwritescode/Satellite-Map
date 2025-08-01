@@ -41,35 +41,53 @@ export const useSatelliteData = () => {
     }
   }, [satelliteError, setError]);
 
-  // Real-time position updates
+  // Optimized real-time position updates with error handling and reduced frequency
   useEffect(() => {
     if (satellites.length === 0) return;
 
     const updatePositions = async () => {
       try {
-        const updatedSatellites = satellites.map(sat => {
-          try {
-            const position = spaceTrackAPI.calculatePosition(sat.tle.line1, sat.tle.line2);
-            return {
-              ...sat,
-              position: {
-                ...position,
-                timestamp: Date.now()
+        // Process satellites in smaller batches to avoid blocking
+        const batchSize = 100;
+        const updatedSatellites = [...satellites];
+        
+        for (let i = 0; i < satellites.length; i += batchSize) {
+          const batch = satellites.slice(i, i + batchSize);
+          
+          batch.forEach((sat, index) => {
+            try {
+              // Only update if TLE data is valid
+              if (sat.tle?.line1 && sat.tle?.line2 && sat.tle.line1.length > 10 && sat.tle.line2.length > 10) {
+                const position = spaceTrackAPI.calculatePosition(sat.tle.line1, sat.tle.line2);
+                const actualIndex = i + index;
+                updatedSatellites[actualIndex] = {
+                  ...sat,
+                  position: {
+                    ...position,
+                    timestamp: Date.now()
+                  }
+                };
               }
-            };
-          } catch (error) {
-            return sat;
-          }
-        });
+            } catch (error) {
+              // Silently fail for individual satellites to avoid console spam
+              // Keep original position data
+            }
+          });
+          
+          // Yield control to prevent blocking
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        
         setSatellites(updatedSatellites);
       } catch (error) {
         console.error('Error updating satellite positions:', error);
       }
     };
 
-    const interval = setInterval(updatePositions, 3000); // 3 seconds
+    // Reduced frequency from 3 seconds to 10 seconds for better performance
+    const interval = setInterval(updatePositions, 10000);
     return () => clearInterval(interval);
-  }, [satellites, setSatellites]);
+  }, [satellites.length, setSatellites]); // Only depend on satellites.length, not the entire array
 
   // Get user location
   useEffect(() => {
