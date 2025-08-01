@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Search, Filter, Globe, Satellite as SatelliteIcon, Clock, MapPin, Zap } from 'lucide-react';
+import { Search, Filter, Globe, Satellite as SatelliteIcon, Clock, MapPin, Zap, ExternalLink } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import FilterPanel from './FilterPanel';
@@ -186,6 +186,32 @@ const SatelliteTable: React.FC = () => {
                     </span>
                   </div>
                 </div>
+
+                {/* Description - Show if available */}
+                {satellite.description && (
+                  <div className="bg-muted/20 rounded px-2 py-1.5">
+                    <h4 className="text-xs font-medium text-foreground mb-1">About</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
+                      {satellite.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Wikipedia Link - Show if available */}
+                {satellite.wikipediaUrl && (
+                  <div className="flex justify-end">
+                    <a
+                      href={satellite.wikipediaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span>Learn more</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
               </div>
             </Card>
           ))}

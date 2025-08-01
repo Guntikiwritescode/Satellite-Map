@@ -358,6 +358,8 @@ class RealSatelliteAPI {
         agency: 'NASA/Roscosmos',
         launchDate: '1998-11-20',
         status: 'active',
+        description: 'The International Space Station is a modular space station in low Earth orbit. It serves as a microgravity research laboratory where crew members conduct experiments in biology, human biology, physics, astronomy, and meteorology. The ISS is the largest human-made object in space and has been continuously inhabited since November 2000.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/International_Space_Station',
         orbital: {
           altitude: 408,
           period: 92.68,
@@ -380,6 +382,8 @@ class RealSatelliteAPI {
         agency: 'CNSA',
         launchDate: '2021-04-29',
         status: 'active',
+        description: 'Tiangong is China\'s modular space station in low Earth orbit. The name "Tiangong" translates to "Heavenly Palace". It serves as a national laboratory for scientific research and technology demonstrations. The station is designed to support long-term crewed missions and international cooperation in space exploration.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/Tiangong_space_station',
         orbital: {
           altitude: 340,
           period: 91.2,
@@ -404,6 +408,8 @@ class RealSatelliteAPI {
         agency: 'SpaceX',
         launchDate: '2019-05-24',
         status: 'active' as const,
+        description: 'Starlink is a satellite internet constellation operated by SpaceX, providing satellite Internet access coverage to most of Earth. The constellation consists of thousands of mass-produced small satellites in low Earth orbit, which communicate with designated ground transceivers.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/Starlink',
         orbital: {
           altitude: 550,
           period: 95.4,
@@ -428,6 +434,8 @@ class RealSatelliteAPI {
         agency: 'US Space Force',
         launchDate: '2010-05-28',
         status: 'active' as const,
+        description: 'The Global Positioning System (GPS) is a satellite-based radionavigation system owned by the US Space Force and operated by the 2nd Space Operations Squadron. It provides geolocation and time information to GPS receivers anywhere on Earth where there is an unobstructed line of sight to four or more GPS satellites.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/Global_Positioning_System',
         orbital: {
           altitude: 20200,
           period: 717.97,
@@ -452,6 +460,8 @@ class RealSatelliteAPI {
         agency: 'ESA',
         launchDate: '2011-10-21',
         status: 'active' as const,
+        description: 'Galileo is a global navigation satellite system (GNSS) created by the European Union through the European Space Agency (ESA). It is intended to allow for better positioning services at higher latitudes than other positioning systems and to provide an alternative to GPS.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/Galileo_(satellite_navigation)',
         orbital: {
           altitude: 23222,
           period: 844.7,
@@ -568,6 +578,8 @@ class RealSatelliteAPI {
         agency: 'NASA/ESA',
         launchDate: '1990-04-24',
         status: 'active',
+        description: 'The Hubble Space Telescope is a space telescope that was launched into low Earth orbit in 1990 and remains in operation. It was not the first space telescope, but it is one of the largest and most versatile, renowned for its deep space images and groundbreaking scientific discoveries.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/Hubble_Space_Telescope',
         orbital: {
           altitude: 547,
           period: 95.42,

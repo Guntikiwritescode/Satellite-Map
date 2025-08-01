@@ -6,6 +6,8 @@ export interface Satellite {
   agency: string;
   launchDate: string;
   status: SatelliteStatus;
+  description?: string; // Historical summary and role description
+  wikipediaUrl?: string; // Link to Wikipedia page
   orbital: {
     altitude: number; // km
     period: number; // minutes
