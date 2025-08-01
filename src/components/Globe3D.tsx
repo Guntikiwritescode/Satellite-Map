@@ -503,7 +503,7 @@ const CameraFocusController: React.FC = () => {
       enableZoom={true}
       enableRotate={true}
       minDistance={5.2} // Prevent camera from going inside Earth (Earth radius = 5 + small buffer)
-      maxDistance={50} // Increased max distance for new Earth scale
+      maxDistance={200} // Much further zoom out for system overview
       enableDamping={true}
       dampingFactor={0.05}
       rotateSpeed={0.5}
