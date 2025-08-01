@@ -45,8 +45,11 @@ interface SpaceTrackGPData {
 }
 
 export class SpaceTrackAPI {
-  private baseUrl = 'https://www.space-track.org';
-  private sessionCookie: string | null = null;
+  private proxyUrl = '/functions/v1/space-track-proxy';
+  private credentials = {
+    username: 'nihanth20@gmail.com',
+    password: 'CS2wTBBW.*LjZeY'
+  };
   private lastRequest = 0;
   private requestQueue: Promise<any> = Promise.resolve();
   
@@ -54,7 +57,7 @@ export class SpaceTrackAPI {
   private readonly RATE_LIMIT_DELAY = 2000; // 2 seconds between requests to be safe
 
   constructor() {
-    console.log('SpaceTrackAPI initialized with authentication');
+    console.log('SpaceTrackAPI initialized with Supabase proxy');
   }
 
   private async rateLimit(): Promise<void> {
@@ -76,80 +79,33 @@ export class SpaceTrackAPI {
     });
   }
 
-  async authenticate(): Promise<void> {
-    console.log('Authenticating with Space-Track.org...');
-    
-    try {
-      const response = await fetch(`${this.baseUrl}/ajaxauth/login`, {
+  private async makeProxyRequest(endpoint: string): Promise<any> {
+    return this.queueRequest(async () => {
+      console.log(`Making Space-Track request via proxy: ${endpoint}`);
+
+      const response = await fetch(this.proxyUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
-        body: 'identity=nihanth20@gmail.com&password=CS2wTBBW.*LjZeY',
-        credentials: 'include'
+        body: JSON.stringify({
+          action: 'fetch',
+          endpoint,
+          credentials: this.credentials
+        })
       });
 
       if (!response.ok) {
-        throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
-      }
-
-      // Extract session cookie
-      const cookies = response.headers.get('set-cookie');
-      if (cookies) {
-        const sessionMatch = cookies.match(/JSESSIONID=([^;]+)/);
-        if (sessionMatch) {
-          this.sessionCookie = sessionMatch[1];
-        }
-      }
-
-      console.log('Successfully authenticated with Space-Track.org');
-    } catch (error) {
-      console.error('Authentication error:', error);
-      throw error;
-    }
-  }
-
-  private async makeRequest(endpoint: string): Promise<any> {
-    return this.queueRequest(async () => {
-      if (!this.sessionCookie) {
-        await this.authenticate();
-      }
-
-      const url = `${this.baseUrl}${endpoint}`;
-      console.log(`Making Space-Track request: ${endpoint}`);
-
-      const response = await fetch(url, {
-        headers: {
-          'Cookie': this.sessionCookie ? `JSESSIONID=${this.sessionCookie}` : '',
-        },
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          // Session expired, re-authenticate
-          this.sessionCookie = null;
-          await this.authenticate();
-          
-          // Retry the request
-          const retryResponse = await fetch(url, {
-            headers: {
-              'Cookie': this.sessionCookie ? `JSESSIONID=${this.sessionCookie}` : '',
-            },
-            credentials: 'include'
-          });
-          
-          if (!retryResponse.ok) {
-            throw new Error(`Space-Track API error after retry: ${retryResponse.status} ${retryResponse.statusText}`);
-          }
-          
-          return retryResponse.json();
-        }
-        
-        throw new Error(`Space-Track API error: ${response.status} ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Proxy request failed: ${response.status} ${response.statusText} - ${errorData.message || ''}`);
       }
 
       const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(`Space-Track API error: ${data.message || data.error}`);
+      }
+      
       return data;
     });
   }
@@ -161,7 +117,7 @@ export class SpaceTrackAPI {
       // Get current GP data for LEO satellites (altitude < 2000 km roughly corresponds to mean motion > 11)
       const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/MEAN_MOTION/>11/orderby/NORAD_CAT_ID asc/limit/${limit}/format/json`;
       
-      const data: SpaceTrackGPData[] = await this.makeRequest(endpoint);
+      const data: SpaceTrackGPData[] = await this.makeProxyRequest(endpoint);
       
       if (!data || !Array.isArray(data) || data.length === 0) {
         throw new Error('No satellite data received from Space-Track.org');
