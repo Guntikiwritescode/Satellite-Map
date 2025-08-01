@@ -111,30 +111,28 @@ const SatelliteTable: React.FC = () => {
       </Card>
 
       {/* Satellite List - Fixed height with scroll */}
-      <div className="flex-1 min-h-0">
-        <div className="h-full overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+      <div className="flex-1 min-h-0 max-h-[60vh] overflow-hidden">
+        <div className="h-full overflow-y-auto space-y-1 pr-1 scrollbar-thin">
           {filteredSatellites.map((satellite) => (
             <Card
               key={satellite.id}
-              className={`p-3 cursor-pointer transition-all duration-200 hover:shadow-sm ${
+              className={`p-2 cursor-pointer transition-all duration-200 hover:shadow-sm text-xs ${
                 globeSettings.selectedSatelliteId === satellite.id 
                   ? 'cosmic-border bg-primary/5' 
                   : 'glass-panel hover:bg-card/80'
               }`}
               onClick={() => handleSatelliteSelect(satellite)}
             >
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {/* Satellite Header - Condensed */}
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-2 min-w-0 flex-1">
-                    <span className="text-lg flex-shrink-0">{getTypeIcon(satellite.type)}</span>
+                <div className="flex items-start justify-between gap-1">
+                  <div className="flex items-center space-x-1 min-w-0 flex-1">
+                    <span className="text-sm flex-shrink-0">{getTypeIcon(satellite.type)}</span>
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-medium text-sm text-foreground line-clamp-1">
+                      <h3 className="font-medium text-xs text-foreground line-clamp-1">
                         {satellite.name}
                       </h3>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {satellite.agency}
-                      </p>
+                      <p className="text-xs text-muted-foreground truncate">{satellite.agency}</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end space-y-1 flex-shrink-0">
