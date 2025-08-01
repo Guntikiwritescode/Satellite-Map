@@ -324,19 +324,24 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
 
   const [cameraDistance, setCameraDistance] = React.useState(10);
 
-  // Optimize frame updates with distance-based LOD
+  // Optimize frame updates with distance-based LOD and performance improvements
   useFrame((state) => {
     if (!markerRef.current) return;
 
     const currentDistance = state.camera.position.distanceTo(new THREE.Vector3(...position));
     
-    // Performance optimization: Only update if distance changed significantly
-    if (Math.abs(currentDistance - cameraDistance) > 0.5) {
+    // Performance optimization: Only update if distance changed significantly or every 10th frame
+    const frameCount = state.clock.getElapsedTime() * 60; // Approximate frame count
+    const shouldUpdate = Math.abs(currentDistance - cameraDistance) > 1.0 || frameCount % 10 === 0;
+    
+    if (!shouldUpdate) return;
+    
+    if (Math.abs(currentDistance - cameraDistance) > 1.0) {
       setCameraDistance(currentDistance);
     }
     
-    // Distance-based visibility culling for performance
-    const maxRenderDistance = 100;
+    // Aggressive distance-based visibility culling for 1000 satellites
+    const maxRenderDistance = 200; // Increased for better viewing
     const shouldRender = currentDistance < maxRenderDistance;
     setIsVisible(shouldRender);
     
@@ -357,22 +362,23 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
       markerRef.current.visible = !showModel;
       modelRef.current.visible = showModel;
       
+      
       if (showModel) {
         // Keep 3D model at fixed scale when viewing it
         const fixedModelScale = 1.0;
         modelRef.current.scale.setScalar(fixedModelScale);
       } else {
-        // Optimized pulsing effect for selected satellite
+        // Optimized pulsing effect for selected satellite (reduced frequency)
         if (isSelected) {
-          const pulse = Math.sin(state.clock.getElapsedTime() * 4) * 0.3 + 1.2;
+          const pulse = Math.sin(state.clock.getElapsedTime() * 2) * 0.2 + 1.1; // Reduced intensity
           markerRef.current.scale.setScalar(baseScale * pulse);
         } else {
           markerRef.current.scale.setScalar(baseScale);
         }
         
-        // Billboard effect - always face camera (less frequent updates)
-        // Update every 6th frame for better performance
-        if (performance.now() % 100 < 16) { // Approximately every 6 frames at 60fps
+        // Billboard effect - always face camera (less frequent updates for performance)
+        // Update every 15th frame for 1000 satellites
+        if (frameCount % 15 === 0) {
           markerRef.current.lookAt(state.camera.position);
         }
       }
@@ -384,7 +390,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
 
   return (
     <group position={position}>
-      {/* Distance-based marker (circles) */}
+      {/* Distance-based marker (circles) - optimized geometry */}
       <mesh
         ref={markerRef}
         onClick={(e) => {
@@ -396,7 +402,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
           }
         }}
       >
-        <sphereGeometry args={[0.015, 6, 6]} />
+        <sphereGeometry args={[0.015, 4, 4]} />  {/* Reduced geometry complexity */}
         <meshBasicMaterial 
           color={color} 
           transparent={true}
@@ -404,10 +410,10 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         />
       </mesh>
       
-      {/* Simplified glow effect for better performance */}
-      {(isSelected || cameraDistance < 10) && (
+      {/* Simplified glow effect for better performance with 1000 satellites */}
+      {(isSelected || cameraDistance < 20) && (
         <mesh>
-          <sphereGeometry args={[0.025, 6, 6]} />
+          <sphereGeometry args={[0.025, 4, 4]} />  {/* Reduced geometry complexity */}
           <meshBasicMaterial 
             color={color} 
             transparent={true}
