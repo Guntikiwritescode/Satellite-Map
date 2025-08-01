@@ -81,9 +81,9 @@ const Index = () => {
                 </div>
                 <div>
                   <h1 className="text-3xl font-display font-black text-terminal-green neon-text">
-                    DEFCON ORBITAL
+                    GLOBAL VIEW
                   </h1>
-                  <p className="text-sm font-terminal text-neon-cyan animate-typing">
+                  <p className="text-sm font-terminal text-neon-cyan">
                     SATELLITE TRACKING TERMINAL
                   </p>
                 </div>
