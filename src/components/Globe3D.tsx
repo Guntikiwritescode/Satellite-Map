@@ -37,7 +37,7 @@ const Earth: React.FC = () => {
   );
 };
 
-// Individual satellite component
+// Individual satellite component with distance-based scaling
 interface SatelliteMarkerProps {
   satellite: Satellite;
   isSelected: boolean;
@@ -50,6 +50,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
   onClick 
 }) => {
   const markerRef = useRef<THREE.Mesh>(null);
+  const modelRef = useRef<THREE.Group>(null);
   const { globeSettings } = useSatelliteStore();
   
   // Calculate satellite's actual 3D position on its orbital path - now stable with memo
@@ -86,7 +87,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     const newZ = y * Math.sin(inclination) + z * Math.cos(inclination);
     
     return [x, newY, newZ] as [number, number, number];
-  }, [satellite.id, satellite.orbital.altitude, satellite.orbital.inclination, satellite.orbital.period, satellite.position.timestamp]); // Keep timestamp for updates
+  }, [satellite.id, satellite.orbital.altitude, satellite.orbital.inclination, satellite.orbital.period, satellite.position.timestamp]);
 
   // Get color based on satellite type with better contrast
   const color = useMemo(() => {
@@ -103,23 +104,111 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     }
   }, [satellite.type]);
 
-  useFrame((state) => {
-    if (markerRef.current) {
-      // Pulsing effect for selected satellite
-      if (isSelected) {
-        const pulse = Math.sin(state.clock.getElapsedTime() * 4) * 0.3 + 1.2;
-        markerRef.current.scale.setScalar(pulse);
-      } else {
-        markerRef.current.scale.setScalar(1);
+  // Create basic 3D satellite model based on type
+  const SatelliteModel: React.FC = () => {
+    const groupRef = useRef<THREE.Group>(null);
+    
+    useFrame(() => {
+      if (groupRef.current) {
+        // Slow rotation for the satellite model
+        groupRef.current.rotation.y += 0.01;
       }
+    });
+
+    switch (satellite.type) {
+      case 'space-station':
+        return (
+          <group ref={groupRef}>
+            {/* ISS-like structure */}
+            <mesh>
+              <boxGeometry args={[0.008, 0.003, 0.012]} />
+              <meshPhongMaterial color={color} />
+            </mesh>
+            {/* Solar panels */}
+            <mesh position={[-0.015, 0, 0]}>
+              <boxGeometry args={[0.02, 0.001, 0.008]} />
+              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.2} />
+            </mesh>
+            <mesh position={[0.015, 0, 0]}>
+              <boxGeometry args={[0.02, 0.001, 0.008]} />
+              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.2} />
+            </mesh>
+          </group>
+        );
       
-      // Billboard effect - always face camera
-      markerRef.current.lookAt(state.camera.position);
+      case 'communication':
+        return (
+          <group ref={groupRef}>
+            {/* Main body */}
+            <mesh>
+              <cylinderGeometry args={[0.002, 0.002, 0.008]} />
+              <meshPhongMaterial color={color} />
+            </mesh>
+            {/* Dish */}
+            <mesh position={[0, 0.006, 0]} rotation={[Math.PI / 4, 0, 0]}>
+              <coneGeometry args={[0.004, 0.002, 8]} />
+              <meshPhongMaterial color="#64748b" />
+            </mesh>
+          </group>
+        );
+      
+      default:
+        return (
+          <group ref={groupRef}>
+            {/* Generic satellite body */}
+            <mesh>
+              <boxGeometry args={[0.003, 0.003, 0.006]} />
+              <meshPhongMaterial color={color} />
+            </mesh>
+            {/* Solar panels */}
+            <mesh position={[-0.006, 0, 0]}>
+              <boxGeometry args={[0.008, 0.001, 0.004]} />
+              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.2} />
+            </mesh>
+            <mesh position={[0.006, 0, 0]}>
+              <boxGeometry args={[0.008, 0.001, 0.004]} />
+              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.2} />
+            </mesh>
+          </group>
+        );
+    }
+  };
+
+  useFrame((state) => {
+    const cameraDistance = state.camera.position.distanceTo(new THREE.Vector3(...position));
+    
+    if (markerRef.current && modelRef.current) {
+      // Distance-based scaling for marker
+      const baseScale = Math.max(0.3, Math.min(2.0, cameraDistance * 0.5));
+      
+      // Show 3D model when very close (distance < 0.5), otherwise show marker
+      const showModel = cameraDistance < 0.5;
+      
+      markerRef.current.visible = !showModel;
+      modelRef.current.visible = showModel;
+      
+      if (!showModel) {
+        // Pulsing effect for selected satellite
+        if (isSelected) {
+          const pulse = Math.sin(state.clock.getElapsedTime() * 4) * 0.3 + 1.2;
+          markerRef.current.scale.setScalar(baseScale * pulse);
+        } else {
+          markerRef.current.scale.setScalar(baseScale);
+        }
+        
+        // Billboard effect - always face camera
+        markerRef.current.lookAt(state.camera.position);
+      } else {
+        // Scale 3D model appropriately
+        const modelScale = Math.max(0.5, Math.min(3.0, (0.5 - cameraDistance) * 10));
+        modelRef.current.scale.setScalar(modelScale);
+      }
     }
   });
 
   return (
     <group position={position}>
+      {/* Distance-based marker (circles) */}
       <mesh
         ref={markerRef}
         onClick={(e) => {
@@ -145,6 +234,16 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         />
       </mesh>
       
+      {/* 3D satellite model when zoomed in close */}
+      <group 
+        ref={modelRef}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+      >
+        <SatelliteModel />
+      </group>
       
       {/* Satellite info on selection */}
       {isSelected && (
