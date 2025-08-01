@@ -61,23 +61,33 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     const earthRadius = 5; // Updated to match new Earth radius
     const earthRadiusKm = 6371;
     
-    // Calculate orbital radius (same as in OrbitPath)
-    const altitudeKm = satellite.orbital.altitude;
+    // Validate input data
+    if (!satellite?.orbital) {
+      console.warn('Missing orbital data for satellite:', satellite?.id);
+      return [0, earthRadius + 1, 0] as [number, number, number];
+    }
+    
+    // Calculate orbital radius (same as in OrbitPath) with validation
+    const altitudeKm = satellite.orbital.altitude || 400;
+    const period = satellite.orbital.period || 90;
+    const inclination = satellite.orbital.inclination || 0;
+    
     const orbitalRadiusKm = earthRadiusKm + altitudeKm;
     const orbitalRadius = (orbitalRadiusKm / earthRadiusKm) * earthRadius; // Scale to new Earth size
     const safeOrbitalRadius = Math.max(orbitalRadius, earthRadius + 0.1); // Prevent intersection with Earth
     
     // Get orbital inclination
-    const inclination = (satellite.orbital.inclination * Math.PI) / 180;
+    const inclinationRad = (inclination * Math.PI) / 180;
     
     // Calculate satellite's position along its orbital path
     // Use current time and satellite's orbital period to determine where it is on the orbit
     const time = Date.now() / 1000;
-    const orbitPeriodSeconds = satellite.orbital.period * 60; // Convert minutes to seconds
+    const orbitPeriodSeconds = period * 60; // Convert minutes to seconds
     const orbitSpeed = (2 * Math.PI) / orbitPeriodSeconds; // radians per second
     
     // Add satellite-specific offset based on its ID for distribution
-    const satelliteOffset = (parseInt(satellite.id) % 1000) / 1000 * Math.PI * 2;
+    const satelliteIdNum = parseInt(satellite.id) || 0;
+    const satelliteOffset = (satelliteIdNum % 1000) / 1000 * Math.PI * 2;
     const angle = (time * orbitSpeed + satelliteOffset) % (Math.PI * 2);
     
     // Position on orbital path (same calculation as OrbitPath)
@@ -86,11 +96,27 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     let z = safeOrbitalRadius * Math.sin(angle);
     
     // Apply inclination rotation (same as OrbitPath)
-    const newY = y * Math.cos(inclination) - z * Math.sin(inclination);
-    const newZ = y * Math.sin(inclination) + z * Math.cos(inclination);
+    const newY = y * Math.cos(inclinationRad) - z * Math.sin(inclinationRad);
+    const newZ = y * Math.sin(inclinationRad) + z * Math.cos(inclinationRad);
     
-    return [x, newY, newZ] as [number, number, number];
-  }, [satellite.id, satellite.orbital.altitude, satellite.orbital.inclination, satellite.orbital.period, satellite.position.timestamp]);
+    // Validate final position
+    const finalPos = [x, newY, newZ] as [number, number, number];
+    
+    // Check for NaN values and log them
+    if (isNaN(finalPos[0]) || isNaN(finalPos[1]) || isNaN(finalPos[2])) {
+      console.error('Invalid position calculated for satellite:', satellite.id, {
+        position: finalPos,
+        altitude: altitudeKm,
+        period: period,
+        inclination: inclination,
+        orbitalRadius: safeOrbitalRadius,
+        angle: angle
+      });
+      return [0, earthRadius + 1, 0] as [number, number, number];
+    }
+    
+    return finalPos;
+  }, [satellite.id, satellite.orbital?.altitude, satellite.orbital?.inclination, satellite.orbital?.period]);
 
   // Get color based on satellite type with better contrast
   const color = useMemo(() => {
@@ -407,12 +433,20 @@ const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
     const earthRadius = 5; // Updated to match new Earth radius
     const earthRadiusKm = 6371;
     
-    const altitudeKm = satellite.orbital.altitude;
+    // Validate orbital data
+    if (!satellite?.orbital) {
+      console.warn('Missing orbital data for orbit path:', satellite?.id);
+      return new THREE.BufferGeometry();
+    }
+    
+    const altitudeKm = satellite.orbital.altitude || 400;
+    const inclination = satellite.orbital.inclination || 0;
+    
     const orbitalRadiusKm = earthRadiusKm + altitudeKm;
     const orbitalRadius = (orbitalRadiusKm / earthRadiusKm) * earthRadius; // Scale to new Earth size
     const safeOrbitalRadius = Math.max(orbitalRadius, earthRadius + 0.1); // Prevent intersection with Earth
     
-    const inclination = (satellite.orbital.inclination * Math.PI) / 180;
+    const inclinationRad = (inclination * Math.PI) / 180;
     
     const numPoints = 128;
     for (let i = 0; i <= numPoints; i++) {
@@ -422,16 +456,21 @@ const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
       let y = 0;
       let z = safeOrbitalRadius * Math.sin(angle);
       
-      const newY = y * Math.cos(inclination) - z * Math.sin(inclination);
-      const newZ = y * Math.sin(inclination) + z * Math.cos(inclination);
+      const newY = y * Math.cos(inclinationRad) - z * Math.sin(inclinationRad);
+      const newZ = y * Math.sin(inclinationRad) + z * Math.cos(inclinationRad);
       
-      points.push(x, newY, newZ);
+      // Validate calculated points
+      if (!isNaN(x) && !isNaN(newY) && !isNaN(newZ)) {
+        points.push(x, newY, newZ);
+      }
     }
     
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(points), 3));
+    if (points.length > 0) {
+      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(points), 3));
+    }
     return geometry;
-  }, [satellite.id]); // Only depend on satellite ID for maximum stability
+  }, [satellite.id, satellite.orbital?.altitude, satellite.orbital?.inclination]); // Added orbital deps
 
   // Stable color based on satellite type  
   const orbitColor = useMemo(() => {
@@ -472,32 +511,51 @@ const CameraFocusController: React.FC = () => {
     
     if (globeSettings.selectedSatelliteId) {
       const selectedSatellite = filteredSatellites.find(sat => sat.id === globeSettings.selectedSatelliteId);
-      if (selectedSatellite) {
-        // Calculate satellite position for camera focus - updated for new Earth scaling
-        const earthRadius = 5; // Updated to match new Earth radius
-        const earthRadiusKm = 6371;
-        const altitudeKm = selectedSatellite.orbital.altitude;
-        const orbitalRadiusKm = earthRadiusKm + altitudeKm;
-        const orbitalRadius = (orbitalRadiusKm / earthRadiusKm) * earthRadius; // Scale to new Earth size
-        const safeOrbitalRadius = Math.max(orbitalRadius, earthRadius + 0.1);
-        
-        const inclination = (selectedSatellite.orbital.inclination * Math.PI) / 180;
-        const time = Date.now() / 1000;
-        const orbitPeriodSeconds = selectedSatellite.orbital.period * 60;
-        const orbitSpeed = (2 * Math.PI) / orbitPeriodSeconds;
-        const satelliteOffset = (parseInt(selectedSatellite.id) % 1000) / 1000 * Math.PI * 2;
-        const angle = (time * orbitSpeed + satelliteOffset) % (Math.PI * 2);
-        
-        let x = safeOrbitalRadius * Math.cos(angle);
-        let y = 0;
-        let z = safeOrbitalRadius * Math.sin(angle);
-        
-        const newY = y * Math.cos(inclination) - z * Math.sin(inclination);
-        const newZ = y * Math.sin(inclination) + z * Math.cos(inclination);
-        
-        // Smoothly transition camera focus to satellite
-        controlsRef.current.target.set(x, newY, newZ);
-        controlsRef.current.update();
+      if (selectedSatellite?.orbital) {
+        try {
+          // Calculate satellite position for camera focus - updated for new Earth scaling
+          const earthRadius = 5; // Updated to match new Earth radius
+          const earthRadiusKm = 6371;
+          const altitudeKm = selectedSatellite.orbital.altitude || 400;
+          const period = selectedSatellite.orbital.period || 90;
+          const inclination = selectedSatellite.orbital.inclination || 0;
+          
+          const orbitalRadiusKm = earthRadiusKm + altitudeKm;
+          const orbitalRadius = (orbitalRadiusKm / earthRadiusKm) * earthRadius; // Scale to new Earth size
+          const safeOrbitalRadius = Math.max(orbitalRadius, earthRadius + 0.1);
+          
+          const inclinationRad = (inclination * Math.PI) / 180;
+          const time = Date.now() / 1000;
+          const orbitPeriodSeconds = period * 60;
+          const orbitSpeed = (2 * Math.PI) / orbitPeriodSeconds;
+          const satelliteIdNum = parseInt(selectedSatellite.id) || 0;
+          const satelliteOffset = (satelliteIdNum % 1000) / 1000 * Math.PI * 2;
+          const angle = (time * orbitSpeed + satelliteOffset) % (Math.PI * 2);
+          
+          let x = safeOrbitalRadius * Math.cos(angle);
+          let y = 0;
+          let z = safeOrbitalRadius * Math.sin(angle);
+          
+          const newY = y * Math.cos(inclinationRad) - z * Math.sin(inclinationRad);
+          const newZ = y * Math.sin(inclinationRad) + z * Math.cos(inclinationRad);
+          
+          // Validate position before setting camera target
+          if (!isNaN(x) && !isNaN(newY) && !isNaN(newZ)) {
+            // Smoothly transition camera focus to satellite
+            controlsRef.current.target.set(x, newY, newZ);
+            controlsRef.current.update();
+          } else {
+            console.warn('Invalid camera target position for satellite:', selectedSatellite.id);
+            // Return focus to Earth center as fallback
+            controlsRef.current.target.set(0, 0, 0);
+            controlsRef.current.update();
+          }
+        } catch (error) {
+          console.error('Error calculating camera focus position:', error);
+          // Return focus to Earth center as fallback
+          controlsRef.current.target.set(0, 0, 0);
+          controlsRef.current.update();
+        }
       }
     } else {
       // Return focus to Earth center
@@ -512,7 +570,7 @@ const CameraFocusController: React.FC = () => {
       enablePan={true}
       enableZoom={true}
       enableRotate={true}
-      minDistance={0.001} // Allow extreme close-up to satellite scale - much smaller than Earth
+      minDistance={0.1} // Increased from 0.001 to prevent camera issues
       maxDistance={200} // Much further zoom out for system overview
       enableDamping={true}
       dampingFactor={0.05}
