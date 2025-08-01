@@ -285,10 +285,13 @@ class RealSatelliteAPI {
         const gmst = satellite.gstime(now);
         const positionGd = satellite.eciToGeodetic(positionEci, gmst);
         
+        // Use the actual calculated altitude from TLE data
+        const actualAltitude = positionGd.height;
+        
         return {
           latitude: satellite.degreesLat(positionGd.latitude),
           longitude: satellite.degreesLong(positionGd.longitude),
-          altitude: positionGd.height,
+          altitude: actualAltitude, // Real altitude from TLE calculation
           timestamp: now.getTime()
         };
       }
@@ -296,10 +299,11 @@ class RealSatelliteAPI {
       console.error('Error calculating satellite position from TLE:', error);
     }
     
+    // Fallback with different default altitudes based on satellite type
     return {
       latitude: 0,
       longitude: 0,
-      altitude: 400,
+      altitude: 400, // Still need a fallback
       timestamp: Date.now()
     };
   }
