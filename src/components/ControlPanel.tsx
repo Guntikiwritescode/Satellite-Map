@@ -1,8 +1,7 @@
 import React from 'react';
-import { Play, Pause, RotateCcw, Eye, EyeOff, Orbit, MapPin, Clock, Zap } from 'lucide-react';
+import { RotateCcw, Eye, EyeOff, Orbit, MapPin, Clock, Zap, Filter, Activity } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useSatelliteStore } from '../stores/satelliteStore';
@@ -12,81 +11,68 @@ const ControlPanel: React.FC = () => {
     globeSettings, 
     updateGlobeSettings, 
     getSelectedSatellite,
-    filteredSatellites
+    filteredSatellites,
+    filters,
+    updateFilters
   } = useSatelliteStore();
 
   const selectedSatellite = getSelectedSatellite();
 
-  const handleTimeSpeedChange = (value: number[]) => {
-    updateGlobeSettings({ timeSpeed: value[0] });
-  };
-
-  const togglePause = () => {
-    updateGlobeSettings({ isPaused: !globeSettings.isPaused });
-  };
-
   const resetView = () => {
     updateGlobeSettings({ 
       selectedSatelliteId: null,
-      cameraFollowSatellite: false,
-      timeSpeed: 1,
-      isPaused: false
+      cameraFollowSatellite: false
     });
   };
 
-  const formatTimeSpeed = (speed: number) => {
-    if (speed === 1) return 'Real-time';
-    if (speed < 1) return `${speed}x slower`;
-    return `${speed}x faster`;
+  const resetFilters = () => {
+    updateFilters({
+      types: [],
+      countries: [],
+      agencies: [],
+      status: [],
+      searchQuery: '',
+      showOnlyVisible: false
+    });
   };
 
   return (
     <div className="space-y-4">
-      {/* Time Controls */}
+      {/* Real-time Status */}
       <Card className="glass-panel p-4">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-foreground flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-primary" />
-              <span>Time Controls</span>
+              <Activity className="h-4 w-4 text-green-400" />
+              <span>Live Tracking</span>
             </h3>
-            <Badge variant="outline" className="cosmic-border">
-              {formatTimeSpeed(globeSettings.timeSpeed)}
+            <Badge variant="outline" className="cosmic-border text-green-400 border-green-400/30">
+              Real-time
             </Badge>
           </div>
           
-          <div className="flex items-center space-x-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={togglePause}
-              className="cosmic-border"
-            >
-              {globeSettings.isPaused ? (
-                <Play className="h-4 w-4" />
-              ) : (
-                <Pause className="h-4 w-4" />
-              )}
-            </Button>
-            
-            <div className="flex-1">
-              <Slider
-                value={[globeSettings.timeSpeed]}
-                onValueChange={handleTimeSpeedChange}
-                min={0.1}
-                max={10}
-                step={0.1}
-                className="w-full"
-              />
-            </div>
-            
+          <div className="text-sm text-muted-foreground">
+            Positions updated every 30 seconds using live TLE data from Celestrak
+          </div>
+          
+          <div className="flex space-x-2">
             <Button
               variant="outline"
               size="sm"
               onClick={resetView}
-              className="cosmic-border"
+              className="cosmic-border flex-1"
             >
-              <RotateCcw className="h-4 w-4" />
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset View
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={resetFilters}
+              className="cosmic-border flex-1"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Clear Filters
             </Button>
           </div>
         </div>

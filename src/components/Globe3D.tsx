@@ -5,57 +5,31 @@ import * as THREE from 'three';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { Satellite } from '../types/satellite.types';
 
-// Earth component
+// Earth component with realistic texture
 const Earth: React.FC = () => {
   const meshRef = useRef<THREE.Mesh>(null);
   
-  // Create Earth texture
+  // Load real Earth texture
   const earthTexture = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
-    
-    if (!ctx) {
-      console.warn('Could not get canvas context');
-      return null;
-    }
-    
-    // Create a simple blue marble effect
-    const gradient = ctx.createLinearGradient(0, 0, 0, 256);
-    gradient.addColorStop(0, '#1e3a8a');
-    gradient.addColorStop(0.5, '#2563eb');
-    gradient.addColorStop(1, '#1e3a8a');
-    
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 512, 256);
-    
-    // Add some simple landmasses
-    ctx.fillStyle = '#22c55e';
-    ctx.fillRect(50, 80, 80, 60);   // Continent 1
-    ctx.fillRect(200, 50, 100, 80); // Continent 2
-    ctx.fillRect(350, 120, 90, 70); // Continent 3
-    
-    try {
-      return new THREE.CanvasTexture(canvas);
-    } catch (error) {
-      console.warn('Failed to create texture:', error);
-      return null;
-    }
+    const loader = new THREE.TextureLoader();
+    return loader.load('/earth-texture.jpg', undefined, undefined, (error) => {
+      console.warn('Failed to load Earth texture, using fallback:', error);
+    });
   }, []);
 
   useFrame(() => {
     if (meshRef.current) {
-      meshRef.current.rotation.y += 0.001;
+      meshRef.current.rotation.y += 0.001; // Slow realistic rotation
     }
   });
 
   return (
     <mesh ref={meshRef}>
-      <sphereGeometry args={[1, 32, 16]} />
+      <sphereGeometry args={[1, 64, 32]} />
       <meshPhongMaterial 
-        color={earthTexture ? undefined : '#2563eb'} 
-        map={earthTexture || undefined}
+        map={earthTexture}
+        shininess={0.1}
+        transparent={false}
       />
     </mesh>
   );

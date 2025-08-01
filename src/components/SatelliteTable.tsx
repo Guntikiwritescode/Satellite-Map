@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Search, Filter, Globe, Satellite as SatelliteIcon, Clock, MapPin, Zap } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import FilterPanel from './FilterPanel';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useSatelliteStore } from '../stores/satelliteStore';
@@ -98,10 +99,7 @@ const SatelliteTable: React.FC = () => {
               className="pl-10 bg-muted/50 border-border/50 focus:border-primary/50"
             />
           </div>
-          <Button variant="outline" size="sm" className="cosmic-border">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
+          <FilterPanel />
         </div>
       </Card>
 
