@@ -73,7 +73,7 @@ export const useSatelliteStore = create<SatelliteStore>()(
     error: null,
     lastUpdate: 0,
     viewMode: 'globe',
-    maxDisplaySatellites: 1000,
+    maxDisplaySatellites: 500, // Reduced from 1000 for better performance
     
     // Computed - since Zustand getters don't work well, we'll use a selector
     filteredSatellites: [],
