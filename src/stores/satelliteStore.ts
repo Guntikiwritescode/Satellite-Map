@@ -181,73 +181,67 @@ export const useSatelliteStore = create<SatelliteStore>()(
     },
     
     applyFilters: (satellites, filters) => {
-      // Reduce console logging frequency
-      if (Math.random() < 0.1) { // Only log 10% of the time
-        console.log('Applying filters to', satellites.length, 'satellites');
-      }
-      
+      // Early return for empty data
       if (satellites.length === 0) {
         return [];
       }
       
-      let filtered = satellites.filter(satellite => {
-        // Type filter
+      // Use a single pass filter with early exits for better performance
+      const filtered = satellites.filter(satellite => {
+        // Type filter - early exit
         if (filters.types.length > 0 && !filters.types.includes(satellite.type)) {
           return false;
         }
         
-        // Country filter
-        if (filters.countries.length > 0 && !filters.countries.includes(satellite.metadata?.country || 'Unknown')) {
+        // Country filter - early exit
+        const country = satellite.metadata?.country || 'Unknown';
+        if (filters.countries.length > 0 && !filters.countries.includes(country)) {
           return false;
         }
         
-        // Agency filter
-        if (filters.agencies.length > 0 && !filters.agencies.includes(satellite.metadata?.constellation || 'Individual')) {
+        // Agency filter - early exit
+        const agency = satellite.metadata?.constellation || 'Individual';
+        if (filters.agencies.length > 0 && !filters.agencies.includes(agency)) {
           return false;
         }
         
-        // Status filter
+        // Status filter - early exit
         if (filters.status.length > 0 && !filters.status.includes(satellite.status)) {
           return false;
         }
         
-        // Altitude range filter
+        // Altitude range filter - early exit
+        const altitude = satellite.position?.altitude || 0;
         const [minAlt, maxAlt] = filters.altitudeRange;
-        if (satellite.position.altitude < minAlt || satellite.position.altitude > maxAlt) {
+        if (altitude < minAlt || altitude > maxAlt) {
           return false;
         }
         
-        // Search query filter
+        // Search query filter - early exit
         if (filters.searchQuery.trim()) {
           const query = filters.searchQuery.toLowerCase();
-          return (
-            satellite.name.toLowerCase().includes(query) ||
-            (satellite.metadata?.constellation || '').toLowerCase().includes(query) ||
-            (satellite.metadata?.country || '').toLowerCase().includes(query) ||
-            satellite.type.toLowerCase().includes(query)
-          );
+          const name = satellite.name.toLowerCase();
+          const constellation = (satellite.metadata?.constellation || '').toLowerCase();
+          const satelliteCountry = (satellite.metadata?.country || '').toLowerCase();
+          const type = satellite.type.toLowerCase();
+          
+          if (!name.includes(query) && !constellation.includes(query) && 
+              !satelliteCountry.includes(query) && !type.includes(query)) {
+            return false;
+          }
         }
         
         return true;
       });
       
-      // Sort by brightness/popularity (lower magnitude = brighter = more popular)
-      // Use altitude as popularity proxy for now (lower altitude = more visible)
-      filtered.sort((a, b) => {
-        return a.position.altitude - b.position.altitude;
-      });
+      // Optimized sorting - only sort if needed
+      if (filtered.length > 1) {
+        filtered.sort((a, b) => (a.position?.altitude || 0) - (b.position?.altitude || 0));
+      }
       
-      // Limit to max display satellites
+      // Apply limit efficiently
       const maxDisplay = get().maxDisplaySatellites;
-      if (filtered.length > maxDisplay) {
-        filtered = filtered.slice(0, maxDisplay);
-      }
-      
-      // Reduce console logging frequency
-      if (Math.random() < 0.1) { // Only log 10% of the time
-        console.log('Filter result:', filtered.length, 'satellites');
-      }
-      return filtered;
+      return filtered.length > maxDisplay ? filtered.slice(0, maxDisplay) : filtered;
     },
   }))
 );

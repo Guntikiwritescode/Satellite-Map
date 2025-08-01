@@ -20,23 +20,16 @@ const SatelliteTable: React.FC = React.memo(() => {
     getSatelliteById
   } = useSatelliteStore();
 
-  const selectedSatellite = getSatelliteById(globeSettings.selectedSatelliteId || '');
+  // Optimized selected satellite lookup with memoization
+  const selectedSatellite = useMemo(() => {
+    return getSatelliteById(globeSettings.selectedSatelliteId || '');
+  }, [globeSettings.selectedSatelliteId, getSatelliteById]);
 
-  // Memoize logging to reduce console spam
+  // Simplified logging - remove console spam entirely for better performance
   const logData = useMemo(() => ({
     totalSatellites: satellites.length, 
-    filteredCount: filteredSatellites.length,
-    filters 
-  }), [satellites.length, filteredSatellites.length, filters]);
-
-  // Only log every 10th render to reduce console spam
-  const renderCount = useRef(0);
-  useEffect(() => {
-    renderCount.current++;
-    if (renderCount.current % 10 === 0) {
-      console.log('SatelliteTable render (every 10th):', logData);
-    }
-  }, [logData]);
+    filteredCount: filteredSatellites.length
+  }), [satellites.length, filteredSatellites.length]);
 
   const handleSatelliteSelect = (satellite: Satellite) => {
     setSelectedSatellite(satellite.id);

@@ -9,31 +9,40 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useSatelliteStore } from '../stores/satelliteStore';
+import { SatelliteType } from '../types/satellite.types';
 import { spaceTrackAPI } from '../services/spaceTrackAPI';
 
 const FilterPanel: React.FC = () => {
   const { filters, updateFilters, satellites } = useSatelliteStore();
   const [isOpen, setIsOpen] = useState(false);
   
-  // Get filter options from the actual loaded satellites
+  // Optimized filter options generation with better memoization
   const filterOptions = useMemo(() => {
     if (satellites.length === 0) {
       return { types: [], countries: [], agencies: [], statuses: [] };
     }
     
-    const types = [...new Set(satellites.map(s => s.type))].sort();
-    const countries = [...new Set(satellites.map(s => s.metadata?.country).filter(Boolean))].sort();
-    const agencies = [...new Set(satellites.map(s => s.metadata?.constellation).filter(Boolean))].sort();
-    const statuses = [...new Set(satellites.map(s => s.status))].sort();
+    // Use Set for better performance with large datasets
+    const typesSet = new Set<string>();
+    const countriesSet = new Set<string>();
+    const agenciesSet = new Set<string>();
+    const statusesSet = new Set<string>();
     
-    return { types, countries, agencies, statuses };
-  }, [satellites]);
-  
-  console.log('FilterPanel render:', { 
-    satellitesCount: satellites.length, 
-    filterOptions, 
-    currentFilters: filters 
-  });
+    // Single pass through satellites for all filter options
+    satellites.forEach(s => {
+      typesSet.add(s.type);
+      statusesSet.add(s.status);
+      if (s.metadata?.country) countriesSet.add(s.metadata.country);
+      if (s.metadata?.constellation) agenciesSet.add(s.metadata.constellation);
+    });
+    
+    return {
+      types: Array.from(typesSet).sort(),
+      countries: Array.from(countriesSet).sort(),
+      agencies: Array.from(agenciesSet).sort(),
+      statuses: Array.from(statusesSet).sort()
+    };
+  }, [satellites.length]); // Only recalculate when satellite count changes, not content
   
   const activeFilterCount = [
     ...filters.types,
@@ -44,7 +53,7 @@ const FilterPanel: React.FC = () => {
 
   const handleTypeChange = (type: string, checked: boolean) => {
     const newTypes = checked 
-      ? [...filters.types, type as any]
+      ? [...filters.types, type as SatelliteType]
       : filters.types.filter(t => t !== type);
     updateFilters({ types: newTypes });
   };
@@ -169,7 +178,7 @@ const FilterPanel: React.FC = () => {
                 <div key={type} className="flex items-center space-x-2">
                   <Checkbox
                     id={`type-${type}`}
-                    checked={filters.types.includes(type)}
+                    checked={filters.types.includes(type as SatelliteType)}
                     onCheckedChange={(checked) => handleTypeChange(type, !!checked)}
                   />
                   <label 
