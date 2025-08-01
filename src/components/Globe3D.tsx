@@ -171,59 +171,39 @@ const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
     const earthRadius = 1; // Our 3D Earth radius
     const earthRadiusKm = 6371; // Real Earth radius in km
     
-    // Calculate orbital parameters
+    // Calculate orbital radius from altitude - this is the distance from Earth's CENTER
     const altitudeKm = satellite.orbital.altitude;
     const orbitalRadiusKm = earthRadiusKm + altitudeKm;
-    const orbitalRadius = orbitalRadiusKm / earthRadiusKm; // Scale to our scene
+    const orbitalRadius = orbitalRadiusKm / earthRadiusKm; // Scale to our scene (Earth radius = 1)
     
     // Ensure orbit is always outside Earth
-    const minRadius = 1.01; // Slightly above Earth surface
-    const safeOrbitalRadius = Math.max(orbitalRadius, minRadius);
+    const safeOrbitalRadius = Math.max(orbitalRadius, 1.02); // Minimum just above Earth surface
     
-    // Orbital parameters
-    const inclination = (satellite.orbital.inclination * Math.PI) / 180; // Convert to radians
-    const eccentricity = satellite.orbital.eccentricity || 0; // Use eccentricity if available
+    // Get orbital inclination in radians
+    const inclination = (satellite.orbital.inclination * Math.PI) / 180;
     
-    // Current satellite position for reference
-    const satLat = (satellite.position.latitude * Math.PI) / 180;
-    const satLon = (satellite.position.longitude * Math.PI) / 180;
-    
-    // Calculate RAAN (Right Ascension of Ascending Node) from current position
-    // This is simplified - in reality this would come from TLE data
-    const raan = satLon;
-    
-    // Generate orbital path points
+    // Create orbital path centered at Earth's center (0,0,0)
     const numPoints = 128;
     for (let i = 0; i <= numPoints; i++) {
-      const trueAnomaly = (i / numPoints) * Math.PI * 2;
+      const angle = (i / numPoints) * Math.PI * 2;
       
-      // Calculate radius at this point (accounting for eccentricity)
-      const r = safeOrbitalRadius * (1 - eccentricity * eccentricity) / 
-                (1 + eccentricity * Math.cos(trueAnomaly));
+      // Start with circular orbit in the XZ plane (Y=0)
+      let x = safeOrbitalRadius * Math.cos(angle);
+      let y = 0;
+      let z = safeOrbitalRadius * Math.sin(angle);
       
-      // Position in orbital plane (perifocal coordinates)
-      const xOrbit = r * Math.cos(trueAnomaly);
-      const yOrbit = r * Math.sin(trueAnomaly);
-      const zOrbit = 0;
+      // Apply inclination: rotate around X-axis
+      const newY = y * Math.cos(inclination) - z * Math.sin(inclination);
+      const newZ = y * Math.sin(inclination) + z * Math.cos(inclination);
       
-      // Apply orbital transformations
-      // 1. Rotate by inclination around X-axis
-      const x1 = xOrbit;
-      const y1 = yOrbit * Math.cos(inclination) - zOrbit * Math.sin(inclination);
-      const z1 = yOrbit * Math.sin(inclination) + zOrbit * Math.cos(inclination);
-      
-      // 2. Rotate by RAAN around Z-axis (simplified)
-      const x2 = x1 * Math.cos(raan) - y1 * Math.sin(raan);
-      const y2 = x1 * Math.sin(raan) + y1 * Math.cos(raan);
-      const z2 = z1;
-      
-      points.push(x2, z2, y2); // Note: Y and Z swapped for Three.js coordinate system
+      // Points are relative to Earth's center (0,0,0)
+      points.push(x, newY, newZ);
     }
     
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(points), 3));
     return geometry;
-  }, [satellite.orbital.altitude, satellite.orbital.inclination, satellite.orbital.eccentricity, satellite.position.latitude, satellite.position.longitude]);
+  }, [satellite.orbital.altitude, satellite.orbital.inclination]);
 
   // Get color based on satellite type
   const orbitColor = useMemo(() => {
