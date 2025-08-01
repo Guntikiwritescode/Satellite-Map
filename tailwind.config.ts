@@ -18,6 +18,11 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				'terminal': ['Share Tech Mono', 'Courier New', 'monospace'],
+				'display': ['Orbitron', 'Share Tech Mono', 'monospace'],
+				'mono': ['Share Tech Mono', 'Courier New', 'monospace'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -62,15 +67,15 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				/* Space theme colors */
-				'nebula-purple': 'hsl(var(--nebula-purple))',
-				'cosmic-blue': 'hsl(var(--cosmic-blue))',
-				'stellar-cyan': 'hsl(var(--stellar-cyan))',
-				'deep-space': 'hsl(var(--deep-space))',
-				'asteroid-gray': 'hsl(var(--asteroid-gray))',
-				'solar-orange': 'hsl(var(--solar-orange))',
-				'mars-red': 'hsl(var(--mars-red))',
-				'jupiter-amber': 'hsl(var(--jupiter-amber))'
+				/* DEFCON 80's Terminal Colors */
+				'terminal-green': 'hsl(var(--terminal-green))',
+				'neon-cyan': 'hsl(var(--neon-cyan))',
+				'neon-magenta': 'hsl(var(--neon-magenta))',
+				'neon-orange': 'hsl(var(--neon-orange))',
+				'neon-yellow': 'hsl(var(--neon-yellow))',
+				'danger-red': 'hsl(var(--danger-red))',
+				'grid-green': 'hsl(var(--grid-green))',
+				'scan-blue': 'hsl(var(--scan-blue))'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -98,19 +103,27 @@ export default {
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
-				'orbit': 'orbit var(--orbit-duration) linear infinite',
-				'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
-				'float': 'float 3s ease-in-out infinite'
+				/* DEFCON Terminal Animations */
+				'terminal-flicker': 'terminal-flicker var(--flicker-duration) infinite linear',
+				'terminal-scan': 'terminal-scan var(--scan-duration) infinite linear',
+				'neon-glow': 'neon-glow var(--glow-duration) ease-in-out infinite alternate',
+				'neon-pulse': 'neon-pulse 2s ease-in-out infinite',
+				'scanner-sweep': 'scanner-sweep 3s infinite linear',
+				'typing': 'typing 0.5s steps(20) infinite',
+				'terminal-glow': 'terminal-glow var(--glow-duration) ease-in-out infinite alternate'
 			},
 			backgroundImage: {
-				'gradient-nebula': 'var(--gradient-nebula)',
-				'gradient-cosmic': 'var(--gradient-cosmic)',
-				'gradient-aurora': 'var(--gradient-aurora)'
+				/* DEFCON Gradients */
+				'gradient-terminal': 'var(--gradient-terminal)',
+				'gradient-neon': 'var(--gradient-neon)',
+				'gradient-scan': 'var(--gradient-scan)'
 			},
 			boxShadow: {
-				'orbital': 'var(--shadow-orbital)',
-				'nebula': 'var(--shadow-nebula)',
-				'deep': 'var(--shadow-deep)'
+				/* Neon glow shadows */
+				'neon-cyan': 'var(--shadow-neon-cyan)',
+				'neon-green': 'var(--shadow-neon-green)',
+				'neon-magenta': 'var(--shadow-neon-magenta)',
+				'terminal': 'var(--shadow-terminal)'
 			}
 		}
 	},
