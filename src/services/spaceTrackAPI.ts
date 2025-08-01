@@ -66,17 +66,53 @@ export class SpaceTrackAPI {
     });
   }
 
-  async getAllActiveSatellites(limit: number = 1000): Promise<Satellite[]> {
+  async getHighPrioritySatellites(): Promise<Satellite[]> {
     try {
-      // Get all active satellites regardless of orbit type - much more comprehensive
-      const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/orderby/NORAD_CAT_ID asc/limit/${limit}/format/json`;
-      const data: SpaceTrackGPData[] = await this.makeProxyRequest(endpoint);
+      // Specific NORAD IDs for important satellites
+      const prioritySatellites = [
+        25544, // ISS
+        48274, // Chinese Space Station (Tianhe core module)
+        37820, // HUBBLE SPACE TELESCOPE
+        25994, // HST
+        28654, // SPOT 5
+        27424, // TERRA
+        27891, // AQUA
+        32060, // JASON-1
+        33591, // JASON-2
+        39084, // JASON-3
+        27386, // LANDSAT 7
+        39084, // LANDSAT 8
+        43013, // LANDSAT 9
+        28376, // IKONOS
+        32060, // ENVISAT
+        26871, // CHANDRA
+        21701, // WIND
+        20580, // ACE
+        28485, // CLUSTER II-FM7
+        28486, // CLUSTER II-FM6
+        28487, // CLUSTER II-FM8
+        28488, // CLUSTER II-FM5
+      ];
+
+      const allPriorityData: SpaceTrackGPData[] = [];
       
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        throw new Error('No satellite data received');
+      // Fetch in smaller batches to avoid API limits
+      for (let i = 0; i < prioritySatellites.length; i += 20) {
+        const batch = prioritySatellites.slice(i, i + 20);
+        const noradList = batch.join(',');
+        const endpoint = `/basicspacedata/query/class/gp/NORAD_CAT_ID/${noradList}/orderby/NORAD_CAT_ID/format/json`;
+        
+        try {
+          const batchData: SpaceTrackGPData[] = await this.makeProxyRequest(endpoint);
+          if (batchData && Array.isArray(batchData)) {
+            allPriorityData.push(...batchData);
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch priority satellite batch: ${noradList}`, error);
+        }
       }
 
-      return data.map(sat => this.convertToSatellite(sat)).map(sat => {
+      return allPriorityData.map(sat => this.convertToSatellite(sat)).map(sat => {
         try {
           const position = this.calculatePosition(sat.tle.line1, sat.tle.line2);
           return { ...sat, position: { ...position, timestamp: Date.now() } };
@@ -84,6 +120,40 @@ export class SpaceTrackAPI {
           return sat;
         }
       });
+    } catch (error) {
+      console.error('Error fetching priority satellites:', error);
+      return [];
+    }
+  }
+
+  async getAllActiveSatellites(limit: number = 1000): Promise<Satellite[]> {
+    try {
+      // First get high priority satellites
+      const prioritySatellites = await this.getHighPrioritySatellites();
+      
+      // Then get general active satellites
+      const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/orderby/NORAD_CAT_ID asc/limit/${limit}/format/json`;
+      const data: SpaceTrackGPData[] = await this.makeProxyRequest(endpoint);
+      
+      if (!data || !Array.isArray(data)) {
+        // Return priority satellites even if general fetch fails
+        return prioritySatellites;
+      }
+
+      const generalSatellites = data.map(sat => this.convertToSatellite(sat)).map(sat => {
+        try {
+          const position = this.calculatePosition(sat.tle.line1, sat.tle.line2);
+          return { ...sat, position: { ...position, timestamp: Date.now() } };
+        } catch (error) {
+          return sat;
+        }
+      });
+
+      // Combine priority and general satellites, removing duplicates
+      const priorityIds = new Set(prioritySatellites.map(sat => sat.id));
+      const uniqueGeneralSatellites = generalSatellites.filter(sat => !priorityIds.has(sat.id));
+      
+      return [...prioritySatellites, ...uniqueGeneralSatellites];
     } catch (error) {
       console.error('Error fetching satellites:', error);
       throw error;
