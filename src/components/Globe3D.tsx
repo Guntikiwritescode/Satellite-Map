@@ -300,8 +300,8 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
       // Distance-based scaling for marker - scales down as you get closer
       const baseScale = Math.max(0.05, Math.min(1.5, cameraDistance * 0.2));
       
-      // Show 3D model only when VERY close (distance < 0.15 units)
-      const showModel = cameraDistance < 0.15;
+      // Show 3D model when reasonably close (distance < 8 units) - achievable with current camera limits
+      const showModel = cameraDistance < 8.0;
       
       markerRef.current.visible = !showModel;
       modelRef.current.visible = showModel;
