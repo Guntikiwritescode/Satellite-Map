@@ -129,9 +129,17 @@ export const useSatelliteStore = create<SatelliteStore>()(
       globeSettings: { ...state.globeSettings, ...newSettings }
     })),
     
-    setSelectedSatellite: (id) => set((state) => ({
-      globeSettings: { ...state.globeSettings, selectedSatelliteId: id }
-    })),
+    setSelectedSatellite: (id) => {
+      try {
+        console.log('Selecting satellite:', id);
+        set((state) => ({
+          globeSettings: { ...state.globeSettings, selectedSatelliteId: id }
+        }));
+      } catch (error) {
+        console.error('Error setting selected satellite:', error);
+        set({ error: `Failed to select satellite: ${error.message}` });
+      }
+    },
     
     setLoading: (isLoading) => set({ isLoading }),
     
