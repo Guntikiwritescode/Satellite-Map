@@ -405,8 +405,6 @@ const Stars: React.FC = () => {
 
 // Main Globe3D component with improved controls
 const Globe3D: React.FC = () => {
-  const { setSelectedSatellite } = useSatelliteStore();
-  
   return (
     <div className="h-full w-full bg-gradient-cosmic rounded-lg overflow-hidden relative">
       <div className="absolute inset-0">
@@ -427,7 +425,6 @@ const Globe3D: React.FC = () => {
             gl.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             gl.setClearColor('#000000', 0);
           }}
-          onClick={() => setSelectedSatellite(null)} // Deselect when clicking empty space
         >
           <Scene />
           <CameraFocusController />
