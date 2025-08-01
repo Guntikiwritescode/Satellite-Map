@@ -617,14 +617,14 @@ const Scene: React.FC = () => {
     camera.lookAt(0, 0, 0);
   }, [camera]);
 
-  // Filter satellites based on selection and optimize for performance
+  // Filter satellites based on selection - render all satellites with optimizations
   const visibleSatellites = useMemo(() => {
     if (globeSettings.selectedSatelliteId) {
       // When a satellite is selected, show only that satellite
       return filteredSatellites.filter(sat => sat.id === globeSettings.selectedSatelliteId);
     }
-    // When no satellite is selected, limit to first 150 satellites for performance
-    return filteredSatellites.slice(0, 150);
+    // When no satellite is selected, show all filtered satellites (optimized rendering)
+    return filteredSatellites;
   }, [filteredSatellites, globeSettings.selectedSatelliteId]);
 
   return (
