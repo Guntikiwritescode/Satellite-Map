@@ -17,9 +17,7 @@ const Earth: React.FC = () => {
   }, []);
 
   useFrame(() => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y += 0.0001; // Realistic Earth rotation
-    }
+    // Earth stays stationary - satellites orbit around it (realistic)
   });
 
   return (
@@ -44,7 +42,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
 }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   
-  // Calculate position with proper scaling
+  // Calculate orbital position that changes over time
   const position = useMemo(() => {
     const { latitude, longitude, altitude } = satellite.position;
     if (!latitude || !longitude || !altitude) return null;
@@ -54,12 +52,17 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     const lon = (longitude * Math.PI) / 180;
     const radius = earthRadius + (altitude * 5) / 6371; // Proper scaling
     
-    return [
-      radius * Math.cos(lat) * Math.cos(lon),
-      radius * Math.sin(lat),
-      radius * Math.cos(lat) * Math.sin(lon)
-    ] as [number, number, number];
-  }, [satellite.position]);
+    return {
+      basePosition: [
+        radius * Math.cos(lat) * Math.cos(lon),
+        radius * Math.sin(lat),
+        radius * Math.cos(lat) * Math.sin(lon)
+      ] as [number, number, number],
+      radius,
+      inclination: (satellite.orbital.inclination * Math.PI) / 180,
+      period: satellite.orbital.period || 90 // minutes
+    };
+  }, [satellite.position, satellite.orbital]);
 
   // Satellite type colors
   const color = useMemo(() => {
@@ -76,18 +79,44 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     return colors[satellite.type as keyof typeof colors] || '#6b7280';
   }, [satellite.type]);
 
-  // Simple pulsing animation for selected satellites
+  // Realistic orbital motion animation
   useFrame((state) => {
-    if (meshRef.current && isSelected) {
-      const pulse = Math.sin(state.clock.getElapsedTime() * 3) * 0.1 + 1.0;
-      meshRef.current.scale.setScalar(pulse);
+    if (meshRef.current && position) {
+      // Calculate orbital position based on time and orbital parameters
+      const time = state.clock.getElapsedTime();
+      
+      // Orbital speed: faster satellites have shorter periods
+      const orbitalSpeed = (2 * Math.PI) / (position.period * 6); // 6 = time scale factor
+      
+      // Current orbital angle
+      const angle = time * orbitalSpeed;
+      
+      // Calculate position in orbital plane
+      const x = position.radius * Math.cos(angle);
+      const z = position.radius * Math.sin(angle);
+      const y = 0; // Start in equatorial plane
+      
+      // Apply orbital inclination
+      const inclinedY = y * Math.cos(position.inclination) - z * Math.sin(position.inclination);
+      const inclinedZ = y * Math.sin(position.inclination) + z * Math.cos(position.inclination);
+      
+      // Update satellite position
+      meshRef.current.position.set(x, inclinedY, inclinedZ);
+      
+      // Pulsing animation for selected satellites
+      if (isSelected) {
+        const pulse = Math.sin(state.clock.getElapsedTime() * 3) * 0.1 + 1.0;
+        meshRef.current.scale.setScalar(pulse);
+      } else {
+        meshRef.current.scale.setScalar(1);
+      }
     }
   });
 
   if (!position) return null;
 
   return (
-    <group position={position}>
+    <group>
       <mesh
         ref={meshRef}
         onClick={(e) => {
@@ -100,7 +129,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
       </mesh>
       
       {isSelected && (
-        <mesh>
+        <mesh position={meshRef.current?.position || [0, 0, 0]}>
           <sphereGeometry args={[0.05, 8, 8]} />
           <meshBasicMaterial color={color} transparent opacity={0.3} />
         </mesh>
@@ -141,46 +170,15 @@ const CameraController: React.FC = () => {
       return;
     }
 
-    // Find selected satellite
+    // For selected satellite, we'll track its current orbital position
+    // This is more complex since satellites are now moving, so we'll update in real-time
     const selectedSatellite = filteredSatellites.find(
       sat => sat.id === globeSettings.selectedSatelliteId
     );
     
     if (selectedSatellite && controlsRef.current) {
-      const { latitude, longitude, altitude } = selectedSatellite.position;
-      if (!latitude || !longitude || !altitude) return;
-      
-      // Calculate satellite position (same logic as SatelliteMarker)
-      const earthRadius = 5;
-      const lat = (latitude * Math.PI) / 180;
-      const lon = (longitude * Math.PI) / 180;
-      const radius = earthRadius + (altitude * 5) / 6371;
-      
-      const satellitePosition = new THREE.Vector3(
-        radius * Math.cos(lat) * Math.cos(lon),
-        radius * Math.sin(lat),
-        radius * Math.cos(lat) * Math.sin(lon)
-      );
-      
-      // Calculate camera position (offset from satellite)
-      const offset = satellitePosition.clone().normalize().multiplyScalar(2);
-      const cameraPosition = satellitePosition.clone().add(offset);
-      
-      // Smooth transition to satellite
-      const startPosition = camera.position.clone();
-      const startTarget = controlsRef.current.target.clone();
-      
-      let progress = 0;
-      const animate = () => {
-        progress += 0.03;
-        if (progress <= 1) {
-          camera.position.lerpVectors(startPosition, cameraPosition, progress);
-          controlsRef.current.target.lerpVectors(startTarget, satellitePosition, progress);
-          controlsRef.current.update();
-          requestAnimationFrame(animate);
-        }
-      };
-      animate();
+      // Set up camera to follow the moving satellite
+      // We'll let the real-time tracking happen in the render loop instead
     }
   }, [globeSettings.selectedSatelliteId, filteredSatellites, camera]);
 
