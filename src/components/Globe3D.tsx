@@ -2,6 +2,7 @@ import React, { useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
+import * as satellite from 'satellite.js';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { Satellite } from '../types/satellite.types';
 import ErrorBoundary from './ErrorBoundary';
@@ -110,6 +111,74 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
   );
 });
 
+// Orbital path component for selected satellite
+interface OrbitalPathProps {
+  satellite: Satellite;
+}
+
+const OrbitalPath: React.FC<OrbitalPathProps> = ({ satellite: sat }) => {
+  const pathPoints = useMemo(() => {
+    const points: THREE.Vector3[] = [];
+    const earthRadius = 5;
+    
+    try {
+      const satrec = satellite.twoline2satrec(sat.tle.line1, sat.tle.line2);
+      const now = new Date();
+      const period = sat.orbital.period; // minutes
+      const totalPoints = 100;
+      
+      for (let i = 0; i <= totalPoints; i++) {
+        const timeOffset = (i / totalPoints) * period * 60 * 1000; // convert to milliseconds
+        const time = new Date(now.getTime() + timeOffset);
+        
+        const positionAndVelocity = satellite.propagate(satrec, time);
+        
+        if (positionAndVelocity.position && typeof positionAndVelocity.position === 'object') {
+          const positionEci = positionAndVelocity.position as any;
+          const gmst = satellite.gstime(time);
+          const positionGd = satellite.eciToGeodetic(positionEci, gmst);
+          
+          const longitude = satellite.degreesLong(positionGd.longitude);
+          const latitude = satellite.degreesLat(positionGd.latitude);
+          const altitude = positionGd.height;
+          
+          if (!isNaN(latitude) && !isNaN(longitude) && !isNaN(altitude)) {
+            const lat = (latitude * Math.PI) / 180;
+            const lon = (longitude * Math.PI) / 180;
+            const radius = earthRadius + (altitude * 5) / 6371;
+            
+            const x = radius * Math.cos(lat) * Math.cos(lon);
+            const y = radius * Math.sin(lat);
+            const z = radius * Math.cos(lat) * Math.sin(lon);
+            
+            points.push(new THREE.Vector3(x, y, z));
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Error calculating orbital path:', error);
+    }
+    
+    return points;
+  }, [sat]);
+
+  if (pathPoints.length === 0) return null;
+
+  return (
+    <line>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          count={pathPoints.length}
+          array={new Float32Array(pathPoints.flatMap(p => [p.x, p.y, p.z]))}
+          itemSize={3}
+        />
+      </bufferGeometry>
+      <lineBasicMaterial color="#00d9ff" opacity={0.6} transparent />
+    </line>
+  );
+};
+
 // Camera controller for focusing on selected satellites
 const CameraController: React.FC = () => {
   const { camera } = useThree();
@@ -214,12 +283,20 @@ const Scene: React.FC = () => {
       .slice(0, 1000); // Performance limit
   }, [filteredSatellites, globeSettings.selectedSatelliteId]);
 
+  const selectedSatellite = useMemo(() => {
+    if (!globeSettings.selectedSatelliteId) return null;
+    return filteredSatellites.find(sat => sat.id === globeSettings.selectedSatelliteId);
+  }, [filteredSatellites, globeSettings.selectedSatelliteId]);
+
   return (
     <>
       <ambientLight intensity={0.4} />
       <directionalLight position={[5, 5, 5]} intensity={0.7} />
       
       <Earth />
+      
+      {/* Show orbital path for selected satellite */}
+      {selectedSatellite && <OrbitalPath satellite={selectedSatellite} />}
       
       {visibleSatellites.map((satellite) => (
         <SatelliteMarker
