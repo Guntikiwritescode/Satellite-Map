@@ -4,21 +4,24 @@ import * as satellite from 'satellite.js';
 // CelesTrak API - Most popular satellite groups (limited to prevent lag)
 const POPULAR_CELESTRAK_GROUPS = [
   'https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=json', // Space stations (all ~10)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=json&LIMIT=50', // Brightest visible satellites
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=json&LIMIT=30', // Most important weather sats
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops&FORMAT=json&LIMIT=40', // GPS constellation
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo&FORMAT=json&LIMIT=30', // Galileo constellation
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=json&LIMIT=100', // Popular Starlink subset
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium-NEXT&FORMAT=json&LIMIT=50', // Iridium constellation
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=oneweb&FORMAT=json&LIMIT=40', // OneWeb constellation
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=json&LIMIT=50', // Famous science satellites
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=json&LIMIT=30', // Earth observation
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=intelsat&FORMAT=json&LIMIT=20', // Major communication sats
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=ses&FORMAT=json&LIMIT=20', // SES communication sats
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=goes&FORMAT=json&LIMIT=10', // GOES weather satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=json&LIMIT=100', // Brightest visible satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=json&LIMIT=50', // Weather satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops&FORMAT=json&LIMIT=60', // GPS constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo&FORMAT=json&LIMIT=50', // Galileo constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=beidou&FORMAT=json&LIMIT=50', // BeiDou constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=glonass-ops&FORMAT=json&LIMIT=40', // GLONASS constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=json&LIMIT=200', // Popular Starlink subset
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium-NEXT&FORMAT=json&LIMIT=80', // Iridium constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=oneweb&FORMAT=json&LIMIT=80', // OneWeb constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=json&LIMIT=80', // Famous science satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=json&LIMIT=60', // Earth observation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=intelsat&FORMAT=json&LIMIT=40', // Major communication sats
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=ses&FORMAT=json&LIMIT=40', // SES communication sats
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=goes&FORMAT=json&LIMIT=20', // GOES weather satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=geo&FORMAT=json&LIMIT=50', // Other geostationary
 ];
 
-const MAX_SATELLITES = 500; // Hard limit to prevent lag
+const MAX_SATELLITES = 1000; // Increased limit with optimizations
 
 // Launch API for upcoming launches  
 const LAUNCH_API = 'https://ll.thespacedevs.com/2.2.0/launch';
@@ -533,21 +536,46 @@ class RealSatelliteAPI {
     // Initial load
     this.getSatellitesWithFallback().then(callback);
     
-    // Update satellite positions every 3 seconds
+    // Update satellite positions every 5 seconds (optimized for 1000 satellites)
     this.updateInterval = setInterval(async () => {
       try {
         if (this.cachedSatellites.length > 0) {
-          // Reduced logging frequency for better performance
-          if (Math.random() < 0.1) { // Only log 10% of the time
-            console.log('Updating satellite positions every 3 seconds for', this.cachedSatellites.length, 'satellites');
+          // Reduced logging frequency for better performance with 1000 satellites
+          if (Math.random() < 0.02) { // Only log 2% of the time
+            console.log('Updating satellite positions every 5 seconds for', this.cachedSatellites.length, 'satellites');
           }
           
-          const updatedSatellites = this.cachedSatellites.map(satellite => {
-            return {
-              ...satellite,
-              position: this.calculateSatellitePositionFromTLE(satellite.tle.line1, satellite.tle.line2)
-            };
-          });
+          // Batch position updates for better performance
+          const batchSize = 100;
+          const updatedSatellites = [...this.cachedSatellites];
+          
+          for (let i = 0; i < updatedSatellites.length; i += batchSize) {
+            const batch = updatedSatellites.slice(i, i + batchSize);
+            
+            batch.forEach((satellite, index) => {
+              const globalIndex = i + index;
+              try {
+                // Only update satellites with valid TLE data to improve performance
+                if (satellite.tle.line1 && satellite.tle.line2 && 
+                    satellite.tle.line1.length >= 69 && satellite.tle.line2.length >= 69) {
+                  const newPosition = this.calculateSatellitePositionFromTLE(satellite.tle.line1, satellite.tle.line2);
+                  // Preserve the realistic altitude we set manually
+                  newPosition.altitude = satellite.position.altitude;
+                  updatedSatellites[globalIndex].position = newPosition;
+                }
+              } catch (error) {
+                // Silently skip problematic satellites to maintain performance
+                if (Math.random() < 0.001) { // Only log 0.1% of errors to avoid spam
+                  console.warn(`Position update failed for satellite ${satellite.id}`);
+                }
+              }
+            });
+            
+            // Add small delay between batches to prevent blocking
+            if (i + batchSize < updatedSatellites.length) {
+              await new Promise(resolve => setTimeout(resolve, 10));
+            }
+          }
           
           this.cachedSatellites = updatedSatellites;
           callback(updatedSatellites);
@@ -555,7 +583,7 @@ class RealSatelliteAPI {
       } catch (error) {
         console.error('Error updating satellite positions:', error);
       }
-    }, 3000);
+    }, 5000); // Changed from 3000ms to 5000ms
   }
 
   stopRealTimeUpdates() {
