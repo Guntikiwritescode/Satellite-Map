@@ -212,20 +212,37 @@ class RealSatelliteAPI {
   }
 
   calculateOrbitalPosition(satellite: Satellite): Satellite['position'] {
+    // Validate input data and provide fallbacks
+    if (!satellite?.orbital) {
+      console.warn('Missing orbital data for satellite:', satellite?.id);
+      return {
+        latitude: 0,
+        longitude: 0,
+        altitude: 400,
+        timestamp: Date.now()
+      };
+    }
+
     const currentTime = Date.now() / 1000; // Current time in seconds
     
-    // Calculate orbital parameters
-    const orbitPeriodSeconds = satellite.orbital.period * 60; // Convert minutes to seconds
+    // Calculate orbital parameters with validation
+    const period = satellite.orbital.period || 90; // Default 90 minutes if missing
+    const altitude = satellite.orbital.altitude || 400; // Default 400km if missing
+    const inclination = satellite.orbital.inclination || 0; // Default 0 degrees if missing
+    
+    const orbitPeriodSeconds = period * 60; // Convert minutes to seconds
     const orbitSpeed = (2 * Math.PI) / orbitPeriodSeconds; // radians per second
     
     // Add satellite-specific offset for distribution along orbit
-    const satelliteOffset = (parseInt(satellite.id) % 1000) / 1000 * Math.PI * 2;
+    // Convert ID to number safely
+    const satelliteIdNum = parseInt(satellite.id) || 0;
+    const satelliteOffset = (satelliteIdNum % 1000) / 1000 * Math.PI * 2;
     const angle = (currentTime * orbitSpeed + satelliteOffset) % (Math.PI * 2);
     
     // Earth parameters
     const earthRadiusKm = 6371;
-    const orbitalRadiusKm = earthRadiusKm + satellite.orbital.altitude;
-    const inclination = (satellite.orbital.inclination * Math.PI) / 180;
+    const orbitalRadiusKm = earthRadiusKm + altitude;
+    const inclinationRad = (inclination * Math.PI) / 180;
     
     // Calculate position on orbital path
     let x = orbitalRadiusKm * Math.cos(angle);
@@ -233,18 +250,21 @@ class RealSatelliteAPI {
     let z = orbitalRadiusKm * Math.sin(angle);
     
     // Apply inclination rotation
-    const rotatedY = y * Math.cos(inclination) - z * Math.sin(inclination);
-    const rotatedZ = y * Math.sin(inclination) + z * Math.cos(inclination);
+    const rotatedY = y * Math.cos(inclinationRad) - z * Math.sin(inclinationRad);
+    const rotatedZ = y * Math.sin(inclinationRad) + z * Math.cos(inclinationRad);
     
     // Convert back to lat/lon for position tracking
     const distance = Math.sqrt(x * x + rotatedY * rotatedY + rotatedZ * rotatedZ);
-    const latitude = Math.asin(rotatedY / distance) * 180 / Math.PI;
+    
+    // Validate calculations before returning
+    const latitude = Math.asin(Math.max(-1, Math.min(1, rotatedY / distance))) * 180 / Math.PI;
     const longitude = Math.atan2(rotatedZ, x) * 180 / Math.PI;
     
+    // Final validation to ensure no NaN values
     return {
-      latitude: latitude,
-      longitude: longitude,
-      altitude: satellite.orbital.altitude,
+      latitude: isNaN(latitude) ? 0 : latitude,
+      longitude: isNaN(longitude) ? 0 : longitude,
+      altitude: isNaN(altitude) ? 400 : altitude,
       timestamp: Date.now()
     };
   }
