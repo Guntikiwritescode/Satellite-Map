@@ -14,7 +14,10 @@ const ControlPanel: React.FC = () => {
     filteredSatellites,
     filters,
     updateFilters,
-    setSelectedSatellite
+    setSelectedSatellite,
+    maxDisplaySatellites,
+    setMaxDisplaySatellites,
+    satellites
   } = useSatelliteStore();
 
   const selectedSatellite = getSelectedSatellite();
@@ -139,12 +142,41 @@ const ControlPanel: React.FC = () => {
             
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="space-y-1">
-                <div className="text-muted-foreground">Tracked</div>
+                <div className="text-muted-foreground">Displayed</div>
                 <div className="font-mono text-primary text-sm">
                   {filteredSatellites.length}
                 </div>
               </div>
               
+              <div className="space-y-1">
+                <div className="text-muted-foreground">Total</div>
+                <div className="font-mono text-muted-foreground text-sm">
+                  {satellites.length}
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-foreground">Satellite Limit</span>
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMaxDisplaySatellites(Math.min(maxDisplaySatellites + 500, satellites.length))}
+                    disabled={maxDisplaySatellites >= satellites.length}
+                    className="h-6 px-2 text-xs"
+                  >
+                    +500
+                  </Button>
+                  <span className="text-xs font-mono text-primary min-w-[3rem] text-center">
+                    {maxDisplaySatellites}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="space-y-1">
                 <div className="text-muted-foreground">Active</div>
                 <div className="font-mono text-stellar-cyan text-sm">
