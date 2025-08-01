@@ -126,13 +126,13 @@ export class SpaceTrackAPI {
     }
   }
 
-  async getAllActiveSatellites(limit: number = 1000): Promise<Satellite[]> {
+  async getAllActiveSatellites(): Promise<Satellite[]> {
     try {
       // First get high priority satellites
       const prioritySatellites = await this.getHighPrioritySatellites();
       
-      // Then get general active satellites
-      const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/orderby/NORAD_CAT_ID asc/limit/${limit}/format/json`;
+      // Then get general active satellites - no limit to get ALL satellites
+      const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/orderby/NORAD_CAT_ID asc/format/json`;
       const data: SpaceTrackGPData[] = await this.makeProxyRequest(endpoint);
       
       if (!data || !Array.isArray(data)) {
@@ -160,9 +160,9 @@ export class SpaceTrackAPI {
     }
   }
 
-  async getLEOSatellites(limit: number = 200): Promise<Satellite[]> {
+  async getLEOSatellites(): Promise<Satellite[]> {
     try {
-      const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/MEAN_MOTION/>11/orderby/NORAD_CAT_ID asc/limit/${limit}/format/json`;
+      const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/MEAN_MOTION/>11/orderby/NORAD_CAT_ID asc/format/json`;
       const data: SpaceTrackGPData[] = await this.makeProxyRequest(endpoint);
       
       if (!data || !Array.isArray(data) || data.length === 0) {
