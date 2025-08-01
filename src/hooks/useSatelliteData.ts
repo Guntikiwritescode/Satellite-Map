@@ -7,7 +7,7 @@ export const useSatelliteData = () => {
   const { setSatellites, setLaunches, setLoading, setError } = useSatelliteStore();
 
   // Fetch initial satellite data
-  const { data: satellites, isLoading: satellitesLoading } = useQuery({
+  const { data: satellites, isLoading: satellitesLoading, error: satellitesError } = useQuery({
     queryKey: ['satellites'],
     queryFn: () => satelliteAPI.getSatellites(),
     refetchInterval: 30000, // Refetch every 30 seconds
@@ -15,7 +15,7 @@ export const useSatelliteData = () => {
   });
 
   // Fetch launch data
-  const { data: launches, isLoading: launchesLoading } = useQuery({
+  const { data: launches, isLoading: launchesLoading, error: launchesError } = useQuery({
     queryKey: ['launches'],
     queryFn: () => satelliteAPI.getLaunches(),
     refetchInterval: 60000, // Refetch every minute
@@ -25,19 +25,35 @@ export const useSatelliteData = () => {
   // Update store when data changes
   useEffect(() => {
     if (satellites) {
+      console.log('Loading satellites:', satellites.length);
       setSatellites(satellites);
     }
   }, [satellites, setSatellites]);
 
   useEffect(() => {
     if (launches) {
+      console.log('Loading launches:', launches.length);
       setLaunches(launches);
     }
   }, [launches, setLaunches]);
 
+  // Handle errors
+  useEffect(() => {
+    if (satellitesError) {
+      console.error('Error loading satellites:', satellitesError);
+      setError(`Failed to load satellite data: ${satellitesError.message}`);
+    }
+    if (launchesError) {
+      console.error('Error loading launches:', launchesError);
+      setError(`Failed to load launch data: ${launchesError.message}`);
+    }
+  }, [satellitesError, launchesError, setError]);
+
   // Update loading state
   useEffect(() => {
-    setLoading(satellitesLoading || launchesLoading);
+    const loading = satellitesLoading || launchesLoading;
+    console.log('Loading state:', loading);
+    setLoading(loading);
   }, [satellitesLoading, launchesLoading, setLoading]);
 
   // Start real-time updates

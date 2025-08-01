@@ -3,7 +3,9 @@ import { Satellite, Loader2, Activity } from 'lucide-react';
 import SatelliteTable from '../components/SatelliteTable';
 import Globe3D from '../components/Globe3D';
 import ControlPanel from '../components/ControlPanel';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { useSatelliteData } from '../hooks/useSatelliteData';
+import { useSatelliteStore } from '../stores/satelliteStore';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import spaceHero from '../assets/space-hero.jpg';
@@ -17,8 +19,31 @@ const LoadingSpinner = () => (
   </div>
 );
 
+const ErrorFallback = ({ error }: { error: string }) => (
+  <div className="flex items-center justify-center h-full">
+    <div className="flex flex-col items-center space-y-4 text-center max-w-md">
+      <div className="p-3 bg-destructive/20 rounded-lg">
+        <Activity className="h-8 w-8 text-destructive" />
+      </div>
+      <div>
+        <h3 className="font-semibold text-foreground mb-2">Unable to Load Data</h3>
+        <p className="text-sm text-muted-foreground">{error}</p>
+      </div>
+    </div>
+  </div>
+);
+
 const Index = () => {
   const { isLoading } = useSatelliteData();
+  const { error, satellites } = useSatelliteStore();
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-cosmic flex items-center justify-center">
+        <ErrorFallback error={error} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-cosmic">
@@ -67,6 +92,8 @@ const Index = () => {
             <Card className="glass-panel h-full p-6">
               {isLoading ? (
                 <LoadingSpinner />
+              ) : satellites.length === 0 ? (
+                <ErrorFallback error="No satellite data available. Please try refreshing the page." />
               ) : (
                 <SatelliteTable />
               )}
@@ -76,9 +103,15 @@ const Index = () => {
           {/* Center Panel - 3D Globe */}
           <div className="col-span-12 lg:col-span-6 xl:col-span-7">
             <Card className="glass-panel h-full p-2">
-              <Suspense fallback={<LoadingSpinner />}>
-                <Globe3D />
-              </Suspense>
+              {isLoading ? (
+                <LoadingSpinner />
+              ) : (
+                <ErrorBoundary>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Globe3D />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
             </Card>
           </div>
 
