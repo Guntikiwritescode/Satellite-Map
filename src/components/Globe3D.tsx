@@ -55,6 +55,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
   const markerRef = useRef<THREE.Mesh>(null);
   const modelRef = useRef<THREE.Group>(null);
   const { globeSettings } = useSatelliteStore();
+  const [isVisible, setIsVisible] = React.useState(true);
   
   // Calculate satellite's actual 3D position on its orbital path - updated for new Earth scaling
   const position = useMemo(() => {
@@ -321,9 +322,27 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
 
   const [cameraDistance, setCameraDistance] = React.useState(10);
 
+  // Optimize frame updates with distance-based LOD
   useFrame((state) => {
+    if (!markerRef.current) return;
+
     const currentDistance = state.camera.position.distanceTo(new THREE.Vector3(...position));
-    setCameraDistance(currentDistance);
+    
+    // Performance optimization: Only update if distance changed significantly
+    if (Math.abs(currentDistance - cameraDistance) > 0.5) {
+      setCameraDistance(currentDistance);
+    }
+    
+    // Distance-based visibility culling for performance
+    const maxRenderDistance = 100;
+    const shouldRender = currentDistance < maxRenderDistance;
+    setIsVisible(shouldRender);
+    
+    if (!shouldRender) {
+      markerRef.current.visible = false;
+      if (modelRef.current) modelRef.current.visible = false;
+      return;
+    }
     
     if (markerRef.current && modelRef.current) {
       // Distance-based scaling for marker - scales down as you get closer
@@ -332,20 +351,16 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
       // Show 3D model only when EXTREMELY close - realistic satellite scale
       const showModel = currentDistance < 0.05;
       
-      // ALWAYS keep markers visible - only hide when 3D model is showing
-      markerRef.current.visible = true; // Always visible
+      // Performance: Use simple visibility toggle
+      markerRef.current.visible = !showModel;
       modelRef.current.visible = showModel;
       
-      // If showing 3D model, hide the marker, otherwise show marker
       if (showModel) {
-        markerRef.current.visible = false;
         // Keep 3D model at fixed scale when viewing it
         const fixedModelScale = 1.0;
         modelRef.current.scale.setScalar(fixedModelScale);
       } else {
-        markerRef.current.visible = true;
-        
-        // Pulsing effect for selected satellite
+        // Optimized pulsing effect for selected satellite
         if (isSelected) {
           const pulse = Math.sin(state.clock.getElapsedTime() * 4) * 0.3 + 1.2;
           markerRef.current.scale.setScalar(baseScale * pulse);
@@ -353,11 +368,17 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
           markerRef.current.scale.setScalar(baseScale);
         }
         
-        // Billboard effect - always face camera
-        markerRef.current.lookAt(state.camera.position);
+        // Billboard effect - always face camera (less frequent updates)
+        // Update every 6th frame for better performance
+        if (performance.now() % 100 < 16) { // Approximately every 6 frames at 60fps
+          markerRef.current.lookAt(state.camera.position);
+        }
       }
     }
   });
+
+  // Don't render if not visible (performance optimization)
+  if (!isVisible) return null;
 
   return (
     <group position={position}>
@@ -373,7 +394,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
           }
         }}
       >
-        <sphereGeometry args={[0.015, 8, 8]} />
+        <sphereGeometry args={[0.015, 6, 6]} />
         <meshBasicMaterial 
           color={color} 
           transparent={true}
@@ -381,15 +402,17 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         />
       </mesh>
       
-      {/* Glow effect for better visibility */}
-      <mesh>
-        <sphereGeometry args={[0.025, 8, 8]} />
-        <meshBasicMaterial 
-          color={color} 
-          transparent={true}
-          opacity={0.3}
-        />
-      </mesh>
+      {/* Simplified glow effect for better performance */}
+      {(isSelected || cameraDistance < 10) && (
+        <mesh>
+          <sphereGeometry args={[0.025, 6, 6]} />
+          <meshBasicMaterial 
+            color={color} 
+            transparent={true}
+            opacity={0.3}
+          />
+        </mesh>
+      )}
       
       {/* 3D satellite model when zoomed in close */}
       <group 
@@ -406,10 +429,10 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         <SatelliteModel />
       </group>
       
-      {/* Simple selection indicator - no HTML component */}
+      {/* Simple selection indicator - only when selected */}
       {isSelected && (
         <mesh position={[0, 0.1, 0]}>
-          <sphereGeometry args={[0.03, 8, 8]} />
+          <sphereGeometry args={[0.03, 6, 6]} />
           <meshBasicMaterial 
             color="#ffffff" 
             transparent={true}
@@ -594,14 +617,14 @@ const Scene: React.FC = () => {
     camera.lookAt(0, 0, 0);
   }, [camera]);
 
-  // Filter satellites based on selection - show only selected satellite when one is selected
+  // Filter satellites based on selection and optimize for performance
   const visibleSatellites = useMemo(() => {
     if (globeSettings.selectedSatelliteId) {
       // When a satellite is selected, show only that satellite
       return filteredSatellites.filter(sat => sat.id === globeSettings.selectedSatelliteId);
     }
-    // When no satellite is selected, show all filtered satellites
-    return filteredSatellites;
+    // When no satellite is selected, limit to first 150 satellites for performance
+    return filteredSatellites.slice(0, 150);
   }, [filteredSatellites, globeSettings.selectedSatelliteId]);
 
   return (

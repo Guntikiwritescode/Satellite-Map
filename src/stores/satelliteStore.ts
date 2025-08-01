@@ -171,7 +171,10 @@ export const useSatelliteStore = create<SatelliteStore>()(
     },
     
     applyFilters: (satellites, filters) => {
-      console.log('Applying filters to', satellites.length, 'satellites');
+      // Reduce console logging frequency
+      if (Math.random() < 0.1) { // Only log 10% of the time
+        console.log('Applying filters to', satellites.length, 'satellites');
+      }
       
       if (satellites.length === 0) {
         return [];
@@ -218,7 +221,10 @@ export const useSatelliteStore = create<SatelliteStore>()(
         return true;
       });
       
-      console.log('Filter result:', filtered.length, 'satellites');
+      // Reduce console logging frequency
+      if (Math.random() < 0.1) { // Only log 10% of the time
+        console.log('Filter result:', filtered.length, 'satellites');
+      }
       return filtered;
     },
   }))

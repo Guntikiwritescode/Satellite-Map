@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { Search, Filter, Globe, Satellite as SatelliteIcon, Clock, MapPin, Zap, ExternalLink } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { Satellite, SatelliteType } from '../types/satellite.types';
 
-const SatelliteTable: React.FC = () => {
+const SatelliteTable: React.FC = React.memo(() => {
   const { 
     satellites,
     filteredSatellites, 
@@ -18,11 +18,21 @@ const SatelliteTable: React.FC = () => {
     globeSettings 
   } = useSatelliteStore();
 
-  console.log('SatelliteTable render:', { 
+  // Memoize logging to reduce console spam
+  const logData = useMemo(() => ({
     totalSatellites: satellites.length, 
     filteredCount: filteredSatellites.length,
     filters 
-  });
+  }), [satellites.length, filteredSatellites.length, filters]);
+
+  // Only log every 10th render to reduce console spam
+  const renderCount = useRef(0);
+  useEffect(() => {
+    renderCount.current++;
+    if (renderCount.current % 10 === 0) {
+      console.log('SatelliteTable render (every 10th):', logData);
+    }
+  }, [logData]);
 
   const handleSatelliteSelect = (satellite: Satellite) => {
     setSelectedSatellite(satellite.id);
@@ -229,6 +239,8 @@ const SatelliteTable: React.FC = () => {
       </div>
     </div>
   );
-};
+});
+
+SatelliteTable.displayName = 'SatelliteTable';
 
 export default SatelliteTable;
