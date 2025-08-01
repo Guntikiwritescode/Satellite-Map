@@ -4,25 +4,26 @@ import * as satellite from 'satellite.js';
 // Launch API for upcoming launches
 const LAUNCH_API = 'https://ll.thespacedevs.com/2.2.0/launch';
 
-// Priority bulk satellite data APIs - most reliable sources
+// Priority bulk satellite data APIs - limited to 500 most popular satellites
 const PRIORITY_SATELLITE_GROUPS = [
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=json', // Space stations
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=json', // Bright satellites
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=json', // Weather satellites
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=goes&FORMAT=json', // GOES satellites
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=json', // Earth resources
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=geo&FORMAT=json', // Geostationary
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=intelsat&FORMAT=json', // Intelsat
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=ses&FORMAT=json', // SES
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium-NEXT&FORMAT=json', // Iridium NEXT
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=json&LIMIT=100', // Starlink (limited)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=oneweb&FORMAT=json&LIMIT=50', // OneWeb (limited)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops&FORMAT=json', // GPS operational
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo&FORMAT=json', // Galileo
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=beidou&FORMAT=json', // BeiDou
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=json', // Science satellites
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=engineering&FORMAT=json' // Engineering satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=json', // Space stations (all)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=json', // Bright satellites (all)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=json', // Weather satellites (all)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=goes&FORMAT=json', // GOES satellites (all)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=json&LIMIT=30', // Earth resources (limited)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops&FORMAT=json', // GPS operational (all)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo&FORMAT=json', // Galileo (all)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=beidou&FORMAT=json', // BeiDou (all)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=json&LIMIT=50', // Starlink (limited to 50)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=oneweb&FORMAT=json&LIMIT=25', // OneWeb (limited to 25)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium-NEXT&FORMAT=json&LIMIT=30', // Iridium NEXT (limited)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=intelsat&FORMAT=json&LIMIT=20', // Intelsat (limited)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=ses&FORMAT=json&LIMIT=15', // SES (limited)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=json&LIMIT=40', // Science satellites (limited)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=geo&FORMAT=json&LIMIT=30' // Geostationary (limited)
 ];
+
+const MAX_SATELLITES = 500; // Hard limit to prevent crashes
 
 interface CelestrakSatellite {
   OBJECT_NAME: string;
@@ -335,10 +336,42 @@ class RealSatelliteAPI {
       }
     }
     
-    // Convert map to array
-    const finalSatellites = Array.from(uniqueSatellites.values());
+    // Convert map to array and apply 500 satellite limit
+    let finalSatellites = Array.from(uniqueSatellites.values());
     
-    console.log(`🎯 FINAL RESULT: ${finalSatellites.length} unique satellites loaded successfully!`);
+    // Enforce hard limit of 500 satellites to prevent crashes
+    if (finalSatellites.length > MAX_SATELLITES) {
+      console.log(`⚠️ Limiting satellites from ${finalSatellites.length} to ${MAX_SATELLITES} to prevent crashes`);
+      
+      // Prioritize satellites by type importance
+      const priorityOrder: SatelliteType[] = [
+        'space-station', 'weather', 'navigation', 'scientific', 
+        'communication', 'earth-observation', 'constellation', 'military'
+      ];
+      
+      const prioritizedSatellites: Satellite[] = [];
+      
+      // Add satellites by priority, keeping a balanced mix
+      for (const type of priorityOrder) {
+        const satellitesOfType = finalSatellites.filter(sat => sat.type === type);
+        const maxPerType = Math.min(satellitesOfType.length, Math.floor(MAX_SATELLITES / priorityOrder.length));
+        prioritizedSatellites.push(...satellitesOfType.slice(0, maxPerType));
+        
+        if (prioritizedSatellites.length >= MAX_SATELLITES) break;
+      }
+      
+      // Fill remaining slots with any leftover satellites
+      const remaining = MAX_SATELLITES - prioritizedSatellites.length;
+      if (remaining > 0) {
+        const usedIds = new Set(prioritizedSatellites.map(sat => sat.id));
+        const leftoverSatellites = finalSatellites.filter(sat => !usedIds.has(sat.id));
+        prioritizedSatellites.push(...leftoverSatellites.slice(0, remaining));
+      }
+      
+      finalSatellites = prioritizedSatellites.slice(0, MAX_SATELLITES);
+    }
+    
+    console.log(`🎯 FINAL RESULT: ${finalSatellites.length} satellites loaded successfully!`);
     console.log(`📊 Breakdown by type:`, this.getTypeBreakdown(finalSatellites));
     
     this.cachedSatellites = finalSatellites;
