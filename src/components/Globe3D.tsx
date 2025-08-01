@@ -132,10 +132,6 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = ({
         />
       </mesh>
       
-      {/* Orbital path visualization - only show when selected or globally enabled */}
-      {(isSelected || globeSettings.showOrbits) && (
-        <OrbitPath satellite={satellite} />
-      )}
       
       {/* Satellite info on selection */}
       {isSelected && (

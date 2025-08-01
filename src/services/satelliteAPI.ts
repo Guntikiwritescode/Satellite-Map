@@ -337,6 +337,28 @@ class RealSatelliteAPI {
         footprint: 1000
       },
       {
+        id: '44714',
+        name: 'STARLINK-1021',
+        type: 'constellation',
+        country: 'USA',
+        agency: 'SpaceX',
+        launchDate: '2019-05-24',
+        status: 'active',
+        orbital: {
+          altitude: 550,
+          period: 95.4,
+          inclination: 53.0,
+          eccentricity: 0.0001,
+          velocity: 7.57
+        },
+        position: generatePosition(1.5, 50),
+        tle: {
+          line1: '1 44714U 19074B   23001.00000000  .00001345  00000-0  10270-3 0  9991',
+          line2: '2 44714  53.0536  95.4721 0001425  95.4618 264.6879 15.05444835201234'
+        },
+        footprint: 1000
+      },
+      {
         id: '29601',
         name: 'GPS BIIR-2 (PRN 13)',
         type: 'navigation',
@@ -401,6 +423,204 @@ class RealSatelliteAPI {
           line2: '2 41866   0.0567 123.4567 0001234  12.3456 347.6789  1.00271234567890'
         },
         footprint: 18000
+      },
+      {
+        id: '40697',
+        name: 'SENTINEL-2A',
+        type: 'earth-observation',
+        country: 'Europe',
+        agency: 'ESA',
+        launchDate: '2015-06-23',
+        status: 'active',
+        orbital: {
+          altitude: 786,
+          period: 100.4,
+          inclination: 98.5,
+          eccentricity: 0.0001,
+          velocity: 7.43
+        },
+        position: generatePosition(5, 225),
+        tle: {
+          line1: '1 40697U 15028A   23001.00000000  .00000234  00000-0  12345-4 0  9992',
+          line2: '2 40697  98.5123  45.6789 0001234  87.6543 272.3456 14.57123456789012'
+        },
+        footprint: 2900
+      },
+      {
+        id: '43013',
+        name: 'STARLINK-1130',
+        type: 'constellation',
+        country: 'USA',
+        agency: 'SpaceX',
+        launchDate: '2020-01-07',
+        status: 'active',
+        orbital: {
+          altitude: 550,
+          period: 95.4,
+          inclination: 53.0,
+          eccentricity: 0.0001,
+          velocity: 7.57
+        },
+        position: generatePosition(6, 270),
+        tle: {
+          line1: '1 43013U 20001A   23001.00000000  .00001345  00000-0  10270-3 0  9991',
+          line2: '2 43013  53.0536  90.4721 0001425  95.4618 264.6879 15.05444835201234'
+        },
+        footprint: 1000
+      },
+      {
+        id: '27424',
+        name: 'AQUA',
+        type: 'earth-observation',
+        country: 'USA',
+        agency: 'NASA',
+        launchDate: '2002-05-04',
+        status: 'active',
+        orbital: {
+          altitude: 705,
+          period: 98.8,
+          inclination: 98.2,
+          eccentricity: 0.0001,
+          velocity: 7.45
+        },
+        position: generatePosition(7, 315),
+        tle: {
+          line1: '1 27424U 02022A   23001.00000000  .00000234  00000-0  12345-4 0  9992',
+          line2: '2 27424  98.2123  45.6789 0001234  87.6543 272.3456 14.57123456789012'
+        },
+        footprint: 2800
+      },
+      {
+        id: '39084',
+        name: 'NOAA-20 (JPSS-1)',
+        type: 'weather',
+        country: 'USA',
+        agency: 'NOAA',
+        launchDate: '2017-11-18',
+        status: 'active',
+        orbital: {
+          altitude: 824,
+          period: 101.5,
+          inclination: 98.7,
+          eccentricity: 0.0001,
+          velocity: 7.41
+        },
+        position: generatePosition(8, 0),
+        tle: {
+          line1: '1 39084U 17073A   23001.00000000  .00000234  00000-0  12345-4 0  9992',
+          line2: '2 39084  98.7123  45.6789 0001234  87.6543 272.3456 14.57123456789012'
+        },
+        footprint: 3000
+      },
+      {
+        id: '45588',
+        name: 'STARLINK-2182',
+        type: 'constellation',
+        country: 'USA',
+        agency: 'SpaceX',
+        launchDate: '2020-03-18',
+        status: 'active',
+        orbital: {
+          altitude: 550,
+          period: 95.4,
+          inclination: 53.0,
+          eccentricity: 0.0001,
+          velocity: 7.57
+        },
+        position: generatePosition(9, 60),
+        tle: {
+          line1: '1 45588U 20019A   23001.00000000  .00001345  00000-0  10270-3 0  9991',
+          line2: '2 45588  53.0536  90.4721 0001425  95.4618 264.6879 15.05444835201234'
+        },
+        footprint: 1000
+      },
+      {
+        id: '28654',
+        name: 'GPS IIR-M-5 (PRN 17)',
+        type: 'navigation',
+        country: 'USA',
+        agency: 'US Air Force',
+        launchDate: '2005-09-26',
+        status: 'active',
+        orbital: {
+          altitude: 20200,
+          period: 717.97,
+          inclination: 55.0,
+          eccentricity: 0.0048,
+          velocity: 3.87
+        },
+        position: generatePosition(10, 120),
+        tle: {
+          line1: '1 28654U 05038A   23001.00000000 -.00000007  00000-0  00000+0 0  9995',
+          line2: '2 28654  54.9988 123.4567 0048123  45.6789 314.5678  2.00564321123456'
+        },
+        footprint: 12000
+      },
+      {
+        id: '43070',
+        name: 'GOES-17',
+        type: 'weather',
+        country: 'USA',
+        agency: 'NOAA',
+        launchDate: '2018-03-01',
+        status: 'active',
+        orbital: {
+          altitude: 35786,
+          period: 1436.1,
+          inclination: 0.1,
+          eccentricity: 0.0001,
+          velocity: 3.07
+        },
+        position: generatePosition(11, 240),
+        tle: {
+          line1: '1 43070U 18016A   23001.00000000 -.00000123  00000-0  00000+0 0  9993',
+          line2: '2 43070   0.0567 123.4567 0001234  12.3456 347.6789  1.00271234567890'
+        },
+        footprint: 18000
+      },
+      {
+        id: '37849',
+        name: 'LANDSAT 8',
+        type: 'earth-observation',
+        country: 'USA',
+        agency: 'NASA/USGS',
+        launchDate: '2013-02-11',
+        status: 'active',
+        orbital: {
+          altitude: 705,
+          period: 98.8,
+          inclination: 98.2,
+          eccentricity: 0.0001,
+          velocity: 7.45
+        },
+        position: generatePosition(12, 300),
+        tle: {
+          line1: '1 37849U 11005A   23001.00000000  .00000234  00000-0  12345-4 0  9992',
+          line2: '2 37849  98.2123  45.6789 0001234  87.6543 272.3456 14.57123456789012'
+        },
+        footprint: 2800
+      },
+      {
+        id: '48274',
+        name: 'STARLINK-3401',
+        type: 'constellation',
+        country: 'USA',
+        agency: 'SpaceX',
+        launchDate: '2021-05-04',
+        status: 'active',
+        orbital: {
+          altitude: 550,
+          period: 95.4,
+          inclination: 53.0,
+          eccentricity: 0.0001,
+          velocity: 7.57
+        },
+        position: generatePosition(13, 150),
+        tle: {
+          line1: '1 48274U 21036A   23001.00000000  .00001345  00000-0  10270-3 0  9991',
+          line2: '2 48274  53.0536  90.4721 0001425  95.4618 264.6879 15.05444835201234'
+        },
+        footprint: 1000
       }
     ];
     
