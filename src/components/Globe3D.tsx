@@ -173,16 +173,11 @@ interface OrbitPathProps {
 }
 
 const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
-  const orbitGeometry = useMemo(() => {
+  // Stable orbital path creation - only recreate when orbital parameters actually change
+  const orbitLine = useMemo(() => {
     const points = [];
     const earthRadius = 1; // Our 3D Earth radius
     const earthRadiusKm = 6371; // Real Earth radius in km
-    
-    console.log(`Calculating orbit for ${satellite.name}:`, {
-      altitude: satellite.orbital.altitude,
-      inclination: satellite.orbital.inclination,
-      currentPosition: satellite.position
-    });
     
     // Calculate orbital radius from altitude - this is the distance from Earth's CENTER
     const altitudeKm = satellite.orbital.altitude;
@@ -215,35 +210,100 @@ const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
     
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(points), 3));
-    return geometry;
-  }, [satellite.orbital.altitude, satellite.orbital.inclination]);
-
-  // Get color based on satellite type
-  const orbitColor = useMemo(() => {
-    switch (satellite.type) {
-      case 'space-station': return '#00d9ff'; // bright cyan
-      case 'constellation': return '#3b82f6'; // blue
-      case 'navigation': return '#fbbf24'; // amber
-      case 'weather': return '#a855f7'; // purple
-      case 'earth-observation': return '#10b981'; // emerald
-      case 'communication': return '#06b6d4'; // cyan
-      case 'scientific': return '#8b5cf6'; // violet
-      case 'military': return '#ef4444'; // red
-      default: return '#6b7280'; // gray
-    }
-  }, [satellite.type]);
+    
+    // Get color based on satellite type
+    const orbitColor = (() => {
+      switch (satellite.type) {
+        case 'space-station': return '#00d9ff'; // bright cyan
+        case 'constellation': return '#3b82f6'; // blue
+        case 'navigation': return '#fbbf24'; // amber
+        case 'weather': return '#a855f7'; // purple
+        case 'earth-observation': return '#10b981'; // emerald
+        case 'communication': return '#06b6d4'; // cyan
+        case 'scientific': return '#8b5cf6'; // violet
+        case 'military': return '#ef4444'; // red
+        default: return '#6b7280'; // gray
+      }
+    })();
+    
+    const material = new THREE.LineBasicMaterial({ 
+      color: orbitColor, 
+      transparent: true, 
+      opacity: 0.4,
+      linewidth: 1
+    });
+    
+    return new THREE.Line(geometry, material);
+  }, [satellite.id, satellite.orbital.altitude, satellite.orbital.inclination, satellite.type]); // Only satellite ID and stable orbital params
 
   return (
     <group>
-      <primitive 
-        object={new THREE.Line(orbitGeometry, new THREE.LineBasicMaterial({ 
-          color: orbitColor, 
-          transparent: true, 
-          opacity: 0.4,
-          linewidth: 1
-        }))}
-      />
+      <primitive object={orbitLine} />
     </group>
+  );
+};
+
+// Camera focus controller component
+const CameraFocusController: React.FC = () => {
+  const controlsRef = useRef<any>(null);
+  const { filteredSatellites, globeSettings } = useSatelliteStore();
+
+  // Handle camera focus changes when satellite selection changes
+  useEffect(() => {
+    if (!controlsRef.current) return;
+    
+    if (globeSettings.selectedSatelliteId) {
+      const selectedSatellite = filteredSatellites.find(sat => sat.id === globeSettings.selectedSatelliteId);
+      if (selectedSatellite) {
+        // Calculate satellite position for camera focus
+        const earthRadius = 1;
+        const earthRadiusKm = 6371;
+        const altitudeKm = selectedSatellite.orbital.altitude;
+        const orbitalRadiusKm = earthRadiusKm + altitudeKm;
+        const orbitalRadius = orbitalRadiusKm / earthRadiusKm;
+        const safeOrbitalRadius = Math.max(orbitalRadius, 1.02);
+        
+        const inclination = (selectedSatellite.orbital.inclination * Math.PI) / 180;
+        const time = Date.now() / 1000;
+        const orbitPeriodSeconds = selectedSatellite.orbital.period * 60;
+        const orbitSpeed = (2 * Math.PI) / orbitPeriodSeconds;
+        const satelliteOffset = (parseInt(selectedSatellite.id) % 1000) / 1000 * Math.PI * 2;
+        const angle = (time * orbitSpeed + satelliteOffset) % (Math.PI * 2);
+        
+        let x = safeOrbitalRadius * Math.cos(angle);
+        let y = 0;
+        let z = safeOrbitalRadius * Math.sin(angle);
+        
+        const newY = y * Math.cos(inclination) - z * Math.sin(inclination);
+        const newZ = y * Math.sin(inclination) + z * Math.cos(inclination);
+        
+        // Smoothly transition camera focus to satellite
+        controlsRef.current.target.set(x, newY, newZ);
+        controlsRef.current.update();
+      }
+    } else {
+      // Return focus to Earth center
+      controlsRef.current.target.set(0, 0, 0);
+      controlsRef.current.update();
+    }
+  }, [globeSettings.selectedSatelliteId, filteredSatellites]);
+
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      enablePan={true}
+      enableZoom={true}
+      enableRotate={true}
+      minDistance={1.2}
+      maxDistance={8}
+      enableDamping={true}
+      dampingFactor={0.05}
+      rotateSpeed={0.5}
+      zoomSpeed={0.8}
+      panSpeed={0.5}
+      maxPolarAngle={Math.PI}
+      minPolarAngle={0}
+    />
   );
 };
 
@@ -355,6 +415,8 @@ const Stars: React.FC = () => {
 
 // Main Globe3D component with improved controls
 const Globe3D: React.FC = () => {
+  const { setSelectedSatellite } = useSatelliteStore();
+  
   return (
     <div className="h-full w-full bg-gradient-cosmic rounded-lg overflow-hidden relative">
       <div className="absolute inset-0">
@@ -375,22 +437,10 @@ const Globe3D: React.FC = () => {
             gl.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             gl.setClearColor('#000000', 0);
           }}
+          onClick={() => setSelectedSatellite(null)} // Deselect when clicking empty space
         >
           <Scene />
-          <OrbitControls
-            enablePan={true}
-            enableZoom={true}
-            enableRotate={true}
-            minDistance={1.2}
-            maxDistance={8}
-            enableDamping={true}
-            dampingFactor={0.05}
-            rotateSpeed={0.5}
-            zoomSpeed={0.8}
-            panSpeed={0.5}
-            maxPolarAngle={Math.PI}
-            minPolarAngle={0}
-          />
+          <CameraFocusController />
         </Canvas>
       </div>
     </div>
