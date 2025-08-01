@@ -45,7 +45,7 @@ interface SpaceTrackGPData {
 }
 
 export class SpaceTrackAPI {
-  private proxyUrl = '/functions/v1/space-track-proxy';
+  private proxyUrl = 'https://dnjhvmwznqsunjpabacg.supabase.co/functions/v1/space-track-proxy';
   private credentials = {
     username: 'nihanth20@gmail.com',
     password: 'CS2wTBBW.*LjZeY'
