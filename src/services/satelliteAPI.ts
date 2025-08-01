@@ -4,24 +4,28 @@ import * as satellite from 'satellite.js';
 // CelesTrak API - Most popular satellite groups (limited to prevent lag)
 const POPULAR_CELESTRAK_GROUPS = [
   'https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=json', // Space stations (all ~10)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=json&LIMIT=100', // Brightest visible satellites
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=json&LIMIT=50', // Weather satellites
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops&FORMAT=json&LIMIT=60', // GPS constellation
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo&FORMAT=json&LIMIT=50', // Galileo constellation
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=beidou&FORMAT=json&LIMIT=50', // BeiDou constellation
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=glonass-ops&FORMAT=json&LIMIT=40', // GLONASS constellation
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=json&LIMIT=200', // Popular Starlink subset
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium-NEXT&FORMAT=json&LIMIT=80', // Iridium constellation
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=oneweb&FORMAT=json&LIMIT=80', // OneWeb constellation
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=json&LIMIT=80', // Famous science satellites
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=json&LIMIT=60', // Earth observation
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=intelsat&FORMAT=json&LIMIT=40', // Major communication sats
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=ses&FORMAT=json&LIMIT=40', // SES communication sats
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=goes&FORMAT=json&LIMIT=20', // GOES weather satellites
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=geo&FORMAT=json&LIMIT=50', // Other geostationary
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=json&LIMIT=300', // Brightest visible satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=json&LIMIT=200', // Weather satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops&FORMAT=json&LIMIT=150', // GPS constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo&FORMAT=json&LIMIT=150', // Galileo constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=beidou&FORMAT=json&LIMIT=150', // BeiDou constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=glonass-ops&FORMAT=json&LIMIT=120', // GLONASS constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=json&LIMIT=1000', // Starlink subset
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium-NEXT&FORMAT=json&LIMIT=200', // Iridium constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=oneweb&FORMAT=json&LIMIT=300', // OneWeb constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=json&LIMIT=250', // Famous science satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=json&LIMIT=200', // Earth observation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=intelsat&FORMAT=json&LIMIT=100', // Major communication sats
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=ses&FORMAT=json&LIMIT=100', // SES communication sats
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=goes&FORMAT=json&LIMIT=50', // GOES weather satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=geo&FORMAT=json&LIMIT=200', // Other geostationary
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=molniya&FORMAT=json&LIMIT=100', // Molniya orbits
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=nnss&FORMAT=json&LIMIT=100', // Naval navigation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=argos&FORMAT=json&LIMIT=100', // Argos data collection
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=noaa&FORMAT=json&LIMIT=100', // NOAA satellites
 ];
 
-const MAX_SATELLITES = 1000; // Increased limit with optimizations
+const MAX_SATELLITES = 5000; // Increased limit with heavy optimizations
 
 // Launch API for upcoming launches  
 const LAUNCH_API = 'https://ll.thespacedevs.com/2.2.0/launch';
@@ -397,30 +401,10 @@ class RealSatelliteAPI {
           }
         }
         
-        // Fallback position with realistic orbital mechanics
+        // Skip satellites without proper TLE data - only use real positions
         if (!position) {
-          // Calculate position based on orbital parameters from satellite data
-          const meanMotion = sat.MEAN_MOTION || 15.5; // revolutions per day
-          const inclination = sat.INCLINATION || this.getTypicalInclination(type);
-          const raan = sat.RA_OF_ASC_NODE || 0;
-          const meanAnomaly = sat.MEAN_ANOMALY || 0;
-          
-          // Calculate current orbital position
-          const currentTime = Date.now();
-          const daysSinceEpoch = (currentTime - new Date(sat.EPOCH).getTime()) / (1000 * 60 * 60 * 24);
-          const currentMeanAnomaly = (meanAnomaly + meanMotion * 360 * daysSinceEpoch) % 360;
-          
-          // Simple orbital position calculation
-          const orbitalRadius = 6371 + realAltitude; // Earth radius + altitude
-          const longitude = ((raan + currentMeanAnomaly) % 360) - 180; // Convert to -180 to 180
-          const latitude = Math.sin(inclination * Math.PI / 180) * Math.sin(currentMeanAnomaly * Math.PI / 180) * 90;
-          
-          position = {
-            latitude: Math.max(-85, Math.min(85, latitude)), // Clamp to reasonable bounds
-            longitude: longitude,
-            altitude: realAltitude,
-            timestamp: currentTime
-          };
+          console.warn(`Skipping ${sat.OBJECT_NAME} - no valid TLE data for real position calculation`);
+          return null; // Skip this satellite entirely
         }
         
         return {
@@ -450,7 +434,7 @@ class RealSatelliteAPI {
         };
       });
       
-      return satellites;
+      return satellites.filter(sat => sat !== null); // Filter out null satellites
     } catch (error) {
       console.error(`Error fetching satellites from ${url}:`, error);
       return [];
@@ -474,11 +458,11 @@ class RealSatelliteAPI {
       }
     }
     
-    // Enforce 500 satellite limit to prevent lag
+    // Enforce 5000 satellite limit with optimizations
     if (allSatellites.length > MAX_SATELLITES) {
-      console.log(`⚠️ Limiting satellites from ${allSatellites.length} to ${MAX_SATELLITES} to prevent lag`);
+      console.log(`⚠️ Limiting satellites from ${allSatellites.length} to ${MAX_SATELLITES} with optimizations`);
       
-      // Prioritize satellites by importance/popularity
+      // Prioritize satellites by importance/popularity  
       const priorityOrder: SatelliteType[] = [
         'space-station', 'scientific', 'weather', 'navigation', 
         'constellation', 'communication', 'earth-observation', 'military'
@@ -503,7 +487,7 @@ class RealSatelliteAPI {
         prioritizedSatellites.push(...leftoverSatellites.slice(0, remaining));
       }
       
-      // Final trim to exactly 500
+      // Final trim to exactly MAX_SATELLITES
       allSatellites.splice(0, allSatellites.length, ...prioritizedSatellites.slice(0, MAX_SATELLITES));
     }
     
