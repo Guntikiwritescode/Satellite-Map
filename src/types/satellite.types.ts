@@ -49,7 +49,8 @@ export type SatelliteType =
   | 'earth-observation'
   | 'space-station'
   | 'constellation'
-  | 'commercial';
+  | 'commercial'
+  | 'rocket-body';
 
 export type SatelliteStatus = 'active' | 'inactive' | 'decayed' | 'unknown';
 
