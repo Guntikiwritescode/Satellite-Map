@@ -20,6 +20,7 @@ interface SatelliteStore {
   
   // Actions
   setSatellites: (satellites: Satellite[]) => void;
+  updateSatellitePositions: (positionUpdates: { id: string; position: Satellite['position'] }[]) => void;
   updateSatellitePosition: (id: string, position: Satellite['position']) => void;
   setLaunches: (launches: Launch[]) => void;
   setUserLocation: (location: UserLocation) => void;
@@ -84,12 +85,31 @@ export const useSatelliteStore = create<SatelliteStore>()(
       });
     },
     
-    updateSatellitePosition: (id, position) => set((state) => ({
-      satellites: state.satellites.map(sat =>
+    updateSatellitePositions: (positionUpdates) => set((state) => {
+      const updatedSatellites = state.satellites.map(satellite => {
+        const update = positionUpdates.find(u => u.id === satellite.id);
+        return update ? { ...satellite, position: update.position } : satellite;
+      });
+      
+      const filtered = state.applyFilters(updatedSatellites, state.filters);
+      return {
+        satellites: updatedSatellites,
+        filteredSatellites: filtered,
+        lastUpdate: Date.now()
+      };
+    }),
+    
+    updateSatellitePosition: (id, position) => set((state) => {
+      const updatedSatellites = state.satellites.map(sat =>
         sat.id === id ? { ...sat, position } : sat
-      ),
-      lastUpdate: Date.now(),
-    })),
+      );
+      const filtered = state.applyFilters(updatedSatellites, state.filters);
+      return {
+        satellites: updatedSatellites,
+        filteredSatellites: filtered,
+        lastUpdate: Date.now()
+      };
+    }),
     
     setLaunches: (launches) => set({ launches }),
     
