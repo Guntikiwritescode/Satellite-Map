@@ -189,13 +189,13 @@ class RealSatelliteAPI {
     // Initial load with fallback
     this.getSatellitesWithFallback().then(callback);
     
-    // Update satellite positions every 10 seconds for better performance
+    // Update satellite positions every 3 seconds
     this.updateInterval = setInterval(async () => {
       try {
         if (this.cachedSatellites.length > 0) {
           // Reduced logging frequency for better performance
           if (Math.random() < 0.1) { // Only log 10% of the time
-            console.log('Updating satellite positions every 10 seconds for', this.cachedSatellites.length, 'satellites');
+            console.log('Updating satellite positions every 3 seconds for', this.cachedSatellites.length, 'satellites');
           }
           
           const updatedSatellites = this.cachedSatellites.map(satellite => {
@@ -211,7 +211,7 @@ class RealSatelliteAPI {
       } catch (error) {
         console.error('Error updating satellite positions:', error);
       }
-    }, 10000); // Changed from 3000 to 10000 (10 seconds)
+    }, 3000); // Back to 3 seconds as requested
   }
 
   calculateOrbitalPosition(satellite: Satellite): Satellite['position'] {
