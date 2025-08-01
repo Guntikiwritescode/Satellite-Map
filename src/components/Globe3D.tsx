@@ -125,38 +125,38 @@ const OrbitalPath: React.FC<OrbitalPathProps> = ({ satellite: sat }) => {
       const { latitude, longitude, altitude } = sat.position;
       if (!latitude || !longitude || !altitude) return points;
       
-      // Convert current satellite position to 3D coordinates
-      const currentLat = (latitude * Math.PI) / 180;
-      const currentLon = (longitude * Math.PI) / 180;
-      const currentRadius = earthRadius + (altitude * 5) / 6371;
+      // Convert satellite's current position to 3D coordinates
+      const lat = (latitude * Math.PI) / 180;
+      const lon = (longitude * Math.PI) / 180;
+      const satelliteRadius = earthRadius + (altitude * 5) / 6371;
       
-      const currentX = currentRadius * Math.cos(currentLat) * Math.cos(currentLon);
-      const currentY = currentRadius * Math.sin(currentLat);
-      const currentZ = currentRadius * Math.cos(currentLat) * Math.sin(currentLon);
+      // Current satellite position in 3D space
+      const satX = satelliteRadius * Math.cos(lat) * Math.cos(lon);
+      const satY = satelliteRadius * Math.sin(lat);
+      const satZ = satelliteRadius * Math.cos(lat) * Math.sin(lon);
       
-      // For simplicity, create a circular orbit at the satellite's altitude
-      // The orbit plane will be tilted by the inclination angle
-      const inclination = (sat.orbital.inclination * Math.PI) / 180;
+      // Create a simple circular orbit at the satellite's distance from Earth center
+      const orbitRadius = Math.sqrt(satX * satX + satY * satY + satZ * satZ);
       const totalPoints = 100;
       
-      // Find the angle where the satellite currently is on its orbit
-      const currentAngle = Math.atan2(currentZ, currentX);
+      // Find the current angle of the satellite in its orbital plane
+      const currentAngle = Math.atan2(satZ, satX);
       
+      // Create circular orbit points starting from satellite's current position
       for (let i = 0; i <= totalPoints; i++) {
-        // Create angle starting from satellite's current position
         const angle = currentAngle + (i / totalPoints) * 2 * Math.PI;
         
-        // Create circular orbit at satellite's altitude
-        const x = currentRadius * Math.cos(angle);
-        const y = currentRadius * Math.sin(angle) * Math.sin(inclination);
-        const z = currentRadius * Math.sin(angle) * Math.cos(inclination);
+        // Simple circular orbit in the XZ plane at satellite's distance
+        const x = orbitRadius * Math.cos(angle);
+        const y = satY; // Keep same Y level for now (will apply inclination)
+        const z = orbitRadius * Math.sin(angle);
         
-        // Rotate to match the satellite's orbital plane orientation
-        const rotatedX = x * Math.cos(currentLat) - y * Math.sin(currentLat);
-        const rotatedY = x * Math.sin(currentLat) + y * Math.cos(currentLat);
-        const rotatedZ = z;
+        // Apply inclination by rotating around X axis
+        const inclination = (sat.orbital.inclination * Math.PI) / 180;
+        const rotatedY = y * Math.cos(inclination);
+        const rotatedZ = z * Math.cos(inclination) + y * Math.sin(inclination);
         
-        points.push(new THREE.Vector3(rotatedX, rotatedY, rotatedZ));
+        points.push(new THREE.Vector3(x, rotatedY, rotatedZ));
       }
       
     } catch (error) {
