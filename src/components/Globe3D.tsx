@@ -6,7 +6,7 @@ import { useSatelliteStore } from '../stores/satelliteStore';
 import { Satellite } from '../types/satellite.types';
 import ErrorBoundary from './ErrorBoundary';
 
-// Optimized Earth component
+// Stationary Earth component
 const Earth: React.FC = () => {
   const meshRef = useRef<THREE.Mesh>(null);
   const earthRadius = 5;
@@ -16,10 +16,7 @@ const Earth: React.FC = () => {
     return loader.load('/earth-texture.jpg');
   }, []);
 
-  useFrame(() => {
-    // Earth stays stationary - satellites orbit around it (realistic)
-  });
-
+  // Earth stays stationary
   return (
     <mesh ref={meshRef}>
       <sphereGeometry args={[earthRadius, 32, 16]} />
@@ -28,7 +25,7 @@ const Earth: React.FC = () => {
   );
 };
 
-// Optimized satellite marker
+// Optimized satellite marker with orbital motion
 interface SatelliteMarkerProps {
   satellite: Satellite;
   isSelected: boolean;
@@ -41,26 +38,28 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
   onClick 
 }) => {
   const meshRef = useRef<THREE.Mesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
   
-  // Calculate orbital position that changes over time
-  const position = useMemo(() => {
+  // Calculate base orbital parameters
+  const orbitalData = useMemo(() => {
     const { latitude, longitude, altitude } = satellite.position;
     if (!latitude || !longitude || !altitude) return null;
     
     const earthRadius = 5;
+    const radius = earthRadius + (altitude * 5) / 6371; // Proper scaling
+    const inclination = (satellite.orbital.inclination * Math.PI) / 180;
+    const period = satellite.orbital.period || 90; // minutes
+    
+    // Convert initial position to orbital parameters
     const lat = (latitude * Math.PI) / 180;
     const lon = (longitude * Math.PI) / 180;
-    const radius = earthRadius + (altitude * 5) / 6371; // Proper scaling
     
     return {
-      basePosition: [
-        radius * Math.cos(lat) * Math.cos(lon),
-        radius * Math.sin(lat),
-        radius * Math.cos(lat) * Math.sin(lon)
-      ] as [number, number, number],
       radius,
-      inclination: (satellite.orbital.inclination * Math.PI) / 180,
-      period: satellite.orbital.period || 90 // minutes
+      inclination,
+      period,
+      initialAngle: lon, // Use longitude as starting orbital angle
+      initialLat: lat
     };
   }, [satellite.position, satellite.orbital]);
 
@@ -79,44 +78,43 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     return colors[satellite.type as keyof typeof colors] || '#6b7280';
   }, [satellite.type]);
 
-  // Realistic orbital motion animation
+  // Orbital motion animation
   useFrame((state) => {
-    if (meshRef.current && position) {
-      // Calculate orbital position based on time and orbital parameters
+    if (groupRef.current && orbitalData) {
       const time = state.clock.getElapsedTime();
       
-      // Orbital speed: faster satellites have shorter periods
-      const orbitalSpeed = (2 * Math.PI) / (position.period * 6); // 6 = time scale factor
+      // Orbital speed based on period (faster for lower orbits)
+      const orbitalSpeed = (2 * Math.PI) / (orbitalData.period * 0.1); // Speed up 10x for visibility
       
       // Current orbital angle
-      const angle = time * orbitalSpeed;
+      const angle = orbitalData.initialAngle + (time * orbitalSpeed);
       
       // Calculate position in orbital plane
-      const x = position.radius * Math.cos(angle);
-      const z = position.radius * Math.sin(angle);
-      const y = 0; // Start in equatorial plane
+      const x = orbitalData.radius * Math.cos(angle);
+      const z = orbitalData.radius * Math.sin(angle);
+      const y = 0;
       
       // Apply orbital inclination
-      const inclinedY = y * Math.cos(position.inclination) - z * Math.sin(position.inclination);
-      const inclinedZ = y * Math.sin(position.inclination) + z * Math.cos(position.inclination);
+      const inclinedY = y * Math.cos(orbitalData.inclination) - z * Math.sin(orbitalData.inclination);
+      const inclinedZ = y * Math.sin(orbitalData.inclination) + z * Math.cos(orbitalData.inclination);
       
-      // Update satellite position
-      meshRef.current.position.set(x, inclinedY, inclinedZ);
-      
-      // Pulsing animation for selected satellites
-      if (isSelected) {
-        const pulse = Math.sin(state.clock.getElapsedTime() * 3) * 0.1 + 1.0;
-        meshRef.current.scale.setScalar(pulse);
-      } else {
-        meshRef.current.scale.setScalar(1);
-      }
+      // Update position
+      groupRef.current.position.set(x, inclinedY, inclinedZ);
+    }
+    
+    // Pulsing animation for selected satellites
+    if (meshRef.current && isSelected) {
+      const pulse = Math.sin(state.clock.getElapsedTime() * 3) * 0.1 + 1.0;
+      meshRef.current.scale.setScalar(pulse);
+    } else if (meshRef.current) {
+      meshRef.current.scale.setScalar(1);
     }
   });
 
-  if (!position) return null;
+  if (!orbitalData) return null;
 
   return (
-    <group>
+    <group ref={groupRef}>
       <mesh
         ref={meshRef}
         onClick={(e) => {
@@ -129,7 +127,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
       </mesh>
       
       {isSelected && (
-        <mesh position={meshRef.current?.position || [0, 0, 0]}>
+        <mesh>
           <sphereGeometry args={[0.05, 8, 8]} />
           <meshBasicMaterial color={color} transparent opacity={0.3} />
         </mesh>
@@ -167,20 +165,8 @@ const CameraController: React.FC = () => {
         };
         animate();
       }
-      return;
     }
-
-    // For selected satellite, we'll track its current orbital position
-    // This is more complex since satellites are now moving, so we'll update in real-time
-    const selectedSatellite = filteredSatellites.find(
-      sat => sat.id === globeSettings.selectedSatelliteId
-    );
-    
-    if (selectedSatellite && controlsRef.current) {
-      // Set up camera to follow the moving satellite
-      // We'll let the real-time tracking happen in the render loop instead
-    }
-  }, [globeSettings.selectedSatelliteId, filteredSatellites, camera]);
+  }, [globeSettings.selectedSatelliteId, camera]);
 
   return (
     <OrbitControls 
@@ -208,7 +194,7 @@ const Scene: React.FC = () => {
     
     return filteredSatellites
       .filter(sat => sat?.position?.latitude && sat?.position?.longitude && sat?.position?.altitude)
-      .slice(0, 1000); // Performance limit
+      .slice(0, 500); // Reduced for performance
   }, [filteredSatellites, globeSettings.selectedSatelliteId]);
 
   return (
