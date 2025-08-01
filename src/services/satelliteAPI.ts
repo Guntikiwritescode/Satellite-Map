@@ -321,6 +321,7 @@ class RealSatelliteAPI {
     };
     
     const mockSatellites: Satellite[] = [
+      // SPACE STATIONS
       {
         id: '25544',
         name: 'ISS (ZARYA)',
@@ -344,8 +345,32 @@ class RealSatelliteAPI {
         footprint: 4500
       },
       {
+        id: '48274',
+        name: 'TIANGONG SPACE STATION',
+        type: 'space-station',
+        country: 'China',
+        agency: 'CNSA',
+        launchDate: '2021-04-29',
+        status: 'active',
+        orbital: {
+          altitude: 340,
+          period: 91.2,
+          inclination: 41.5,
+          eccentricity: 0.0001,
+          velocity: 7.68
+        },
+        position: generatePosition(0.5, 15),
+        tle: {
+          line1: '1 48274U 21035A   23001.00000000  .00001742  00000-0  37350-4 0  9990',
+          line2: '2 48274  41.5393 339.2928 0001897  95.8340 264.3200 15.52299371367649'
+        },
+        footprint: 4200
+      },
+
+      // STARLINK CONSTELLATION (Multiple satellites)
+      {
         id: '44713',
-        name: 'STARLINK-1019',
+        name: 'STARLINK-1007',
         type: 'constellation',
         country: 'USA',
         agency: 'SpaceX',
@@ -366,6 +391,52 @@ class RealSatelliteAPI {
         footprint: 1000
       },
       {
+        id: '44714',
+        name: 'STARLINK-1008',
+        type: 'constellation',
+        country: 'USA',
+        agency: 'SpaceX',
+        launchDate: '2019-05-24',
+        status: 'active',
+        orbital: {
+          altitude: 550,
+          period: 95.4,
+          inclination: 53.0,
+          eccentricity: 0.0001,
+          velocity: 7.57
+        },
+        position: generatePosition(1.1, 50),
+        tle: {
+          line1: '1 44714U 19074B   23001.00000000  .00001345  00000-0  10270-3 0  9991',
+          line2: '2 44714  53.0536  90.4721 0001425  95.4618 264.6879 15.05444835201234'
+        },
+        footprint: 1000
+      },
+      {
+        id: '51862',
+        name: 'STARLINK-3075',
+        type: 'constellation',
+        country: 'USA',
+        agency: 'SpaceX',
+        launchDate: '2022-02-25',
+        status: 'active',
+        orbital: {
+          altitude: 540,
+          period: 95.2,
+          inclination: 53.2,
+          eccentricity: 0.0001,
+          velocity: 7.58
+        },
+        position: generatePosition(1.2, 55),
+        tle: {
+          line1: '1 51862U 22025A   23001.00000000  .00001345  00000-0  10270-3 0  9991',
+          line2: '2 51862  53.2536  90.4721 0001425  95.4618 264.6879 15.05644835201234'
+        },
+        footprint: 1000
+      },
+
+      // GPS CONSTELLATION
+      {
         id: '29601',
         name: 'GPS BIIR-2 (PRN 13)',
         type: 'navigation',
@@ -382,11 +453,81 @@ class RealSatelliteAPI {
         },
         position: generatePosition(2, 90),
         tle: {
-          line1: '1 24876U 97035A   23001.00000000 -.00000007  00000-0  00000+0 0  9995',
-          line2: '2 24876  54.9988 123.4567 0048123  45.6789 314.5678  2.00564321123456'
+          line1: '1 29601U 97035A   23001.00000000 -.00000007  00000-0  00000+0 0  9995',
+          line2: '2 29601  54.9988 123.4567 0048123  45.6789 314.5678  2.00564321123456'
         },
         footprint: 12000
       },
+      {
+        id: '40294',
+        name: 'GPS BIIF-5 (PRN 30)',
+        type: 'navigation',
+        country: 'USA',
+        agency: 'US Air Force',
+        launchDate: '2014-02-20',
+        status: 'active',
+        orbital: {
+          altitude: 20180,
+          period: 717.8,
+          inclination: 54.8,
+          eccentricity: 0.0045,
+          velocity: 3.87
+        },
+        position: generatePosition(2.1, 120),
+        tle: {
+          line1: '1 40294U 14016A   23001.00000000 -.00000007  00000-0  00000+0 0  9995',
+          line2: '2 40294  54.8988 153.4567 0045123  45.6789 314.5678  2.00564321123456'
+        },
+        footprint: 12000
+      },
+      {
+        id: '43873',
+        name: 'GPS BIII-3 (PRN 32)',
+        type: 'navigation',
+        country: 'USA',
+        agency: 'US Space Force',
+        launchDate: '2018-12-23',
+        status: 'active',
+        orbital: {
+          altitude: 20190,
+          period: 717.9,
+          inclination: 54.9,
+          eccentricity: 0.0046,
+          velocity: 3.87
+        },
+        position: generatePosition(2.2, 150),
+        tle: {
+          line1: '1 43873U 18109A   23001.00000000 -.00000007  00000-0  00000+0 0  9995',
+          line2: '2 43873  54.9988 183.4567 0046123  45.6789 314.5678  2.00564321123456'
+        },
+        footprint: 12000
+      },
+
+      // GALILEO NAVIGATION
+      {
+        id: '37846',
+        name: 'GALILEO-1 (GSAT0101)',
+        type: 'navigation',
+        country: 'Europe',
+        agency: 'ESA',
+        launchDate: '2011-10-21',
+        status: 'active',
+        orbital: {
+          altitude: 23222,
+          period: 844.1,
+          inclination: 56.0,
+          eccentricity: 0.0002,
+          velocity: 3.6
+        },
+        position: generatePosition(2.3, 180),
+        tle: {
+          line1: '1 37846U 11060A   23001.00000000 -.00000007  00000-0  00000+0 0  9995',
+          line2: '2 37846  56.0988 213.4567 0002123  45.6789 314.5678  1.70564321123456'
+        },
+        footprint: 15000
+      },
+
+      // EARTH OBSERVATION SATELLITES
       {
         id: '25994',
         name: 'TERRA',
@@ -410,6 +551,74 @@ class RealSatelliteAPI {
         footprint: 2800
       },
       {
+        id: '27424',
+        name: 'AQUA',
+        type: 'earth-observation',
+        country: 'USA',
+        agency: 'NASA',
+        launchDate: '2002-05-04',
+        status: 'active',
+        orbital: {
+          altitude: 705,
+          period: 98.8,
+          inclination: 98.2,
+          eccentricity: 0.0001,
+          velocity: 7.45
+        },
+        position: generatePosition(3.1, 145),
+        tle: {
+          line1: '1 27424U 02022A   23001.00000000  .00000234  00000-0  12345-4 0  9992',
+          line2: '2 27424  98.2123  55.6789 0001234  87.6543 272.3456 14.57123456789012'
+        },
+        footprint: 2800
+      },
+      {
+        id: '39084',
+        name: 'LANDSAT 8',
+        type: 'earth-observation',
+        country: 'USA',
+        agency: 'NASA/USGS',
+        launchDate: '2013-02-11',
+        status: 'active',
+        orbital: {
+          altitude: 705,
+          period: 98.8,
+          inclination: 98.2,
+          eccentricity: 0.0001,
+          velocity: 7.45
+        },
+        position: generatePosition(3.2, 155),
+        tle: {
+          line1: '1 39084U 13008A   23001.00000000  .00000234  00000-0  12345-4 0  9992',
+          line2: '2 39084  98.2123  65.6789 0001234  87.6543 272.3456 14.57123456789012'
+        },
+        footprint: 2800
+      },
+      {
+        id: '49260',
+        name: 'LANDSAT 9',
+        type: 'earth-observation',
+        country: 'USA',
+        agency: 'NASA/USGS',
+        launchDate: '2021-09-27',
+        status: 'active',
+        orbital: {
+          altitude: 705,
+          period: 98.8,
+          inclination: 98.2,
+          eccentricity: 0.0001,
+          velocity: 7.45
+        },
+        position: generatePosition(3.3, 165),
+        tle: {
+          line1: '1 49260U 21088A   23001.00000000  .00000234  00000-0  12345-4 0  9992',
+          line2: '2 49260  98.2123  75.6789 0001234  87.6543 272.3456 14.57123456789012'
+        },
+        footprint: 2800
+      },
+
+      // WEATHER SATELLITES
+      {
         id: '41866',
         name: 'GOES-16',
         type: 'weather',
@@ -430,6 +639,188 @@ class RealSatelliteAPI {
           line2: '2 41866   0.0567 123.4567 0001234  12.3456 347.6789  1.00271234567890'
         },
         footprint: 18000
+      },
+      {
+        id: '43226',
+        name: 'GOES-17',
+        type: 'weather',
+        country: 'USA',
+        agency: 'NOAA',
+        launchDate: '2018-03-01',
+        status: 'active',
+        orbital: {
+          altitude: 35786,
+          period: 1436.1,
+          inclination: 0.1,
+          eccentricity: 0.0001,
+          velocity: 3.07
+        },
+        position: generatePosition(4.1, 210),
+        tle: {
+          line1: '1 43226U 18022A   23001.00000000 -.00000123  00000-0  00000+0 0  9993',
+          line2: '2 43226   0.0567 153.4567 0001234  12.3456 347.6789  1.00271234567890'
+        },
+        footprint: 18000
+      },
+      {
+        id: '40069',
+        name: 'NOAA-20',
+        type: 'weather',
+        country: 'USA',
+        agency: 'NOAA',
+        launchDate: '2017-11-18',
+        status: 'active',
+        orbital: {
+          altitude: 824,
+          period: 101.1,
+          inclination: 98.7,
+          eccentricity: 0.0001,
+          velocity: 7.35
+        },
+        position: generatePosition(4.2, 240),
+        tle: {
+          line1: '1 40069U 17073A   23001.00000000  .00000234  00000-0  12345-4 0  9992',
+          line2: '2 40069  98.7123  85.6789 0001234  87.6543 272.3456 14.19123456789012'
+        },
+        footprint: 3100
+      },
+
+      // SCIENTIFIC SATELLITES
+      {
+        id: '20580',
+        name: 'HUBBLE SPACE TELESCOPE',
+        type: 'scientific',
+        country: 'International',
+        agency: 'NASA/ESA',
+        launchDate: '1990-04-24',
+        status: 'active',
+        orbital: {
+          altitude: 547,
+          period: 95.4,
+          inclination: 28.5,
+          eccentricity: 0.0003,
+          velocity: 7.56
+        },
+        position: generatePosition(5, 270),
+        tle: {
+          line1: '1 20580U 90037B   23001.00000000  .00000345  00000-0  12345-4 0  9992',
+          line2: '2 20580  28.5123  115.6789 0003234  87.6543 272.3456 15.09123456789012'
+        },
+        footprint: 1200
+      },
+      {
+        id: '36411',
+        name: 'SPITZER SPACE TELESCOPE',
+        type: 'scientific',
+        country: 'USA',
+        agency: 'NASA',
+        launchDate: '2003-08-25',
+        status: 'inactive',
+        orbital: {
+          altitude: 350000,
+          period: 372.6,
+          inclination: 1.1,
+          eccentricity: 0.98,
+          velocity: 1.02
+        },
+        position: generatePosition(5.1, 300),
+        tle: {
+          line1: '1 36411U 03038A   23001.00000000  .00000000  00000-0  00000+0 0  9992',
+          line2: '2 36411   1.1123  145.6789 0980234  87.6543 272.3456  0.37123456789012'
+        },
+        footprint: 150000
+      },
+
+      // COMMUNICATION SATELLITES
+      {
+        id: '40874',
+        name: 'INTELSAT 35E',
+        type: 'communication',
+        country: 'International',
+        agency: 'Intelsat',
+        launchDate: '2015-07-03',
+        status: 'active',
+        orbital: {
+          altitude: 35786,
+          period: 1436.1,
+          inclination: 0.1,
+          eccentricity: 0.0001,
+          velocity: 3.07
+        },
+        position: generatePosition(6, 330),
+        tle: {
+          line1: '1 40874U 15039A   23001.00000000 -.00000123  00000-0  00000+0 0  9993',
+          line2: '2 40874   0.0567 183.4567 0001234  12.3456 347.6789  1.00271234567890'
+        },
+        footprint: 18000
+      },
+      {
+        id: '37834',
+        name: 'EUTELSAT 70B',
+        type: 'communication',
+        country: 'Europe',
+        agency: 'Eutelsat',
+        launchDate: '2013-12-03',
+        status: 'active',
+        orbital: {
+          altitude: 35786,
+          period: 1436.1,
+          inclination: 0.1,
+          eccentricity: 0.0001,
+          velocity: 3.07
+        },
+        position: generatePosition(6.1, 360),
+        tle: {
+          line1: '1 37834U 11060B   23001.00000000 -.00000123  00000-0  00000+0 0  9993',
+          line2: '2 37834   0.0567 213.4567 0001234  12.3456 347.6789  1.00271234567890'
+        },
+        footprint: 18000
+      },
+
+      // MILITARY SATELLITES
+      {
+        id: '44506',
+        name: 'USA 290 (GPS BIII-2)',
+        type: 'military',
+        country: 'USA',
+        agency: 'US Space Force',
+        launchDate: '2019-08-22',
+        status: 'active',
+        orbital: {
+          altitude: 20180,
+          period: 717.8,
+          inclination: 54.8,
+          eccentricity: 0.0045,
+          velocity: 3.87
+        },
+        position: generatePosition(7, 30),
+        tle: {
+          line1: '1 44506U 19048A   23001.00000000 -.00000007  00000-0  00000+0 0  9995',
+          line2: '2 44506  54.8988 243.4567 0045123  45.6789 314.5678  2.00564321123456'
+        },
+        footprint: 12000
+      },
+      {
+        id: '37752',
+        name: 'NROL-65',
+        type: 'military',
+        country: 'USA',
+        agency: 'NRO',
+        launchDate: '2011-04-15',
+        status: 'active',
+        orbital: {
+          altitude: 1020,
+          period: 105.1,
+          inclination: 123.0,
+          eccentricity: 0.02,
+          velocity: 7.24
+        },
+        position: generatePosition(7.1, 60),
+        tle: {
+          line1: '1 37752U 11015A   23001.00000000  .00000234  00000-0  12345-4 0  9992',
+          line2: '2 37752 123.0123  275.6789 0020234  87.6543 272.3456 13.73123456789012'
+        },
+        footprint: 4200
       }
     ];
     
