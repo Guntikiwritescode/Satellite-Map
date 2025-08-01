@@ -594,6 +594,16 @@ const Scene: React.FC = () => {
     camera.lookAt(0, 0, 0);
   }, [camera]);
 
+  // Filter satellites based on selection - show only selected satellite when one is selected
+  const visibleSatellites = useMemo(() => {
+    if (globeSettings.selectedSatelliteId) {
+      // When a satellite is selected, show only that satellite
+      return filteredSatellites.filter(sat => sat.id === globeSettings.selectedSatelliteId);
+    }
+    // When no satellite is selected, show all filtered satellites
+    return filteredSatellites;
+  }, [filteredSatellites, globeSettings.selectedSatelliteId]);
+
   return (
     <>
       {/* Improved lighting setup */}
@@ -619,18 +629,25 @@ const Scene: React.FC = () => {
       {/* Earth with better material */}
       <Earth />
       
-      {/* Satellites with improved rendering */}
-      {filteredSatellites.map((satellite) => (
+      {/* Satellites with improved rendering - filtered by selection */}
+      {visibleSatellites.map((satellite) => (
         <SatelliteMarker
           key={satellite.id}
           satellite={satellite}
           isSelected={globeSettings.selectedSatelliteId === satellite.id}
-          onClick={() => setSelectedSatellite(satellite.id)}
+          onClick={() => {
+            // Toggle selection: if clicking the same satellite, deselect it
+            if (globeSettings.selectedSatelliteId === satellite.id) {
+              setSelectedSatellite(null);
+            } else {
+              setSelectedSatellite(satellite.id);
+            }
+          }}
         />
       ))}
       
       {/* Orbital paths - rendered separately and centered on Earth */}
-      {filteredSatellites.map((satellite) => {
+      {visibleSatellites.map((satellite) => {
         const isSelected = globeSettings.selectedSatelliteId === satellite.id;
         return (globeSettings.showOrbits || isSelected) && (
           <OrbitPath key={`orbit-${satellite.id}`} satellite={satellite} />
