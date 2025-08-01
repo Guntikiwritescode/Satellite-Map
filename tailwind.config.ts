@@ -61,7 +61,16 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				/* Space theme colors */
+				'nebula-purple': 'hsl(var(--nebula-purple))',
+				'cosmic-blue': 'hsl(var(--cosmic-blue))',
+				'stellar-cyan': 'hsl(var(--stellar-cyan))',
+				'deep-space': 'hsl(var(--deep-space))',
+				'asteroid-gray': 'hsl(var(--asteroid-gray))',
+				'solar-orange': 'hsl(var(--solar-orange))',
+				'mars-red': 'hsl(var(--mars-red))',
+				'jupiter-amber': 'hsl(var(--jupiter-amber))'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -88,7 +97,20 @@ export default {
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'orbit': 'orbit var(--orbit-duration) linear infinite',
+				'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
+				'float': 'float 3s ease-in-out infinite'
+			},
+			backgroundImage: {
+				'gradient-nebula': 'var(--gradient-nebula)',
+				'gradient-cosmic': 'var(--gradient-cosmic)',
+				'gradient-aurora': 'var(--gradient-aurora)'
+			},
+			boxShadow: {
+				'orbital': 'var(--shadow-orbital)',
+				'nebula': 'var(--shadow-nebula)',
+				'deep': 'var(--shadow-deep)'
 			}
 		}
 	},
