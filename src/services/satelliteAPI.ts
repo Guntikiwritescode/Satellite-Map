@@ -397,13 +397,29 @@ class RealSatelliteAPI {
           }
         }
         
-        // Fallback position with realistic altitude
+        // Fallback position with realistic orbital mechanics
         if (!position) {
+          // Calculate position based on orbital parameters from satellite data
+          const meanMotion = sat.MEAN_MOTION || 15.5; // revolutions per day
+          const inclination = sat.INCLINATION || this.getTypicalInclination(type);
+          const raan = sat.RA_OF_ASC_NODE || 0;
+          const meanAnomaly = sat.MEAN_ANOMALY || 0;
+          
+          // Calculate current orbital position
+          const currentTime = Date.now();
+          const daysSinceEpoch = (currentTime - new Date(sat.EPOCH).getTime()) / (1000 * 60 * 60 * 24);
+          const currentMeanAnomaly = (meanAnomaly + meanMotion * 360 * daysSinceEpoch) % 360;
+          
+          // Simple orbital position calculation
+          const orbitalRadius = 6371 + realAltitude; // Earth radius + altitude
+          const longitude = ((raan + currentMeanAnomaly) % 360) - 180; // Convert to -180 to 180
+          const latitude = Math.sin(inclination * Math.PI / 180) * Math.sin(currentMeanAnomaly * Math.PI / 180) * 90;
+          
           position = {
-            latitude: Math.random() * 180 - 90,
-            longitude: Math.random() * 360 - 180,
+            latitude: Math.max(-85, Math.min(85, latitude)), // Clamp to reasonable bounds
+            longitude: longitude,
             altitude: realAltitude,
-            timestamp: Date.now()
+            timestamp: currentTime
           };
         }
         
