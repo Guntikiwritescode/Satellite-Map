@@ -197,12 +197,12 @@ export const useSatelliteStore = create<SatelliteStore>()(
         }
         
         // Country filter
-        if (filters.countries.length > 0 && !filters.countries.includes(satellite.country)) {
+        if (filters.countries.length > 0 && !filters.countries.includes(satellite.metadata?.country || 'Unknown')) {
           return false;
         }
         
         // Agency filter
-        if (filters.agencies.length > 0 && !filters.agencies.includes(satellite.agency)) {
+        if (filters.agencies.length > 0 && !filters.agencies.includes(satellite.metadata?.constellation || 'Individual')) {
           return false;
         }
         
@@ -213,7 +213,7 @@ export const useSatelliteStore = create<SatelliteStore>()(
         
         // Altitude range filter
         const [minAlt, maxAlt] = filters.altitudeRange;
-        if (satellite.orbital.altitude < minAlt || satellite.orbital.altitude > maxAlt) {
+        if (satellite.position.altitude < minAlt || satellite.position.altitude > maxAlt) {
           return false;
         }
         
@@ -222,8 +222,8 @@ export const useSatelliteStore = create<SatelliteStore>()(
           const query = filters.searchQuery.toLowerCase();
           return (
             satellite.name.toLowerCase().includes(query) ||
-            satellite.agency.toLowerCase().includes(query) ||
-            satellite.country.toLowerCase().includes(query) ||
+            (satellite.metadata?.constellation || '').toLowerCase().includes(query) ||
+            (satellite.metadata?.country || '').toLowerCase().includes(query) ||
             satellite.type.toLowerCase().includes(query)
           );
         }
@@ -234,7 +234,7 @@ export const useSatelliteStore = create<SatelliteStore>()(
       // Sort by brightness/popularity (lower magnitude = brighter = more popular)
       // Use altitude as popularity proxy for now (lower altitude = more visible)
       filtered.sort((a, b) => {
-        return a.orbital.altitude - b.orbital.altitude;
+        return a.position.altitude - b.position.altitude;
       });
       
       // Limit to max display satellites
