@@ -57,69 +57,29 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
   const { globeSettings } = useSatelliteStore();
   const [isVisible, setIsVisible] = React.useState(true);
   
-  // Calculate satellite's actual 3D position using real-time altitude data
+  // Calculate satellite position from REAL TLE data - no fallbacks
   const position = useMemo(() => {
-    const earthRadius = 5; // Updated to match new Earth radius
-    const earthRadiusKm = 6371;
+    const earthRadius = 5;
     
-    // Validate input data
-    if (!satellite?.position || !satellite?.orbital) {
-      console.warn('Missing position or orbital data for satellite:', satellite?.id);
-      return [0, earthRadius + 1, 0] as [number, number, number];
+    // Only use real position data from TLE calculations
+    if (!satellite?.position?.latitude || !satellite?.position?.longitude || !satellite?.position?.altitude) {
+      console.warn('Missing real position data for satellite:', satellite?.id);
+      return null; // Don't render satellites without real data
     }
     
-    // Use REAL altitude from TLE calculation, not the orbital.altitude fallback
-    const realAltitudeKm = satellite.position.altitude || satellite.orbital.altitude || 400;
-    const period = satellite.orbital.period || 90;
-    const inclination = satellite.orbital.inclination || 0;
+    const lat = (satellite.position.latitude * Math.PI) / 180;
+    const lon = (satellite.position.longitude * Math.PI) / 180;
     
-    // Convert real altitude to 3D scene scale
-    const orbitalRadiusKm = earthRadiusKm + realAltitudeKm;
-    const orbitalRadius = (orbitalRadiusKm / earthRadiusKm) * earthRadius; // Scale to Earth size
-    const safeOrbitalRadius = Math.max(orbitalRadius, earthRadius + 0.1); // Prevent intersection with Earth
+    // Use real altitude with minimal scaling for visibility
+    const altitudeScale = Math.max(0.01, satellite.position.altitude / 50000);
+    const radius = earthRadius + altitudeScale;
     
-    // Get orbital inclination
-    const inclinationRad = (inclination * Math.PI) / 180;
+    const x = radius * Math.cos(lat) * Math.cos(lon);
+    const y = radius * Math.sin(lat);
+    const z = radius * Math.cos(lat) * Math.sin(lon);
     
-    // Calculate satellite's position along its orbital path
-    // Use current time and satellite's orbital period to determine where it is on the orbit
-    const time = Date.now() / 1000;
-    const orbitPeriodSeconds = period * 60; // Convert minutes to seconds
-    const orbitSpeed = (2 * Math.PI) / orbitPeriodSeconds; // radians per second
-    
-    // Add satellite-specific offset based on its ID for distribution
-    const satelliteIdNum = parseInt(satellite.id) || 0;
-    const satelliteOffset = (satelliteIdNum % 1000) / 1000 * Math.PI * 2;
-    const angle = (time * orbitSpeed + satelliteOffset) % (Math.PI * 2);
-    
-    // Position on orbital path at the REAL altitude
-    let x = safeOrbitalRadius * Math.cos(angle);
-    let y = 0;
-    let z = safeOrbitalRadius * Math.sin(angle);
-    
-    // Apply inclination rotation
-    const newY = y * Math.cos(inclinationRad) - z * Math.sin(inclinationRad);
-    const newZ = y * Math.sin(inclinationRad) + z * Math.cos(inclinationRad);
-    
-    // Validate final position
-    const finalPos = [x, newY, newZ] as [number, number, number];
-    
-    // Check for NaN values and log them
-    if (isNaN(finalPos[0]) || isNaN(finalPos[1]) || isNaN(finalPos[2])) {
-      console.error('Invalid position calculated for satellite:', satellite.id, {
-        position: finalPos,
-        realAltitude: realAltitudeKm,
-        fallbackAltitude: satellite.orbital.altitude,
-        period: period,
-        inclination: inclination,
-        orbitalRadius: safeOrbitalRadius,
-        angle: angle
-      });
-      return [0, earthRadius + 1, 0] as [number, number, number];
-    }
-    
-    return finalPos;
-  }, [satellite.id, satellite.position?.altitude, satellite.orbital?.altitude, satellite.orbital?.inclination, satellite.orbital?.period]);
+    return [x, y, z] as [number, number, number];
+  }, [satellite.position?.latitude, satellite.position?.longitude, satellite.position?.altitude]);
 
   // Get color based on satellite type with better contrast
   const color = useMemo(() => {
@@ -385,6 +345,9 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     }
   });
 
+  // Don't render if position is null (no real TLE data)
+  if (!position) return null;
+  
   // Don't render if not visible (performance optimization)
   if (!isVisible) return null;
 
