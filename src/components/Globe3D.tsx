@@ -1,5 +1,5 @@
-import React, { useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import React, { useRef, useMemo, useEffect } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { useSatelliteStore } from '../stores/satelliteStore';
@@ -109,6 +109,93 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
   );
 });
 
+// Camera controller component
+const CameraController: React.FC = () => {
+  const { camera } = useThree();
+  const { filteredSatellites, globeSettings } = useSatelliteStore();
+  const controlsRef = useRef<any>(null);
+  
+  useEffect(() => {
+    if (!globeSettings.selectedSatelliteId) {
+      // Return to Earth view when no satellite selected
+      if (controlsRef.current) {
+        const earthTarget = new THREE.Vector3(0, 0, 0);
+        const earthPosition = new THREE.Vector3(12, 8, 12);
+        
+        // Smooth transition back to Earth
+        const startPosition = camera.position.clone();
+        const startTarget = controlsRef.current.target.clone();
+        
+        let progress = 0;
+        const animate = () => {
+          progress += 0.02;
+          if (progress <= 1) {
+            camera.position.lerpVectors(startPosition, earthPosition, progress);
+            controlsRef.current.target.lerpVectors(startTarget, earthTarget, progress);
+            controlsRef.current.update();
+            requestAnimationFrame(animate);
+          }
+        };
+        animate();
+      }
+      return;
+    }
+
+    // Find selected satellite
+    const selectedSatellite = filteredSatellites.find(
+      sat => sat.id === globeSettings.selectedSatelliteId
+    );
+    
+    if (selectedSatellite && controlsRef.current) {
+      const { latitude, longitude, altitude } = selectedSatellite.position;
+      if (!latitude || !longitude || !altitude) return;
+      
+      // Calculate satellite position (same logic as SatelliteMarker)
+      const earthRadius = 5;
+      const lat = (latitude * Math.PI) / 180;
+      const lon = (longitude * Math.PI) / 180;
+      const radius = earthRadius + (altitude * 5) / 6371;
+      
+      const satellitePosition = new THREE.Vector3(
+        radius * Math.cos(lat) * Math.cos(lon),
+        radius * Math.sin(lat),
+        radius * Math.cos(lat) * Math.sin(lon)
+      );
+      
+      // Calculate camera position (offset from satellite)
+      const offset = satellitePosition.clone().normalize().multiplyScalar(2);
+      const cameraPosition = satellitePosition.clone().add(offset);
+      
+      // Smooth transition to satellite
+      const startPosition = camera.position.clone();
+      const startTarget = controlsRef.current.target.clone();
+      
+      let progress = 0;
+      const animate = () => {
+        progress += 0.03;
+        if (progress <= 1) {
+          camera.position.lerpVectors(startPosition, cameraPosition, progress);
+          controlsRef.current.target.lerpVectors(startTarget, satellitePosition, progress);
+          controlsRef.current.update();
+          requestAnimationFrame(animate);
+        }
+      };
+      animate();
+    }
+  }, [globeSettings.selectedSatelliteId, filteredSatellites, camera]);
+
+  return (
+    <OrbitControls 
+      ref={controlsRef}
+      enablePan={true}
+      enableZoom={true}
+      enableRotate={true}
+      minDistance={2}
+      maxDistance={50}
+    />
+  );
+};
+
 // Main scene component
 const Scene: React.FC = () => {
   const { filteredSatellites, setSelectedSatellite, globeSettings } = useSatelliteStore();
@@ -159,13 +246,7 @@ const Globe3D: React.FC = () => {
           performance={{ min: 0.5 }}
         >
           <Scene />
-          <OrbitControls 
-            enablePan={true}
-            enableZoom={true}
-            enableRotate={true}
-            minDistance={8}
-            maxDistance={50}
-          />
+          <CameraController />
         </Canvas>
       </ErrorBoundary>
     </div>
