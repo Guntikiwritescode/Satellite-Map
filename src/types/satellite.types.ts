@@ -82,7 +82,6 @@ export interface UserLocation {
 }
 
 export interface Globe3DSettings {
-  showOrbits: boolean;
   showFootprints: boolean;
   showCities: boolean;
   showTerminator: boolean;
