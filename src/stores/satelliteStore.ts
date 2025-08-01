@@ -73,6 +73,8 @@ export const useSatelliteStore = create<SatelliteStore>()(
     get filteredSatellites() {
       const { satellites, filters } = get();
       
+      if (satellites.length === 0) return [];
+      
       return satellites.filter(satellite => {
         // Type filter
         if (filters.types.length > 0 && !filters.types.includes(satellite.type)) {
@@ -117,7 +119,8 @@ export const useSatelliteStore = create<SatelliteStore>()(
           return (
             satellite.name.toLowerCase().includes(query) ||
             satellite.agency.toLowerCase().includes(query) ||
-            satellite.country.toLowerCase().includes(query)
+            satellite.country.toLowerCase().includes(query) ||
+            satellite.type.toLowerCase().includes(query)
           );
         }
         
