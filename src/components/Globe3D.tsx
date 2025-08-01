@@ -181,7 +181,7 @@ const CameraController: React.FC = () => {
       };
       animate();
     }
-  }, [globeSettings.selectedSatelliteId, filteredSatellites, camera]);
+  }, [globeSettings.selectedSatelliteId, camera]);
 
   return (
     <OrbitControls 
