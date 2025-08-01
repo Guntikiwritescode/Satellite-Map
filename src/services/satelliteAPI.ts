@@ -1143,7 +1143,241 @@ class RealSatelliteAPI {
           line2: '2 37752 123.0123  275.6789 0020234  87.6543 272.3456 13.73123456789012'
         },
         footprint: 4200
-      }
+      },
+
+      // ADDITIONAL STARLINK CONSTELLATION (50 more satellites)
+      ...Array.from({ length: 50 }, (_, i) => ({
+        id: `starlink-${50000 + i}`,
+        name: `STARLINK-${2000 + i}`,
+        type: 'constellation' as const,
+        country: 'USA',
+        agency: 'SpaceX',
+        launchDate: '2021-01-01',
+        status: 'active' as const,
+        description: 'Starlink is a satellite internet constellation operated by SpaceX, providing satellite Internet access coverage to most of Earth. The constellation consists of thousands of mass-produced small satellites in low Earth orbit.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/Starlink',
+        orbital: {
+          altitude: 550 + (i % 5) * 10,
+          period: 95.4 + (i % 3) * 0.1,
+          inclination: 53.0 + (i % 4) * 0.5,
+          eccentricity: 0.0001,
+          velocity: 7.57 - (i % 6) * 0.01
+        },
+        position: generatePosition(20 + i * 0.1, 45 + i * 7.2),
+        tle: {
+          line1: `1 ${50000 + i}U 21001A   23001.00000000  .00001345  00000-0  10270-3 0  999${i % 10}`,
+          line2: `2 ${50000 + i}  53.0536  90.4721 0001425  95.4618 264.6879 15.05444835201234`
+        },
+        footprint: 1000
+      })),
+
+      // ONEWEB CONSTELLATION (30 satellites)
+      ...Array.from({ length: 30 }, (_, i) => ({
+        id: `oneweb-${45000 + i}`,
+        name: `ONEWEB-${i + 1}`,
+        type: 'constellation' as const,
+        country: 'UK',
+        agency: 'OneWeb',
+        launchDate: '2020-02-01',
+        status: 'active' as const,
+        description: 'OneWeb is a global communications company building a constellation of Low Earth Orbit satellites that will provide high-speed, low-latency internet connectivity around the world.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/OneWeb',
+        orbital: {
+          altitude: 1200,
+          period: 109.1,
+          inclination: 87.4,
+          eccentricity: 0.0001,
+          velocity: 7.2
+        },
+        position: generatePosition(30 + i * 0.2, 120 + i * 12),
+        tle: {
+          line1: `1 ${45000 + i}U 20001A   23001.00000000  .00001200  00000-0  95270-3 0  999${i % 10}`,
+          line2: `2 ${45000 + i}  87.4536  90.4721 0001425  95.4618 264.6879 13.40444835201234`
+        },
+        footprint: 1500
+      })),
+
+      // ADDITIONAL GPS SATELLITES (20 more)
+      ...Array.from({ length: 20 }, (_, i) => ({
+        id: `gps-${30000 + i}`,
+        name: `GPS BIII-${i + 10}`,
+        type: 'navigation' as const,
+        country: 'USA',
+        agency: 'US Space Force',
+        launchDate: '2019-01-01',
+        status: 'active' as const,
+        description: 'The Global Positioning System (GPS) is a satellite-based radionavigation system owned by the US Space Force and operated by the 2nd Space Operations Squadron.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/Global_Positioning_System',
+        orbital: {
+          altitude: 20200 + (i % 3) * 20,
+          period: 717.97 + (i % 2) * 0.1,
+          inclination: 55.0 + (i % 4) * 0.2,
+          eccentricity: 0.02,
+          velocity: 3.87
+        },
+        position: generatePosition(40 + i * 0.3, 180 + i * 18),
+        tle: {
+          line1: `1 ${30000 + i}U 19001A   23001.00000000 -.00000007  00000-0  00000+0 0  999${i % 10}`,
+          line2: `2 ${30000 + i}  55.0000 ${180 + i * 18}.0000 0020000  90.0000 270.0000  2.00563365085000`
+        },
+        footprint: 12000
+      })),
+
+      // ADDITIONAL COMMUNICATION SATELLITES (25 satellites)
+      ...Array.from({ length: 25 }, (_, i) => ({
+        id: `comsat-${45000 + i}`,
+        name: `ASTRA-${i + 1}G`,
+        type: 'communication' as const,
+        country: 'Luxembourg',
+        agency: 'SES',
+        launchDate: '2020-01-01',
+        status: 'active' as const,
+        description: 'SES operates a fleet of geostationary and medium Earth orbit satellites providing video and data connectivity worldwide, serving broadcast, telecom, corporate and government customers.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/SES_S.A.',
+        orbital: {
+          altitude: 35786,
+          period: 1436,
+          inclination: 0.1 + (i % 3) * 0.05,
+          eccentricity: 0.0001,
+          velocity: 3.07
+        },
+        position: generatePosition(50 + i * 0.1, 24 + i * 14.4),
+        tle: {
+          line1: `1 ${45000 + i}U 20001A   23001.00000000  .00000004  00000-0  00000+0 0  999${i % 10}`,
+          line2: `2 ${45000 + i}   0.1000 ${24 + i * 14.4}.0000 0001000  90.0000 270.0000  1.00271096000000`
+        },
+        footprint: 18000
+      })),
+
+      // EARTH OBSERVATION SATELLITES (20 more)
+      ...Array.from({ length: 20 }, (_, i) => ({
+        id: `earthobs-${50000 + i}`,
+        name: `SENTINEL-${Math.floor(i/3) + 3}${String.fromCharCode(65 + (i % 3))}`,
+        type: 'earth-observation' as const,
+        country: 'Europe',
+        agency: 'ESA',
+        launchDate: '2020-01-01',
+        status: 'active' as const,
+        description: 'The Sentinel satellites are part of the European Space Agency\'s Copernicus Programme, providing comprehensive Earth observation data for environmental monitoring and climate change research.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/Copernicus_Programme',
+        orbital: {
+          altitude: 700 + (i % 5) * 50,
+          period: 98.5 + (i % 4) * 0.5,
+          inclination: 98.2 + (i % 3) * 0.3,
+          eccentricity: 0.0001,
+          velocity: 7.5 - (i % 6) * 0.02
+        },
+        position: generatePosition(60 + i * 0.3, 300 + i * 18),
+        tle: {
+          line1: `1 ${50000 + i}U 20001A   23001.00000000  .00000345  00000-0  18270-3 0  999${i % 10}`,
+          line2: `2 ${50000 + i}  98.2000 ${300 + i * 18}.0000 0001000  95.0000 265.0000 14.57113027000000`
+        },
+        footprint: 2200
+      })),
+
+      // WEATHER SATELLITES (15 more)
+      ...Array.from({ length: 15 }, (_, i) => ({
+        id: `weather-${50000 + i}`,
+        name: `METEOSAT-${11 + i}`,
+        type: 'weather' as const,
+        country: 'Europe',
+        agency: 'EUMETSAT',
+        launchDate: '2020-01-01',
+        status: 'active' as const,
+        description: 'Meteosat satellites are geostationary meteorological satellites operated by EUMETSAT providing weather forecasting and climate monitoring for Europe and Africa.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/Meteosat',
+        orbital: {
+          altitude: 35786,
+          period: 1436,
+          inclination: 0.1,
+          eccentricity: 0.0003,
+          velocity: 3.07
+        },
+        position: generatePosition(70 + i * 0.1, 240 + i * 24),
+        tle: {
+          line1: `1 ${50000 + i}U 20001A   23001.00000000  .00000004  00000-0  00000+0 0  999${i % 10}`,
+          line2: `2 ${50000 + i}   0.1000 ${240 + i * 24}.0000 0003000  90.0000 270.0000  1.00271096000000`
+        },
+        footprint: 18000
+      })),
+
+      // SCIENTIFIC SATELLITES (15 more)
+      ...Array.from({ length: 15 }, (_, i) => ({
+        id: `science-${60000 + i}`,
+        name: `KEPLER-${i + 2}`,
+        type: 'scientific' as const,
+        country: 'International',
+        agency: 'NASA',
+        launchDate: '2020-01-01',
+        status: 'active' as const,
+        description: 'Space-based observatory designed to discover Earth-like planets orbiting other stars and advance our understanding of planetary systems and astrobiology.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/Kepler_space_telescope',
+        orbital: {
+          altitude: 600 + i * 200,
+          period: 96 + i * 5,
+          inclination: 45 + i * 8,
+          eccentricity: 0.0001,
+          velocity: 7.5 - i * 0.05
+        },
+        position: generatePosition(80 + i * 0.2, 180 + i * 24),
+        tle: {
+          line1: `1 ${60000 + i}U 20001A   23001.00000000  .00000345  00000-0  18270-3 0  999${i % 10}`,
+          line2: `2 ${60000 + i}  ${45 + i * 8}.0000 ${180 + i * 24}.0000 0001000  95.0000 265.0000 15.00000000000000`
+        },
+        footprint: 1500 + i * 100
+      })),
+
+      // COMMERCIAL SATELLITES (15 more)
+      ...Array.from({ length: 15 }, (_, i) => ({
+        id: `commercial-${60000 + i}`,
+        name: `IRIDIUM-${150 + i}`,
+        type: 'commercial' as const,
+        country: 'USA',
+        agency: 'Iridium Communications',
+        launchDate: '2021-01-01',
+        status: 'active' as const,
+        description: 'Iridium satellite constellation provides voice and data communications coverage to satellite phones, pagers and integrated transceivers over the entire Earth surface.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/Iridium_satellite_constellation',
+        orbital: {
+          altitude: 780,
+          period: 100.4,
+          inclination: 86.4,
+          eccentricity: 0.0001,
+          velocity: 7.4
+        },
+        position: generatePosition(90 + i * 0.3, 120 + i * 24),
+        tle: {
+          line1: `1 ${60000 + i}U 21001A   23001.00000000  .00000345  00000-0  18270-3 0  999${i % 10}`,
+          line2: `2 ${60000 + i}  86.4000 ${120 + i * 24}.0000 0001000  95.0000 265.0000 14.34000000000000`
+        },
+        footprint: 1400
+      })),
+
+      // MILITARY SATELLITES (10 more)
+      ...Array.from({ length: 10 }, (_, i) => ({
+        id: `military-${60000 + i}`,
+        name: `NROL-${70 + i}`,
+        type: 'military' as const,
+        country: 'USA',
+        agency: 'NRO',
+        launchDate: '2020-01-01',
+        status: 'active' as const,
+        description: 'National Reconnaissance Office satellite providing classified intelligence capabilities for national security. Mission details are classified.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/National_Reconnaissance_Office',
+        orbital: {
+          altitude: 800 + i * 300,
+          period: 100 + i * 8,
+          inclination: 70 + i * 7,
+          eccentricity: 0.001 + i * 0.001,
+          velocity: 7.4 - i * 0.05
+        },
+        position: generatePosition(100 + i * 0.5, 72 + i * 36),
+        tle: {
+          line1: `1 ${60000 + i}U 20001A   23001.00000000  .00000345  00000-0  18270-3 0  999${i % 10}`,
+          line2: `2 ${60000 + i}  ${70 + i * 7}.0000 ${72 + i * 36}.0000 00${10 + i}000  95.0000 265.0000 14.00000000000000`
+        },
+        footprint: 2500 + i * 400
+      }))
     ];
     
     console.log(`Generated ${mockSatellites.length} mock satellites`);
