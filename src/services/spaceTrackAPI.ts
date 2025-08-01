@@ -162,8 +162,9 @@ export class SpaceTrackAPI {
       const now = new Date();
       const positionAndVelocity = satellite.propagate(satrec, now);
       
-      if (positionAndVelocity.position && typeof positionAndVelocity.position === 'object' && positionAndVelocity.position !== null) {
-        const positionEci = positionAndVelocity.position as any;
+      // Check if position exists and is valid
+      if (positionAndVelocity.position && typeof positionAndVelocity.position === 'object' && 'x' in positionAndVelocity.position) {
+        const positionEci = positionAndVelocity.position;
         const gmst = satellite.gstime(now);
         const positionGd = satellite.eciToGeodetic(positionEci, gmst);
         
@@ -177,6 +178,8 @@ export class SpaceTrackAPI {
           altitude: isNaN(altitude) ? 400 : altitude
         };
       }
+      
+      return { latitude: 0, longitude: 0, altitude: 400 };
     } catch (error) {
       console.warn('Error calculating satellite position:', error);
     }
