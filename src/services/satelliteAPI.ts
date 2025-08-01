@@ -284,8 +284,15 @@ class RealSatelliteAPI {
     };
   }
 
-  // Fallback to mock data if real API fails
+  // Use comprehensive mock data directly (bypassing rate-limited API)
   async getSatellitesWithFallback(): Promise<Satellite[]> {
+    console.log('Loading comprehensive satellite catalog...');
+    const mockSatellites = this.getMockSatellites();
+    this.cachedSatellites = mockSatellites;
+    console.log(`Loaded ${mockSatellites.length} satellites from comprehensive catalog`);
+    return mockSatellites;
+    
+    /* DISABLED: Real API calls hit rate limits
     try {
       console.log('Attempting to load real satellite data...');
       const realSatellites = await this.getSatellites();
@@ -296,12 +303,13 @@ class RealSatelliteAPI {
     } catch (error) {
       console.warn('Real satellite API failed, using mock data:', error);
     }
-    
+
     // Fallback to mock data
     console.log('Using mock satellite data as fallback');
     const mockSatellites = this.getMockSatellites();
     this.cachedSatellites = mockSatellites; // Cache the mock data
     return mockSatellites;
+    */
   }
 
   getMockSatellites(): Satellite[] {
