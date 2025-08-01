@@ -1,0 +1,175 @@
+import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
+import { Satellite, SatelliteFilters, Launch, UserLocation, Globe3DSettings, SatelliteType, SatelliteStatus } from '../types/satellite.types';
+
+interface SatelliteStore {
+  // Data
+  satellites: Satellite[];
+  launches: Launch[];
+  userLocation: UserLocation | null;
+  
+  // UI State
+  filters: SatelliteFilters;
+  globeSettings: Globe3DSettings;
+  isLoading: boolean;
+  error: string | null;
+  lastUpdate: number;
+  
+  // Computed
+  filteredSatellites: Satellite[];
+  
+  // Actions
+  setSatellites: (satellites: Satellite[]) => void;
+  updateSatellitePosition: (id: string, position: Satellite['position']) => void;
+  setLaunches: (launches: Launch[]) => void;
+  setUserLocation: (location: UserLocation) => void;
+  updateFilters: (filters: Partial<SatelliteFilters>) => void;
+  updateGlobeSettings: (settings: Partial<Globe3DSettings>) => void;
+  setSelectedSatellite: (id: string | null) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  
+  // Utility
+  getSatelliteById: (id: string) => Satellite | undefined;
+  getSelectedSatellite: () => Satellite | undefined;
+  resetFilters: () => void;
+}
+
+const defaultFilters: SatelliteFilters = {
+  types: [],
+  countries: [],
+  agencies: [],
+  status: [],
+  altitudeRange: [0, 50000],
+  launchDateRange: [null, null],
+  searchQuery: '',
+  showOnlyVisible: false,
+};
+
+const defaultGlobeSettings: Globe3DSettings = {
+  showOrbits: true,
+  showFootprints: false,
+  showCities: true,
+  showTerminator: true,
+  timeSpeed: 1,
+  isPaused: false,
+  selectedSatelliteId: null,
+  cameraFollowSatellite: false,
+};
+
+export const useSatelliteStore = create<SatelliteStore>()(
+  subscribeWithSelector((set, get) => ({
+    // Initial state
+    satellites: [],
+    launches: [],
+    userLocation: null,
+    filters: defaultFilters,
+    globeSettings: defaultGlobeSettings,
+    isLoading: false,
+    error: null,
+    lastUpdate: 0,
+    
+    // Computed getter for filtered satellites
+    get filteredSatellites() {
+      const { satellites, filters } = get();
+      
+      return satellites.filter(satellite => {
+        // Type filter
+        if (filters.types.length > 0 && !filters.types.includes(satellite.type)) {
+          return false;
+        }
+        
+        // Country filter
+        if (filters.countries.length > 0 && !filters.countries.includes(satellite.country)) {
+          return false;
+        }
+        
+        // Agency filter
+        if (filters.agencies.length > 0 && !filters.agencies.includes(satellite.agency)) {
+          return false;
+        }
+        
+        // Status filter
+        if (filters.status.length > 0 && !filters.status.includes(satellite.status)) {
+          return false;
+        }
+        
+        // Altitude range filter
+        const [minAlt, maxAlt] = filters.altitudeRange;
+        if (satellite.orbital.altitude < minAlt || satellite.orbital.altitude > maxAlt) {
+          return false;
+        }
+        
+        // Launch date range filter
+        if (filters.launchDateRange[0] || filters.launchDateRange[1]) {
+          const launchDate = new Date(satellite.launchDate);
+          if (filters.launchDateRange[0] && launchDate < filters.launchDateRange[0]) {
+            return false;
+          }
+          if (filters.launchDateRange[1] && launchDate > filters.launchDateRange[1]) {
+            return false;
+          }
+        }
+        
+        // Search query filter
+        if (filters.searchQuery.trim()) {
+          const query = filters.searchQuery.toLowerCase();
+          return (
+            satellite.name.toLowerCase().includes(query) ||
+            satellite.agency.toLowerCase().includes(query) ||
+            satellite.country.toLowerCase().includes(query)
+          );
+        }
+        
+        return true;
+      });
+    },
+    
+    // Actions
+    setSatellites: (satellites) => set({ 
+      satellites, 
+      lastUpdate: Date.now(),
+      error: null 
+    }),
+    
+    updateSatellitePosition: (id, position) => set((state) => ({
+      satellites: state.satellites.map(sat =>
+        sat.id === id ? { ...sat, position } : sat
+      ),
+      lastUpdate: Date.now(),
+    })),
+    
+    setLaunches: (launches) => set({ launches }),
+    
+    setUserLocation: (userLocation) => set({ userLocation }),
+    
+    updateFilters: (newFilters) => set((state) => ({
+      filters: { ...state.filters, ...newFilters }
+    })),
+    
+    updateGlobeSettings: (newSettings) => set((state) => ({
+      globeSettings: { ...state.globeSettings, ...newSettings }
+    })),
+    
+    setSelectedSatellite: (id) => set((state) => ({
+      globeSettings: { ...state.globeSettings, selectedSatelliteId: id }
+    })),
+    
+    setLoading: (isLoading) => set({ isLoading }),
+    
+    setError: (error) => set({ error }),
+    
+    // Utility functions
+    getSatelliteById: (id) => {
+      return get().satellites.find(sat => sat.id === id);
+    },
+    
+    getSelectedSatellite: () => {
+      const { satellites, globeSettings } = get();
+      if (!globeSettings.selectedSatelliteId) return undefined;
+      return satellites.find(sat => sat.id === globeSettings.selectedSatelliteId);
+    },
+    
+    resetFilters: () => set({ filters: defaultFilters }),
+  }))
+);
