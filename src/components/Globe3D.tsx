@@ -16,13 +16,7 @@ const Earth: React.FC = () => {
     return loader.load('/earth-texture.jpg');
   }, []);
 
-  useFrame(() => {
-    if (meshRef.current) {
-      // Very slow Earth rotation - 24 hours = 1 full rotation
-      // Speed it up 1440x so 1 minute = 1 day for visibility
-      meshRef.current.rotation.y += 0.0001;
-    }
-  });
+  // Earth is now stationary - no rotation
 
   return (
     <mesh ref={meshRef}>
