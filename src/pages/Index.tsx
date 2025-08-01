@@ -47,36 +47,36 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-cosmic">
-      {/* Hero Header */}
+      {/* Hero Header - Reduced height */}
       <div 
-        className="relative h-32 bg-cover bg-center bg-no-repeat flex items-center"
+        className="relative h-20 bg-cover bg-center bg-no-repeat flex items-center"
         style={{ backgroundImage: `url(${spaceHero})` }}
       >
         <div className="absolute inset-0 bg-gradient-to-r from-deep-space/80 via-deep-space/60 to-transparent" />
-        <div className="relative z-10 container mx-auto px-6">
+        <div className="relative z-10 container mx-auto px-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-primary/20 rounded-lg backdrop-blur-sm border border-primary/30">
-                  <Satellite className="h-8 w-8 text-primary" />
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 bg-primary/20 rounded-lg backdrop-blur-sm border border-primary/30">
+                  <Satellite className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold bg-gradient-aurora bg-clip-text text-transparent">
+                  <h1 className="text-2xl font-bold bg-gradient-aurora bg-clip-text text-transparent">
                     Orbital Tracker
                   </h1>
-                  <p className="text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Real-time satellite tracking and visualization
                   </p>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
-              <Badge className="glass-panel border-primary/30">
+            <div className="flex items-center space-x-2">
+              <Badge className="glass-panel border-primary/30 text-sm">
                 <Activity className="h-3 w-3 mr-1" />
                 Live Data
               </Badge>
-              <Badge variant="outline" className="cosmic-border">
+              <Badge variant="outline" className="cosmic-border text-sm">
                 Global Coverage
               </Badge>
             </div>
@@ -84,13 +84,13 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-180px)]">
+      {/* Main Content - Reduced height */}
+      <div className="container mx-auto px-4 py-3">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 h-[calc(100vh-140px)]">
           {/* Left Panel - Satellite Table */}
           <div className="lg:col-span-4 xl:col-span-3">
             <Card className="glass-panel h-full">
-              <div className="p-4 h-full">
+              <div className="p-3 h-full">
                 {isLoading ? (
                   <LoadingSpinner />
                 ) : satellites.length === 0 ? (
@@ -105,7 +105,7 @@ const Index = () => {
           {/* Center Panel - 3D Globe */}
           <div className="lg:col-span-6 xl:col-span-7">
             <Card className="glass-panel h-full">
-              <div className="p-2 h-full">
+              <div className="p-1 h-full">
                 {isLoading ? (
                   <LoadingSpinner />
                 ) : (
