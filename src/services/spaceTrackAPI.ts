@@ -162,8 +162,13 @@ export class SpaceTrackAPI {
       const now = new Date();
       const positionAndVelocity = satellite.propagate(satrec, now);
       
+      // First check if positionAndVelocity is null or undefined
+      if (!positionAndVelocity) {
+        return { latitude: 0, longitude: 0, altitude: 400 };
+      }
+      
       // More robust checking for positionAndVelocity
-      if (!positionAndVelocity || typeof positionAndVelocity !== 'object') {
+      if (typeof positionAndVelocity !== 'object') {
         return { latitude: 0, longitude: 0, altitude: 400 };
       }
       
