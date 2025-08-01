@@ -59,15 +59,20 @@ export const useSatelliteData = () => {
   // Start real-time updates
   useEffect(() => {
     const handleRealTimeUpdate = (updatedSatellites: any[]) => {
+      console.log('Real-time update received:', updatedSatellites.length, 'satellites');
       setSatellites(updatedSatellites);
     };
 
-    satelliteAPI.startRealTimeUpdates(handleRealTimeUpdate);
+    // Only start real-time updates if we have initial data
+    if (satellites && satellites.length > 0) {
+      console.log('Starting real-time updates for', satellites.length, 'satellites');
+      satelliteAPI.startRealTimeUpdates(handleRealTimeUpdate);
+    }
 
     return () => {
       satelliteAPI.stopRealTimeUpdates();
     };
-  }, [setSatellites]);
+  }, [satellites, setSatellites]); // Add satellites as dependency
 
   // Get geolocation for user
   useEffect(() => {
