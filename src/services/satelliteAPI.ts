@@ -1,15 +1,24 @@
 import { Satellite, Launch, SatelliteType, SatelliteStatus } from '../types/satellite.types';
 import * as satellite from 'satellite.js';
 
-// CelesTrak API - works in browser without CORS issues
+// CelesTrak API - Most popular satellite groups (limited to prevent lag)
 const POPULAR_CELESTRAK_GROUPS = [
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=json', // Space stations
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=json', // Bright satellites  
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=json', // Weather satellites
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops&FORMAT=json', // GPS operational
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=json&LIMIT=50', // Starlink (limited)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=json&LIMIT=30', // Science satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=json', // Space stations (all ~10)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=json&LIMIT=50', // Brightest visible satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=json&LIMIT=30', // Most important weather sats
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops&FORMAT=json&LIMIT=40', // GPS constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo&FORMAT=json&LIMIT=30', // Galileo constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=json&LIMIT=100', // Popular Starlink subset
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium-NEXT&FORMAT=json&LIMIT=50', // Iridium constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=oneweb&FORMAT=json&LIMIT=40', // OneWeb constellation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=json&LIMIT=50', // Famous science satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=json&LIMIT=30', // Earth observation
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=intelsat&FORMAT=json&LIMIT=20', // Major communication sats
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=ses&FORMAT=json&LIMIT=20', // SES communication sats
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=goes&FORMAT=json&LIMIT=10', // GOES weather satellites
 ];
+
+const MAX_SATELLITES = 500; // Hard limit to prevent lag
 
 // Launch API for upcoming launches  
 const LAUNCH_API = 'https://ll.thespacedevs.com/2.2.0/launch';
@@ -444,6 +453,39 @@ class RealSatelliteAPI {
       } catch (error) {
         console.error(`❌ Failed to fetch group ${index + 1}:`, error);
       }
+    }
+    
+    // Enforce 500 satellite limit to prevent lag
+    if (allSatellites.length > MAX_SATELLITES) {
+      console.log(`⚠️ Limiting satellites from ${allSatellites.length} to ${MAX_SATELLITES} to prevent lag`);
+      
+      // Prioritize satellites by importance/popularity
+      const priorityOrder: SatelliteType[] = [
+        'space-station', 'scientific', 'weather', 'navigation', 
+        'constellation', 'communication', 'earth-observation', 'military'
+      ];
+      
+      const prioritizedSatellites: Satellite[] = [];
+      
+      // Add satellites by priority, keeping a balanced mix
+      for (const type of priorityOrder) {
+        const satellitesOfType = allSatellites.filter(sat => sat.type === type);
+        const maxPerType = Math.min(satellitesOfType.length, Math.floor(MAX_SATELLITES / priorityOrder.length));
+        prioritizedSatellites.push(...satellitesOfType.slice(0, maxPerType));
+        
+        if (prioritizedSatellites.length >= MAX_SATELLITES) break;
+      }
+      
+      // Fill remaining slots with any leftover satellites (most popular first)
+      const remaining = MAX_SATELLITES - prioritizedSatellites.length;
+      if (remaining > 0) {
+        const usedIds = new Set(prioritizedSatellites.map(sat => sat.id));
+        const leftoverSatellites = allSatellites.filter(sat => !usedIds.has(sat.id));
+        prioritizedSatellites.push(...leftoverSatellites.slice(0, remaining));
+      }
+      
+      // Final trim to exactly 500
+      allSatellites.splice(0, allSatellites.length, ...prioritizedSatellites.slice(0, MAX_SATELLITES));
     }
     
     console.log(`🎯 FINAL RESULT: ${allSatellites.length} satellites loaded with realistic altitudes!`);
