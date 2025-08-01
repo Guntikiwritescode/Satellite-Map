@@ -54,7 +54,16 @@ class RealSatelliteAPI {
 
   calculateSatellitePosition(tleData: any): Satellite['position'] {
     try {
-      const satrec = satellite.twoline2satrec(tleData.TLE_LINE1, tleData.TLE_LINE2);
+      // Handle both old format (line1/line2) and new format (TLE_LINE1/TLE_LINE2)
+      const line1 = tleData.TLE_LINE1 || tleData.line1;
+      const line2 = tleData.TLE_LINE2 || tleData.line2;
+      
+      if (!line1 || !line2) {
+        console.error('Missing TLE lines:', tleData);
+        throw new Error('Invalid TLE data format');
+      }
+      
+      const satrec = satellite.twoline2satrec(line1, line2);
       const now = new Date();
       const positionAndVelocity = satellite.propagate(satrec, now);
       
@@ -84,7 +93,16 @@ class RealSatelliteAPI {
 
   calculateOrbitalParameters(tleData: any) {
     try {
-      const satrec = satellite.twoline2satrec(tleData.TLE_LINE1, tleData.TLE_LINE2);
+      // Handle both old format (line1/line2) and new format (TLE_LINE1/TLE_LINE2)
+      const line1 = tleData.TLE_LINE1 || tleData.line1;
+      const line2 = tleData.TLE_LINE2 || tleData.line2;
+      
+      if (!line1 || !line2) {
+        console.error('Missing TLE lines for orbital calculation:', tleData);
+        throw new Error('Invalid TLE data format');
+      }
+      
+      const satrec = satellite.twoline2satrec(line1, line2);
       
       // Extract orbital elements from TLE
       const meanMotion = satrec.no; // rad/min
