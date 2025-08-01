@@ -2,24 +2,28 @@ export interface Satellite {
   id: string;
   name: string;
   type: SatelliteType;
-  country: string;
-  agency: string;
-  launchDate: string;
   status: SatelliteStatus;
-  description?: string; // Historical summary and role description
-  wikipediaUrl?: string; // Link to Wikipedia page
-  orbital: {
-    altitude: number; // km
-    period: number; // minutes
-    inclination: number; // degrees
-    eccentricity: number;
-    velocity: number; // km/s
-  };
   position: {
     latitude: number;
     longitude: number;
     altitude: number;
     timestamp: number;
+  };
+  velocity?: number;
+  heading?: number;
+  orbital: {
+    period: number; // minutes
+    inclination: number; // degrees
+    eccentricity: number;
+    perigee: number; // km
+    apogee: number; // km
+    epoch: string;
+  };
+  metadata: {
+    constellation?: string;
+    country?: string;
+    launchDate?: string;
+    purpose?: string;
   };
   tle: {
     line1: string;
