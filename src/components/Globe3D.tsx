@@ -165,17 +165,19 @@ const OrbitalPath: React.FC<OrbitalPathProps> = ({ satellite: sat }) => {
   if (pathPoints.length === 0) return null;
 
   return (
-    <line>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={pathPoints.length}
-          array={new Float32Array(pathPoints.flatMap(p => [p.x, p.y, p.z]))}
-          itemSize={3}
-        />
-      </bufferGeometry>
-      <lineBasicMaterial color="#00d9ff" opacity={0.6} transparent />
-    </line>
+    <group>
+      <lineSegments>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={pathPoints.length}
+            array={new Float32Array(pathPoints.flatMap(p => [p.x, p.y, p.z]))}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color="#00d9ff" opacity={0.6} transparent />
+      </lineSegments>
+    </group>
   );
 };
 
