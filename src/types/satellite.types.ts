@@ -42,7 +42,8 @@ export type SatelliteType =
   | 'military'
   | 'earth-observation'
   | 'space-station'
-  | 'constellation';
+  | 'constellation'
+  | 'commercial';
 
 export type SatelliteStatus = 'active' | 'inactive' | 'decayed' | 'unknown';
 
