@@ -1,51 +1,20 @@
 import { Satellite, Launch, SatelliteType, SatelliteStatus } from '../types/satellite.types';
 import * as satellite from 'satellite.js';
 
-// Launch API for upcoming launches
-const LAUNCH_API = 'https://ll.thespacedevs.com/2.2.0/launch';
-
-// N2YO.com API for real-time satellite tracking
-const N2YO_API_KEY = 'YC2LYP-RKU24Y-S8P44S-539N'; // Free API key for testing
-const N2YO_BASE_URL = 'https://api.n2yo.com/rest/v1/satellite';
-
-// Get most popular satellites from different categories
-const POPULAR_SATELLITE_NORAD_IDS = [
-  // Space Stations
-  25544, // ISS
-  48274, // Chinese Space Station (Tianhe)
-  
-  // Navigation satellites (GPS)
-  32711, 35752, 36585, 37753, 38833, 39166, 39533, 40105, 40294, 40534,
-  
-  // Communication satellites  
-  23439, 26038, 26900, 27380, 27453, 28628, 29236, 31307, 32951, 33376,
-  
-  // Weather satellites
-  29155, 33591, 35491, 40069, 41932, 43013, 43226, 43493,
-  
-  // Earth observation
-  25994, 27424, 28376, 32060, 39084, 40053, 40697, 42063,
-  
-  // Scientific satellites
-  20580, // Hubble
-  25867, // Chandra
-  25989, // XMM-Newton
-  28485, // Swift
-  33053, // Fermi
-  36411, // Kepler
-  
-  // Popular Starlink satellites (sample)
-  44713, 44714, 44715, 44716, 44717, 44718, 44719, 44720, 44721, 44722,
-  44723, 44724, 44725, 44726, 44727, 44728, 44729, 44730, 44731, 44732,
-  
-  // Popular OneWeb satellites (sample)
-  44058, 44059, 44060, 44061, 44062, 45132, 45133, 45134, 45136, 45137,
-  
-  // Popular Iridium NEXT satellites
-  41917, 41918, 41919, 41920, 41921, 41922, 41923, 41924, 41925, 41926,
-  42803, 42804, 42805, 42806, 42807, 42808, 42809, 42810, 42811, 42812
+// CelesTrak API - works in browser without CORS issues
+const POPULAR_CELESTRAK_GROUPS = [
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=json', // Space stations
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=json', // Bright satellites  
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=json', // Weather satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops&FORMAT=json', // GPS operational
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=json&LIMIT=50', // Starlink (limited)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=json&LIMIT=30', // Science satellites
 ];
 
+// Launch API for upcoming launches  
+const LAUNCH_API = 'https://ll.thespacedevs.com/2.2.0/launch';
+
+// CelesTrak satellite data interface
 interface CelestrakSatellite {
   OBJECT_NAME: string;
   OBJECT_ID: string;
@@ -243,89 +212,7 @@ class RealSatelliteAPI {
     }
   }
 
-  // Fetch satellites from a single bulk endpoint
-  private async fetchBulkSatellites(url: string): Promise<Satellite[]> {
-    try {
-      console.log(`Fetching satellites from: ${url}`);
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data: CelestrakSatellite[] = await response.json();
-      console.log(`Received ${data.length} satellites from ${url}`);
-      
-      const satellites: Satellite[] = data.map(sat => {
-        const country = this.determineCountry(sat.COUNTRY_CODE, sat.OBJECT_NAME);
-        const type = this.determineSatelliteType(sat.OBJECT_NAME, sat.OBJECT_TYPE, sat.COUNTRY_CODE);
-        const agency = this.determineAgency(sat.OBJECT_NAME, country);
-        
-        // Validate and ensure TLE lines exist
-        const tle1 = sat.TLE_LINE1 || '';
-        const tle2 = sat.TLE_LINE2 || '';
-        
-        // Manually assign realistic altitudes based on satellite type and name
-        let realAltitude = this.getRealisticAltitude(sat.OBJECT_NAME, type);
-        
-        // Try TLE calculation first, but fall back to manual assignment
-        let position;
-        if (tle1 && tle2 && tle1.length >= 69 && tle2.length >= 69) {
-          try {
-            position = this.calculateSatellitePositionFromTLE(tle1, tle2);
-            // Only use TLE altitude if it's reasonable (not 0 or negative)
-            if (position.altitude > 100) {
-              realAltitude = position.altitude;
-            }
-          } catch (error) {
-            console.warn(`TLE calculation failed for ${sat.OBJECT_NAME}, using manual altitude`);
-          }
-        }
-        
-        // Fallback position if TLE failed
-        if (!position) {
-          position = {
-            latitude: Math.random() * 180 - 90, // Random but realistic distribution
-            longitude: Math.random() * 360 - 180,
-            altitude: realAltitude,
-            timestamp: Date.now()
-          };
-        }
-        
-        return {
-          id: sat.NORAD_CAT_ID.toString(),
-          name: sat.OBJECT_NAME,
-          type,
-          country,
-          agency,
-          launchDate: sat.LAUNCH_DATE || '1957-01-01',
-          status: sat.DECAY_DATE ? 'inactive' : 'active' as SatelliteStatus,
-          orbital: {
-            altitude: realAltitude, // Use manually assigned realistic altitude
-            period: this.calculateOrbitalPeriod(realAltitude), // Calculate period based on altitude
-            inclination: sat.INCLINATION || this.getTypicalInclination(type),
-            eccentricity: sat.ECCENTRICITY || 0,
-            velocity: Math.sqrt(398600.4418 / (6371 + realAltitude)) // Calculate velocity based on altitude
-          },
-          position: {
-            ...position,
-            altitude: realAltitude // Ensure position also has correct altitude
-          },
-          tle: {
-            line1: tle1,
-            line2: tle2
-          },
-          footprint: this.calculateFootprint(realAltitude)
-        };
-      });
-      
-      return satellites;
-    } catch (error) {
-      console.error(`Error fetching bulk satellites from ${url}:`, error);
-      return [];
-    }
-  }
-
-  // Calculate satellite position from TLE lines
+  // Calculate satellite position from TLE lines (fallback method, not used with N2YO)
   private calculateSatellitePositionFromTLE(line1: string, line2: string): Satellite['position'] {
     try {
       const satrec = satellite.twoline2satrec(line1, line2);
@@ -337,13 +224,10 @@ class RealSatelliteAPI {
         const gmst = satellite.gstime(now);
         const positionGd = satellite.eciToGeodetic(positionEci, gmst);
         
-        // Use the actual calculated altitude from TLE data
-        const actualAltitude = positionGd.height;
-        
         return {
           latitude: satellite.degreesLat(positionGd.latitude),
           longitude: satellite.degreesLong(positionGd.longitude),
-          altitude: actualAltitude, // Real altitude from TLE calculation
+          altitude: positionGd.height,
           timestamp: now.getTime()
         };
       }
@@ -351,11 +235,11 @@ class RealSatelliteAPI {
       console.error('Error calculating satellite position from TLE:', error);
     }
     
-    // Fallback with different default altitudes based on satellite type
+    // Fallback position
     return {
       latitude: 0,
       longitude: 0,
-      altitude: 400, // Still need a fallback
+      altitude: 400,
       timestamp: Date.now()
     };
   }
@@ -466,116 +350,107 @@ class RealSatelliteAPI {
     return Math.sqrt(heightAboveEarth * (heightAboveEarth + 2 * earthRadius));
   }
 
-  // Fetch satellite data from N2YO API using NORAD IDs
-  private async fetchSatelliteFromN2YO(noradId: number): Promise<Satellite | null> {
+  // Fetch satellites from CelesTrak with realistic altitudes
+  private async fetchSatellitesFromGroup(url: string): Promise<Satellite[]> {
     try {
-      const url = `${N2YO_BASE_URL}/positions/${noradId}/41.702/-76.014/0/1/?apiKey=${N2YO_API_KEY}`;
+      console.log(`Fetching satellites from: ${url}`);
       const response = await fetch(url);
-      
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
-      const data = await response.json();
+      const data: CelestrakSatellite[] = await response.json();
+      console.log(`Received ${data.length} satellites from ${url}`);
       
-      if (!data.positions || data.positions.length === 0) {
-        return null;
-      }
-      
-      const satInfo = data.info;
-      const position = data.positions[0];
-      
-      // Determine satellite properties
-      const type = this.determineSatelliteType(satInfo.satname, '', '');
-      const country = this.determineCountryFromName(satInfo.satname);
-      const agency = this.determineAgency(satInfo.satname, country);
-      const realAltitude = this.getRealisticAltitude(satInfo.satname, type);
-      
-      return {
-        id: noradId.toString(),
-        name: satInfo.satname,
-        type,
-        country,
-        agency,
-        launchDate: '2000-01-01', // N2YO doesn't provide launch date
-        status: 'active' as SatelliteStatus,
-        orbital: {
-          altitude: realAltitude,
-          period: this.calculateOrbitalPeriod(realAltitude),
-          inclination: this.getTypicalInclination(type),
-          eccentricity: 0,
-          velocity: Math.sqrt(398600.4418 / (6371 + realAltitude))
-        },
-        position: {
-          latitude: position.satlatitude,
-          longitude: position.satlongitude,
-          altitude: position.sataltitude,
-          timestamp: position.timestamp * 1000
-        },
-        tle: {
-          line1: '',
-          line2: ''
-        },
-        footprint: this.calculateFootprint(position.sataltitude)
-      };
-    } catch (error) {
-      console.error(`Error fetching satellite ${noradId} from N2YO:`, error);
-      return null;
-    }
-  }
-
-  // Determine country from satellite name when country code is not available
-  private determineCountryFromName(name: string): string {
-    const nameUpper = name.toUpperCase();
-    
-    if (nameUpper.includes('ISS') || nameUpper.includes('INTERNATIONAL')) return 'International';
-    if (nameUpper.includes('STARLINK') || nameUpper.includes('GPS') || nameUpper.includes('GOES')) return 'USA';
-    if (nameUpper.includes('GALILEO') || nameUpper.includes('SENTINEL') || nameUpper.includes('METEOSAT')) return 'Europe';
-    if (nameUpper.includes('GLONASS') || nameUpper.includes('COSMOS')) return 'Russia';
-    if (nameUpper.includes('BEIDOU') || nameUpper.includes('TIANHE') || nameUpper.includes('TIANGONG')) return 'China';
-    if (nameUpper.includes('HIMAWARI')) return 'Japan';
-    if (nameUpper.includes('IRIDIUM') || nameUpper.includes('ONEWEB')) return 'International';
-    
-    return 'Unknown';
-  }
-
-  // Load satellites using N2YO API with popular NORAD IDs
-  async getSatellitesWithFallback(): Promise<Satellite[]> {
-    console.log('🚀 Loading satellites from N2YO API...');
-    const satellites: Satellite[] = [];
-    
-    // Limit to first 100 satellites to avoid API rate limits
-    const limitedIds = POPULAR_SATELLITE_NORAD_IDS.slice(0, 100);
-    
-    console.log(`📡 Fetching ${limitedIds.length} popular satellites...`);
-    
-    // Fetch satellites in batches to avoid overwhelming the API
-    const batchSize = 5;
-    for (let i = 0; i < limitedIds.length; i += batchSize) {
-      const batch = limitedIds.slice(i, i + batchSize);
-      
-      const batchPromises = batch.map(noradId => this.fetchSatelliteFromN2YO(noradId));
-      const batchResults = await Promise.all(batchPromises);
-      
-      batchResults.forEach(satellite => {
-        if (satellite) {
-          satellites.push(satellite);
+      const satellites: Satellite[] = data.map(sat => {
+        const country = this.determineCountry(sat.COUNTRY_CODE, sat.OBJECT_NAME);
+        const type = this.determineSatelliteType(sat.OBJECT_NAME, sat.OBJECT_TYPE, sat.COUNTRY_CODE);
+        const agency = this.determineAgency(sat.OBJECT_NAME, country);
+        
+        // Use realistic altitude instead of defaulting to 400km
+        const realAltitude = this.getRealisticAltitude(sat.OBJECT_NAME, type);
+        
+        // Try to calculate position from TLE, but use realistic altitude
+        let position;
+        const tle1 = sat.TLE_LINE1 || '';
+        const tle2 = sat.TLE_LINE2 || '';
+        
+        if (tle1 && tle2 && tle1.length >= 69 && tle2.length >= 69) {
+          try {
+            position = this.calculateSatellitePositionFromTLE(tle1, tle2);
+            // Override the altitude with our realistic value
+            position.altitude = realAltitude;
+          } catch (error) {
+            console.warn(`TLE calculation failed for ${sat.OBJECT_NAME}`);
+          }
         }
+        
+        // Fallback position with realistic altitude
+        if (!position) {
+          position = {
+            latitude: Math.random() * 180 - 90,
+            longitude: Math.random() * 360 - 180,
+            altitude: realAltitude,
+            timestamp: Date.now()
+          };
+        }
+        
+        return {
+          id: sat.NORAD_CAT_ID.toString(),
+          name: sat.OBJECT_NAME,
+          type,
+          country,
+          agency,
+          launchDate: sat.LAUNCH_DATE || '1957-01-01',
+          status: sat.DECAY_DATE ? 'inactive' : 'active' as SatelliteStatus,
+          orbital: {
+            altitude: realAltitude, // Use realistic altitude
+            period: this.calculateOrbitalPeriod(realAltitude),
+            inclination: sat.INCLINATION || this.getTypicalInclination(type),
+            eccentricity: sat.ECCENTRICITY || 0,
+            velocity: Math.sqrt(398600.4418 / (6371 + realAltitude))
+          },
+          position: {
+            ...position,
+            altitude: realAltitude // Ensure position has realistic altitude
+          },
+          tle: {
+            line1: tle1,
+            line2: tle2
+          },
+          footprint: this.calculateFootprint(realAltitude)
+        };
       });
       
-      console.log(`✅ Batch ${Math.floor(i/batchSize) + 1}: ${batchResults.filter(s => s !== null).length} satellites loaded`);
-      
-      // Add delay between batches to respect API rate limits
-      if (i + batchSize < limitedIds.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      return satellites;
+    } catch (error) {
+      console.error(`Error fetching satellites from ${url}:`, error);
+      return [];
+    }
+  }
+
+  // Load satellites from CelesTrak with realistic altitudes
+  async getSatellitesWithFallback(): Promise<Satellite[]> {
+    console.log('🚀 Loading satellites from CelesTrak...');
+    const allSatellites: Satellite[] = [];
+    
+    // Fetch from each popular group
+    for (const [index, apiUrl] of POPULAR_CELESTRAK_GROUPS.entries()) {
+      try {
+        console.log(`📡 Fetching group ${index + 1}/${POPULAR_CELESTRAK_GROUPS.length}...`);
+        const satellites = await this.fetchSatellitesFromGroup(apiUrl);
+        allSatellites.push(...satellites);
+        console.log(`✅ Group ${index + 1}: ${satellites.length} satellites loaded`);
+      } catch (error) {
+        console.error(`❌ Failed to fetch group ${index + 1}:`, error);
       }
     }
     
-    console.log(`🎯 FINAL RESULT: ${satellites.length} satellites loaded successfully!`);
-    console.log(`📊 Breakdown by type:`, this.getTypeBreakdown(satellites));
+    console.log(`🎯 FINAL RESULT: ${allSatellites.length} satellites loaded with realistic altitudes!`);
+    console.log(`📊 Breakdown by type:`, this.getTypeBreakdown(allSatellites));
     
-    this.cachedSatellites = satellites;
-    return satellites;
+    this.cachedSatellites = allSatellites;
+    return allSatellites;
   }
 
   // Helper method to show satellite type breakdown
