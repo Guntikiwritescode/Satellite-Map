@@ -93,4 +93,5 @@ export interface Globe3DSettings {
   timeSpeed: number; // multiplier for real-time
   isPaused: boolean;
   selectedSatelliteId: string | null;
+  globeQuality: number; // rendering quality multiplier
 }
