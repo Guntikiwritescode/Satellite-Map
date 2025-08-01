@@ -191,8 +191,8 @@ const CameraController: React.FC = () => {
       enablePan={true}
       enableZoom={true}
       enableRotate={true}
-      minDistance={2}
-      maxDistance={50}
+      minDistance={0.1}
+      maxDistance={200}
     />
   );
 };
