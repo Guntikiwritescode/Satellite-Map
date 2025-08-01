@@ -1,6 +1,6 @@
 import React, { useRef, useMemo, useEffect } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Html } from '@react-three/drei';
+import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
+import { OrbitControls, Html, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { Satellite } from '../types/satellite.types';
@@ -104,70 +104,176 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     }
   }, [satellite.type]);
 
-  // Create basic 3D satellite model based on type
+  // Real-world satellite scaling helper with visibility multiplier
+  const getRealWorldScale = (satelliteType: string) => {
+    // Real satellite dimensions (in meters) vs Earth radius (6371000m)
+    // Our Earth in scene has radius = 1, so scale factor = 1 / 6371000
+    const earthRadiusMeters = 6371000;
+    const scaleToScene = 1 / earthRadiusMeters;
+    
+    // Visibility multiplier to make satellites actually visible at scale
+    // This represents a compromise between realism and visibility
+    const visibilityMultiplier = 5000; // Makes satellites visible while maintaining proportions
+    
+    // Real satellite dimensions in meters
+    const satelliteDimensions = {
+      'space-station': { length: 108, width: 51, height: 20 }, // ISS
+      'constellation': { length: 5.4, width: 2.9, height: 1.6 }, // Starlink
+      'navigation': { length: 6.5, width: 6.5, height: 3.0 }, // GPS satellite
+      'communication': { length: 7, width: 7, height: 3.5 }, // Typical comsat
+      'weather': { length: 4, width: 4, height: 6 }, // Weather satellite
+      'earth-observation': { length: 8, width: 4, height: 3 }, // Landsat-like
+      'scientific': { length: 13.3, width: 4.3, height: 4.3 }, // Hubble
+      'military': { length: 6, width: 6, height: 4 }, // Generic military
+    };
+    
+    const dims = satelliteDimensions[satelliteType as keyof typeof satelliteDimensions] || 
+                 satelliteDimensions['constellation'];
+    
+    return {
+      x: dims.length * scaleToScene * visibilityMultiplier,
+      y: dims.height * scaleToScene * visibilityMultiplier,
+      z: dims.width * scaleToScene * visibilityMultiplier
+    };
+  };
+
+  // ISS 3D Model Component
+  const ISSModel: React.FC = () => {
+    try {
+      const { scene } = useGLTF('/src/assets/models/iss.glb');
+      const groupRef = useRef<THREE.Group>(null);
+      const scale = getRealWorldScale('space-station');
+      
+      useFrame(() => {
+        if (groupRef.current) {
+          // Realistic ISS rotation (about 4 rpm around its axis)
+          groupRef.current.rotation.y += 0.004;
+        }
+      });
+
+      return (
+        <group ref={groupRef} scale={[scale.x, scale.y, scale.z]}>
+          <primitive object={scene.clone()} />
+        </group>
+      );
+    } catch (error) {
+      console.warn('Failed to load ISS model, using fallback');
+      // Fallback to procedural ISS model
+      return (
+        <group scale={[getRealWorldScale('space-station').x, getRealWorldScale('space-station').y, getRealWorldScale('space-station').z]}>
+          <mesh>
+            <boxGeometry args={[2, 0.4, 1]} />
+            <meshPhongMaterial color={color} />
+          </mesh>
+          <mesh position={[-2.5, 0, 0]}>
+            <boxGeometry args={[2, 0.1, 1.5]} />
+            <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.3} />
+          </mesh>
+          <mesh position={[2.5, 0, 0]}>
+            <boxGeometry args={[2, 0.1, 1.5]} />
+            <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.3} />
+          </mesh>
+        </group>
+      );
+    }
+  };
+
+  // Create realistic 3D satellite models based on type with real-world scaling
   const SatelliteModel: React.FC = () => {
     const groupRef = useRef<THREE.Group>(null);
+    const scale = getRealWorldScale(satellite.type);
     
     useFrame(() => {
       if (groupRef.current) {
-        // Slow rotation for the satellite model
-        groupRef.current.rotation.y += 0.01;
+        // Realistic satellite rotation based on type
+        const rotationSpeed = satellite.type === 'space-station' ? 0.004 : 0.01;
+        groupRef.current.rotation.y += rotationSpeed;
       }
     });
 
+    // Use real ISS model for space stations
+    if (satellite.type === 'space-station') {
+      return <ISSModel />;
+    }
+
     switch (satellite.type) {
-      case 'space-station':
+      case 'constellation': // Starlink-like
         return (
-          <group ref={groupRef}>
-            {/* ISS-like structure */}
+          <group ref={groupRef} scale={[scale.x, scale.y, scale.z]}>
+            {/* Main body - flat rectangular */}
             <mesh>
-              <boxGeometry args={[0.008, 0.003, 0.012]} />
+              <boxGeometry args={[1, 0.3, 0.6]} />
               <meshPhongMaterial color={color} />
             </mesh>
-            {/* Solar panels */}
-            <mesh position={[-0.015, 0, 0]}>
-              <boxGeometry args={[0.02, 0.001, 0.008]} />
-              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.2} />
-            </mesh>
-            <mesh position={[0.015, 0, 0]}>
-              <boxGeometry args={[0.02, 0.001, 0.008]} />
-              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.2} />
+            {/* Solar panel array */}
+            <mesh position={[0, 0, 0.8]}>
+              <boxGeometry args={[0.8, 0.05, 1.2]} />
+              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.3} />
             </mesh>
           </group>
         );
       
       case 'communication':
         return (
-          <group ref={groupRef}>
-            {/* Main body */}
+          <group ref={groupRef} scale={[scale.x, scale.y, scale.z]}>
+            {/* Main cylindrical body */}
             <mesh>
-              <cylinderGeometry args={[0.002, 0.002, 0.008]} />
+              <cylinderGeometry args={[0.5, 0.5, 1]} />
               <meshPhongMaterial color={color} />
             </mesh>
-            {/* Dish */}
-            <mesh position={[0, 0.006, 0]} rotation={[Math.PI / 4, 0, 0]}>
-              <coneGeometry args={[0.004, 0.002, 8]} />
-              <meshPhongMaterial color="#64748b" />
+            {/* Large dish antenna */}
+            <mesh position={[0, 0.8, 0]} rotation={[Math.PI / 6, 0, 0]}>
+              <cylinderGeometry args={[0.6, 0.6, 0.1]} />
+              <meshPhongMaterial color="#e5e7eb" />
+            </mesh>
+            {/* Solar panels */}
+            <mesh position={[-1.2, 0, 0]}>
+              <boxGeometry args={[1.5, 0.05, 1]} />
+              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.3} />
+            </mesh>
+            <mesh position={[1.2, 0, 0]}>
+              <boxGeometry args={[1.5, 0.05, 1]} />
+              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.3} />
             </mesh>
           </group>
         );
       
-      default:
+      case 'scientific': // Hubble-like
         return (
-          <group ref={groupRef}>
-            {/* Generic satellite body */}
+          <group ref={groupRef} scale={[scale.x, scale.y, scale.z]}>
+            {/* Main telescope tube */}
             <mesh>
-              <boxGeometry args={[0.003, 0.003, 0.006]} />
+              <cylinderGeometry args={[0.4, 0.4, 1]} />
+              <meshPhongMaterial color="#f3f4f6" />
+            </mesh>
+            {/* Solar panels */}
+            <mesh position={[-1, 0, 0]}>
+              <boxGeometry args={[1.2, 0.05, 2]} />
+              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.3} />
+            </mesh>
+            <mesh position={[1, 0, 0]}>
+              <boxGeometry args={[1.2, 0.05, 2]} />
+              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.3} />
+            </mesh>
+          </group>
+        );
+      
+      default: // Generic satellite
+        return (
+          <group ref={groupRef} scale={[scale.x, scale.y, scale.z]}>
+            {/* Main body */}
+            <mesh>
+              <boxGeometry args={[1, 1, 1.5]} />
               <meshPhongMaterial color={color} />
             </mesh>
             {/* Solar panels */}
-            <mesh position={[-0.006, 0, 0]}>
-              <boxGeometry args={[0.008, 0.001, 0.004]} />
-              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.2} />
+            <mesh position={[-1.2, 0, 0]}>
+              <boxGeometry args={[1.5, 0.1, 1]} />
+              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.3} />
             </mesh>
-            <mesh position={[0.006, 0, 0]}>
-              <boxGeometry args={[0.008, 0.001, 0.004]} />
-              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.2} />
+            <mesh position={[1.2, 0, 0]}>
+              <boxGeometry args={[1.5, 0.1, 1]} />
+              <meshPhongMaterial color="#1e40af" emissive="#1e40af" emissiveIntensity={0.3} />
             </mesh>
           </group>
         );
@@ -178,11 +284,11 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     const cameraDistance = state.camera.position.distanceTo(new THREE.Vector3(...position));
     
     if (markerRef.current && modelRef.current) {
-      // Distance-based scaling for marker
-      const baseScale = Math.max(0.3, Math.min(2.0, cameraDistance * 0.5));
+      // Distance-based scaling for marker - scales down as you get closer
+      const baseScale = Math.max(0.1, Math.min(1.5, cameraDistance * 0.3));
       
-      // Show 3D model when very close (distance < 0.5), otherwise show marker
-      const showModel = cameraDistance < 0.5;
+      // Show 3D model when closer than 2 units (reasonable zoom distance)
+      const showModel = cameraDistance < 2.0;
       
       markerRef.current.visible = !showModel;
       modelRef.current.visible = showModel;
@@ -199,9 +305,10 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         // Billboard effect - always face camera
         markerRef.current.lookAt(state.camera.position);
       } else {
-        // Scale 3D model appropriately
-        const modelScale = Math.max(0.5, Math.min(3.0, (0.5 - cameraDistance) * 10));
-        modelRef.current.scale.setScalar(modelScale);
+        // Keep 3D model at proportional real-world scale when viewing it
+        // No additional scaling needed as it's already at real-world proportions
+        const fixedModelScale = 1.0; // Keep consistent scale
+        modelRef.current.scale.setScalar(fixedModelScale);
       }
     }
   });
