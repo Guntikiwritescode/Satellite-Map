@@ -1,73 +1,62 @@
 import { Satellite, Launch, SatelliteType, SatelliteStatus } from '../types/satellite.types';
 import * as satellite from 'satellite.js';
 
-// Real satellite data from public APIs
-const CELESTRAK_API = 'https://tle.ivanstanojevic.me/api/tle';
+// Launch API for upcoming launches
 const LAUNCH_API = 'https://ll.thespacedevs.com/2.2.0/launch';
 
-// Real satellite NORAD IDs - ONLY satellites that have been verified to work from network requests
-const KNOWN_SATELLITES = [
-  // Space Stations (verified working from network logs)
-  { id: 25544, name: 'ISS (ZARYA)', type: 'space-station' as SatelliteType, agency: 'NASA/Roscosmos', country: 'International' },
-  { id: 48274, name: 'CSS (TIANHE)', type: 'space-station' as SatelliteType, agency: 'CNSA', country: 'China' },
-  
-  // Weather Satellites (verified working from network logs)
-  { id: 41866, name: 'GOES 16', type: 'weather' as SatelliteType, agency: 'NOAA', country: 'USA' },
-  { id: 43226, name: 'GOES 17', type: 'weather' as SatelliteType, agency: 'NOAA', country: 'USA' },
-  { id: 51850, name: 'GOES 18', type: 'weather' as SatelliteType, agency: 'NOAA', country: 'USA' },
-  { id: 40732, name: 'METEOSAT-11 (MSG-4)', type: 'weather' as SatelliteType, agency: 'EUMETSAT', country: 'Europe' },
-  { id: 36411, name: 'EWS-G2 (GOES 15)', type: 'weather' as SatelliteType, agency: 'NOAA', country: 'USA' },
-
-  // Communication Satellites (verified working from network logs)
-  { id: 42432, name: 'SES-10', type: 'communication' as SatelliteType, agency: 'SES', country: 'Europe' },
-  { id: 43175, name: 'SES-14', type: 'communication' as SatelliteType, agency: 'SES', country: 'Europe' },
-  { id: 44476, name: 'INTELSAT 39 (IS-39)', type: 'communication' as SatelliteType, agency: 'Intelsat', country: 'International' },
-  { id: 41748, name: 'INTELSAT 33E (IS-33E)', type: 'communication' as SatelliteType, agency: 'Intelsat', country: 'International' },
-  { id: 40874, name: 'INTELSAT 34 (IS-34)', type: 'communication' as SatelliteType, agency: 'Intelsat', country: 'International' },
-  { id: 41552, name: 'THAICOM 8', type: 'communication' as SatelliteType, agency: 'Thaicom', country: 'Thailand' },
-
-  // GPS Navigation (verified working from network logs)
-  { id: 40730, name: 'GPS BIIF-10', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 43873, name: 'GPS BIII-1', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 46826, name: 'GPS BIII-4', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-  { id: 48859, name: 'GPS BIII-5 (PRN 11)', type: 'navigation' as SatelliteType, agency: 'US Space Force', country: 'USA' },
-
-  // Galileo Navigation (verified working from network logs)  
-  { id: 37846, name: 'GSAT0101 (GALILEO-PFM)', type: 'navigation' as SatelliteType, agency: 'ESA', country: 'Europe' },
-  { id: 37847, name: 'GSAT0102 (GALILEO-FM2)', type: 'navigation' as SatelliteType, agency: 'ESA', country: 'Europe' },
-  { id: 40128, name: 'GSAT0201 (GALILEO 5)', type: 'navigation' as SatelliteType, agency: 'ESA', country: 'Europe' },
-  { id: 40129, name: 'GSAT0202 (GALILEO 6)', type: 'navigation' as SatelliteType, agency: 'ESA', country: 'Europe' },
-  { id: 43564, name: 'GSAT0221 (GALILEO 25)', type: 'navigation' as SatelliteType, agency: 'ESA', country: 'Europe' },
-
-  // Earth Observation (verified working from network logs)
-  { id: 25994, name: 'TERRA', type: 'earth-observation' as SatelliteType, agency: 'NASA', country: 'USA' },
-  { id: 27424, name: 'AQUA', type: 'earth-observation' as SatelliteType, agency: 'NASA', country: 'USA' },
-  { id: 40697, name: 'SENTINEL-2A', type: 'earth-observation' as SatelliteType, agency: 'ESA', country: 'Europe' },
-  { id: 42063, name: 'SENTINEL-2B', type: 'earth-observation' as SatelliteType, agency: 'ESA', country: 'Europe' },
-  { id: 39084, name: 'LANDSAT 8', type: 'earth-observation' as SatelliteType, agency: 'NASA', country: 'USA' },
-  { id: 43013, name: 'NOAA 20 (JPSS-1)', type: 'weather' as SatelliteType, agency: 'NOAA', country: 'USA' },
-  { id: 43613, name: 'ICESAT-2', type: 'earth-observation' as SatelliteType, agency: 'NASA', country: 'USA' },
-  { id: 28376, name: 'AURA', type: 'earth-observation' as SatelliteType, agency: 'NASA', country: 'USA' },
-
-  // Scientific Satellites (verified working from network logs)
-  { id: 40482, name: 'MMS 1', type: 'scientific' as SatelliteType, agency: 'NASA', country: 'USA' },
-  { id: 30942, name: 'FENGYUN 1C DEB', type: 'scientific' as SatelliteType, agency: 'CNSA', country: 'China' },
-
-  // Starlink Constellation (verified working from network logs)
-  { id: 44713, name: 'STARLINK-1007', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 44714, name: 'STARLINK-1008', type: 'constellation' as SatelliteType, agency: 'SpaceX', country: 'USA' },
-  { id: 47964, name: 'SMOG-1', type: 'constellation' as SatelliteType, agency: 'BME', country: 'Hungary' },
-
-  // Additional verified satellites
-  { id: 45439, name: 'ONEWEB-0096', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' },
-  { id: 45438, name: 'ONEWEB-0085', type: 'constellation' as SatelliteType, agency: 'OneWeb', country: 'UK' }
+// Priority bulk satellite data APIs - most reliable sources
+const PRIORITY_SATELLITE_GROUPS = [
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=json', // Space stations
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=json', // Bright satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=json', // Weather satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=goes&FORMAT=json', // GOES satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=json', // Earth resources
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=geo&FORMAT=json', // Geostationary
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=intelsat&FORMAT=json', // Intelsat
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=ses&FORMAT=json', // SES
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium-NEXT&FORMAT=json', // Iridium NEXT
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=json&LIMIT=100', // Starlink (limited)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=oneweb&FORMAT=json&LIMIT=50', // OneWeb (limited)
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops&FORMAT=json', // GPS operational
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo&FORMAT=json', // Galileo
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=beidou&FORMAT=json', // BeiDou
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=json', // Science satellites
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=engineering&FORMAT=json' // Engineering satellites
 ];
 
-interface TLEData {
-  satelliteId: number;
-  name: string;
-  line1: string;
-  line2: string;
+interface CelestrakSatellite {
+  OBJECT_NAME: string;
+  OBJECT_ID: string;
+  EPOCH: string;
+  MEAN_MOTION: number;
+  ECCENTRICITY: number;
+  INCLINATION: number;
+  RA_OF_ASC_NODE: number;
+  ARG_OF_PERICENTER: number;
+  MEAN_ANOMALY: number;
+  EPHEMERIS_TYPE: number;
+  CLASSIFICATION_TYPE: string;
+  NORAD_CAT_ID: number;
+  ELEMENT_SET_NO: number;
+  REV_AT_EPOCH: number;
+  BSTAR: number;
+  MEAN_MOTION_DOT: number;
+  MEAN_MOTION_DDOT: number;
+  SEMIMAJOR_AXIS: number;
+  PERIOD: number;
+  APOAPSIS: number;
+  PERIAPSIS: number;
+  OBJECT_TYPE: string;
+  RCS_SIZE: string;
+  COUNTRY_CODE: string;
+  LAUNCH_DATE: string;
+  SITE: string;
+  DECAY_DATE?: string;
+  FILE: number;
+  GP_ID: number;
+  TLE_LINE0: string;
+  TLE_LINE1: string;
+  TLE_LINE2: string;
 }
 
 class RealSatelliteAPI {
@@ -75,28 +64,218 @@ class RealSatelliteAPI {
   private onDataUpdate: ((satellites: Satellite[]) => void) | null = null;
   private cachedSatellites: Satellite[] = [];
 
-  async fetchTLEData(satelliteId: number): Promise<TLEData | null> {
-    try {
-      const response = await fetch(`${CELESTRAK_API}/${satelliteId}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch TLE for satellite ${satelliteId}`);
-      }
-      const data = await response.json();
-      return {
-        satelliteId,
-        name: data.name,
-        line1: data.line1,
-        line2: data.line2
-      };
-    } catch (error) {
-      console.error(`Error fetching TLE for satellite ${satelliteId}:`, error);
-      return null;
+  // Convert satellite type based on name and object type
+  private determineSatelliteType(name: string, objectType: string, countryCode: string): SatelliteType {
+    const nameUpper = name.toUpperCase();
+    
+    if (nameUpper.includes('ISS') || nameUpper.includes('ZARYA') || nameUpper.includes('TIANHE') || 
+        nameUpper.includes('TIANGONG') || nameUpper.includes('MIR')) {
+      return 'space-station';
+    }
+    
+    if (nameUpper.includes('STARLINK') || nameUpper.includes('ONEWEB') || nameUpper.includes('IRIDIUM')) {
+      return 'constellation';
+    }
+    
+    if (nameUpper.includes('GPS') || nameUpper.includes('GALILEO') || nameUpper.includes('GLONASS') || 
+        nameUpper.includes('BEIDOU') || nameUpper.includes('COMPASS') || nameUpper.includes('NAVSTAR')) {
+      return 'navigation';
+    }
+    
+    if (nameUpper.includes('GOES') || nameUpper.includes('METEOSAT') || nameUpper.includes('HIMAWARI') || 
+        nameUpper.includes('WEATHER') || nameUpper.includes('NOAA') || nameUpper.includes('DMSP')) {
+      return 'weather';
+    }
+    
+    if (nameUpper.includes('INTELSAT') || nameUpper.includes('SES') || nameUpper.includes('EUTELSAT') || 
+        nameUpper.includes('ASTRA') || nameUpper.includes('DIRECTV') || nameUpper.includes('ECHOSTAR') ||
+        nameUpper.includes('VIASAT') || nameUpper.includes('THAICOM') || nameUpper.includes('AMAZONAS')) {
+      return 'communication';
+    }
+    
+    if (nameUpper.includes('LANDSAT') || nameUpper.includes('SENTINEL') || nameUpper.includes('TERRA') || 
+        nameUpper.includes('AQUA') || nameUpper.includes('MODIS') || nameUpper.includes('SPOT') ||
+        nameUpper.includes('WORLDVIEW') || nameUpper.includes('QUICKBIRD') || nameUpper.includes('PLANET')) {
+      return 'earth-observation';
+    }
+    
+    if (nameUpper.includes('HUBBLE') || nameUpper.includes('SPITZER') || nameUpper.includes('KEPLER') || 
+        nameUpper.includes('TESS') || nameUpper.includes('JWST') || nameUpper.includes('GAIA') ||
+        nameUpper.includes('CLUSTER') || nameUpper.includes('MMS') || nameUpper.includes('VOYAGER')) {
+      return 'scientific';
+    }
+    
+    if (nameUpper.includes('USA') || nameUpper.includes('NROL') || nameUpper.includes('MILSTAR') || 
+        nameUpper.includes('AEHF') || nameUpper.includes('WGS') || nameUpper.includes('SBIRS') ||
+        nameUpper.includes('DSP') || nameUpper.includes('MUOS') || objectType === 'UNKNOWN') {
+      return 'military';
+    }
+    
+    // Default fallback
+    return 'scientific';
+  }
+
+  // Determine country based on country code and satellite name
+  private determineCountry(countryCode: string, name: string): string {
+    const countryMap: Record<string, string> = {
+      'US': 'USA',
+      'RU': 'Russia', 
+      'CN': 'China',
+      'EU': 'Europe',
+      'FR': 'France',
+      'DE': 'Germany',
+      'GB': 'United Kingdom',
+      'JP': 'Japan',
+      'IN': 'India',
+      'CA': 'Canada',
+      'AU': 'Australia',
+      'BR': 'Brazil',
+      'IT': 'Italy',
+      'ES': 'Spain',
+      'NL': 'Netherlands',
+      'SE': 'Sweden',
+      'NO': 'Norway',
+      'DK': 'Denmark',
+      'BE': 'Belgium',
+      'CH': 'Switzerland',
+      'KR': 'South Korea',
+      'IL': 'Israel',
+      'SA': 'Saudi Arabia',
+      'AE': 'UAE',
+      'TH': 'Thailand',
+      'ID': 'Indonesia',
+      'MY': 'Malaysia',
+      'SG': 'Singapore',
+      'PH': 'Philippines',
+      'VN': 'Vietnam',
+      'AR': 'Argentina',
+      'MX': 'Mexico',
+      'CL': 'Chile',
+      'ZA': 'South Africa',
+      'EG': 'Egypt',
+      'MA': 'Morocco',
+      'NG': 'Nigeria',
+      'KE': 'Kenya',
+      'ET': 'Ethiopia',
+      'UG': 'Uganda',
+      'TZ': 'Tanzania',
+      'GH': 'Ghana',
+      'SN': 'Senegal',
+      'CI': 'Ivory Coast',
+      'CM': 'Cameroon',
+      'BW': 'Botswana',
+      'ZW': 'Zimbabwe',
+      'ZM': 'Zambia',
+      'MW': 'Malawi',
+      'MZ': 'Mozambique',
+      'AO': 'Angola',
+      'NA': 'Namibia',
+      'LS': 'Lesotho',
+      'SZ': 'Eswatini'
+    };
+    
+    if (name.toUpperCase().includes('ISS') || name.toUpperCase().includes('INTERNATIONAL')) {
+      return 'International';
+    }
+    
+    return countryMap[countryCode] || countryCode || 'Unknown';
+  }
+
+  // Determine agency based on satellite name and country
+  private determineAgency(name: string, country: string): string {
+    const nameUpper = name.toUpperCase();
+    
+    if (nameUpper.includes('STARLINK')) return 'SpaceX';
+    if (nameUpper.includes('ONEWEB')) return 'OneWeb';
+    if (nameUpper.includes('IRIDIUM')) return 'Iridium';
+    if (nameUpper.includes('INTELSAT')) return 'Intelsat';
+    if (nameUpper.includes('SES')) return 'SES';
+    if (nameUpper.includes('EUTELSAT')) return 'Eutelsat';
+    if (nameUpper.includes('GOES') || nameUpper.includes('NOAA')) return 'NOAA';
+    if (nameUpper.includes('GPS')) return 'US Space Force';
+    if (nameUpper.includes('GALILEO')) return 'ESA';
+    if (nameUpper.includes('GLONASS')) return 'Roscosmos';
+    if (nameUpper.includes('BEIDOU')) return 'CNSA';
+    if (nameUpper.includes('SENTINEL') || nameUpper.includes('ESA')) return 'ESA';
+    if (nameUpper.includes('LANDSAT') || nameUpper.includes('TERRA') || nameUpper.includes('AQUA')) return 'NASA';
+    if (nameUpper.includes('METEOSAT')) return 'EUMETSAT';
+    if (nameUpper.includes('HIMAWARI')) return 'JMA';
+    if (nameUpper.includes('DIRECTV')) return 'DIRECTV';
+    if (nameUpper.includes('ECHOSTAR')) return 'EchoStar';
+    if (nameUpper.includes('VIASAT')) return 'Viasat';
+    if (nameUpper.includes('USA') || nameUpper.includes('NROL')) return 'NRO';
+    if (nameUpper.includes('AEHF') || nameUpper.includes('WGS') || nameUpper.includes('MILSTAR')) return 'USSF';
+    if (nameUpper.includes('ISS')) return 'NASA/Roscosmos';
+    if (nameUpper.includes('TIANHE') || nameUpper.includes('TIANGONG')) return 'CNSA';
+    
+    // Default based on country
+    switch (country) {
+      case 'USA': return 'NASA';
+      case 'Russia': return 'Roscosmos';
+      case 'China': return 'CNSA';
+      case 'Europe': return 'ESA';
+      case 'Japan': return 'JAXA';
+      case 'India': return 'ISRO';
+      case 'International': return 'International';
+      default: return country;
     }
   }
 
-  calculateSatellitePosition(tleData: TLEData): Satellite['position'] {
+  // Fetch satellites from a single bulk endpoint
+  private async fetchBulkSatellites(url: string): Promise<Satellite[]> {
     try {
-      const satrec = satellite.twoline2satrec(tleData.line1, tleData.line2);
+      console.log(`Fetching satellites from: ${url}`);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data: CelestrakSatellite[] = await response.json();
+      console.log(`Received ${data.length} satellites from ${url}`);
+      
+      const satellites: Satellite[] = data.map(sat => {
+        const country = this.determineCountry(sat.COUNTRY_CODE, sat.OBJECT_NAME);
+        const type = this.determineSatelliteType(sat.OBJECT_NAME, sat.OBJECT_TYPE, sat.COUNTRY_CODE);
+        const agency = this.determineAgency(sat.OBJECT_NAME, country);
+        
+        // Calculate current position using TLE
+        const position = this.calculateSatellitePositionFromTLE(sat.TLE_LINE1, sat.TLE_LINE2);
+        
+        return {
+          id: sat.NORAD_CAT_ID.toString(),
+          name: sat.OBJECT_NAME,
+          type,
+          country,
+          agency,
+          launchDate: sat.LAUNCH_DATE || '1957-01-01',
+          status: sat.DECAY_DATE ? 'inactive' : 'active' as SatelliteStatus,
+          orbital: {
+            altitude: sat.SEMIMAJOR_AXIS ? sat.SEMIMAJOR_AXIS - 6371 : 400, // Convert to altitude
+            period: sat.PERIOD || 90,
+            inclination: sat.INCLINATION || 0,
+            eccentricity: sat.ECCENTRICITY || 0,
+            velocity: sat.SEMIMAJOR_AXIS ? Math.sqrt(398600.4418 / sat.SEMIMAJOR_AXIS) : 7.8
+          },
+          position,
+          tle: {
+            line1: sat.TLE_LINE1,
+            line2: sat.TLE_LINE2
+          },
+          footprint: this.calculateFootprint(sat.SEMIMAJOR_AXIS ? sat.SEMIMAJOR_AXIS - 6371 : 400)
+        };
+      });
+      
+      return satellites;
+    } catch (error) {
+      console.error(`Error fetching bulk satellites from ${url}:`, error);
+      return [];
+    }
+  }
+
+  // Calculate satellite position from TLE lines
+  private calculateSatellitePositionFromTLE(line1: string, line2: string): Satellite['position'] {
+    try {
+      const satrec = satellite.twoline2satrec(line1, line2);
       const now = new Date();
       const positionAndVelocity = satellite.propagate(satrec, now);
       
@@ -113,98 +292,15 @@ class RealSatelliteAPI {
         };
       }
     } catch (error) {
-      console.error('Error calculating satellite position:', error);
+      console.error('Error calculating satellite position from TLE:', error);
     }
     
     return {
       latitude: 0,
       longitude: 0,
-      altitude: 0,
+      altitude: 400,
       timestamp: Date.now()
     };
-  }
-
-  calculateOrbitalParameters(tleData: TLEData) {
-    try {
-      const satrec = satellite.twoline2satrec(tleData.line1, tleData.line2);
-      
-      // Extract orbital elements from TLE
-      const meanMotion = satrec.no; // rad/min
-      const period = (2 * Math.PI) / meanMotion; // minutes
-      const semiMajorAxis = Math.pow((398600.4418 * Math.pow(period / (2 * Math.PI), 2)), 1/3); // km
-      const altitude = semiMajorAxis - 6371; // km (subtract Earth radius)
-      const inclination = satrec.inclo * 180 / Math.PI; // degrees
-      const eccentricity = satrec.ecco;
-      const velocity = Math.sqrt(398600.4418 / semiMajorAxis); // km/s
-      
-      return {
-        altitude: Math.max(0, altitude),
-        period: period,
-        inclination: inclination,
-        eccentricity: eccentricity,
-        velocity: velocity
-      };
-    } catch (error) {
-      console.error('Error calculating orbital parameters:', error);
-      return {
-        altitude: 400,
-        period: 90,
-        inclination: 0,
-        eccentricity: 0,
-        velocity: 7.8
-      };
-    }
-  }
-
-  async getSatellites(): Promise<Satellite[]> {
-    console.log('Attempting to load real satellite data...');
-    console.log(`Total satellites to process: ${KNOWN_SATELLITES.length}`);
-    const satellites: Satellite[] = [];
-    let successCount = 0;
-    let failCount = 0;
-    
-    for (const satInfo of KNOWN_SATELLITES) {
-      try {
-        console.log(`Processing satellite ${successCount + failCount + 1}/${KNOWN_SATELLITES.length}: ${satInfo.name} (ID: ${satInfo.id})`);
-        const tleData = await this.fetchTLEData(satInfo.id);
-        if (tleData) {
-          const position = this.calculateSatellitePosition(tleData);
-          const orbital = this.calculateOrbitalParameters(tleData);
-          
-          const satellite: Satellite = {
-            id: satInfo.id.toString(),
-            name: satInfo.name,
-            type: satInfo.type,
-            country: satInfo.country,
-            agency: satInfo.agency,
-            launchDate: '2000-01-01',
-            status: 'active' as SatelliteStatus,
-            orbital,
-            position,
-            tle: {
-              line1: tleData.line1,
-              line2: tleData.line2
-            },
-            footprint: this.calculateFootprint(orbital.altitude)
-          };
-          
-          satellites.push(satellite);
-          successCount++;
-          console.log(`✅ Successfully loaded: ${satInfo.name}`);
-        } else {
-          failCount++;
-          console.log(`❌ Failed to load: ${satInfo.name} (no TLE data)`);
-        }
-      } catch (error) {
-        failCount++;
-        console.error(`❌ Failed to process satellite ${satInfo.name}:`, error);
-        // Continue processing other satellites instead of failing completely
-      }
-    }
-    
-    console.log(`🎯 Final Results: ${successCount} successful, ${failCount} failed, ${satellites.length} total loaded`);
-    this.cachedSatellites = satellites;
-    return satellites;
   }
 
   calculateFootprint(altitude: number): number {
@@ -212,6 +308,50 @@ class RealSatelliteAPI {
     const earthRadius = 6371; // km
     const heightAboveEarth = altitude;
     return Math.sqrt(heightAboveEarth * (heightAboveEarth + 2 * earthRadius));
+  }
+
+  // Load satellites from all priority groups
+  async getSatellitesWithFallback(): Promise<Satellite[]> {
+    console.log('🚀 Loading satellites from bulk APIs...');
+    const allSatellites: Satellite[] = [];
+    const uniqueSatellites = new Map<string, Satellite>();
+    
+    // Fetch from each priority group
+    for (const [index, apiUrl] of PRIORITY_SATELLITE_GROUPS.entries()) {
+      try {
+        console.log(`📡 Fetching group ${index + 1}/${PRIORITY_SATELLITE_GROUPS.length}...`);
+        const satellites = await this.fetchBulkSatellites(apiUrl);
+        
+        // Add unique satellites (avoid duplicates)
+        satellites.forEach(sat => {
+          if (!uniqueSatellites.has(sat.id)) {
+            uniqueSatellites.set(sat.id, sat);
+          }
+        });
+        
+        console.log(`✅ Group ${index + 1}: ${satellites.length} satellites (${uniqueSatellites.size} unique total)`);
+      } catch (error) {
+        console.error(`❌ Failed to fetch group ${index + 1}:`, error);
+      }
+    }
+    
+    // Convert map to array
+    const finalSatellites = Array.from(uniqueSatellites.values());
+    
+    console.log(`🎯 FINAL RESULT: ${finalSatellites.length} unique satellites loaded successfully!`);
+    console.log(`📊 Breakdown by type:`, this.getTypeBreakdown(finalSatellites));
+    
+    this.cachedSatellites = finalSatellites;
+    return finalSatellites;
+  }
+
+  // Helper method to show satellite type breakdown
+  private getTypeBreakdown(satellites: Satellite[]): Record<string, number> {
+    const breakdown: Record<string, number> = {};
+    satellites.forEach(sat => {
+      breakdown[sat.type] = (breakdown[sat.type] || 0) + 1;
+    });
+    return breakdown;
   }
 
   async getLaunches(): Promise<Launch[]> {
@@ -240,7 +380,7 @@ class RealSatelliteAPI {
   startRealTimeUpdates(callback: (satellites: Satellite[]) => void) {
     this.onDataUpdate = callback;
     
-    // Initial load with fallback
+    // Initial load
     this.getSatellitesWithFallback().then(callback);
     
     // Update satellite positions every 3 seconds
@@ -255,7 +395,7 @@ class RealSatelliteAPI {
           const updatedSatellites = this.cachedSatellites.map(satellite => {
             return {
               ...satellite,
-              position: this.calculateOrbitalPosition(satellite)
+              position: this.calculateSatellitePositionFromTLE(satellite.tle.line1, satellite.tle.line2)
             };
           });
           
@@ -265,65 +405,7 @@ class RealSatelliteAPI {
       } catch (error) {
         console.error('Error updating satellite positions:', error);
       }
-    }, 3000); // Back to 3 seconds as requested
-  }
-
-  calculateOrbitalPosition(satellite: Satellite): Satellite['position'] {
-    // Validate input data and provide fallbacks
-    if (!satellite?.orbital) {
-      console.warn('Missing orbital data for satellite:', satellite?.id);
-      return {
-        latitude: 0,
-        longitude: 0,
-        altitude: 400,
-        timestamp: Date.now()
-      };
-    }
-
-    const currentTime = Date.now() / 1000; // Current time in seconds
-    
-    // Calculate orbital parameters with validation
-    const period = satellite.orbital.period || 90; // Default 90 minutes if missing
-    const altitude = satellite.orbital.altitude || 400; // Default 400km if missing
-    const inclination = satellite.orbital.inclination || 0; // Default 0 degrees if missing
-    
-    const orbitPeriodSeconds = period * 60; // Convert minutes to seconds
-    const orbitSpeed = (2 * Math.PI) / orbitPeriodSeconds; // radians per second
-    
-    // Add satellite-specific offset for distribution along orbit
-    // Convert ID to number safely
-    const satelliteIdNum = parseInt(satellite.id) || 0;
-    const satelliteOffset = (satelliteIdNum % 1000) / 1000 * Math.PI * 2;
-    const angle = (currentTime * orbitSpeed + satelliteOffset) % (Math.PI * 2);
-    
-    // Earth parameters
-    const earthRadiusKm = 6371;
-    const orbitalRadiusKm = earthRadiusKm + altitude;
-    const inclinationRad = (inclination * Math.PI) / 180;
-    
-    // Calculate position on orbital path
-    let x = orbitalRadiusKm * Math.cos(angle);
-    let y = 0;
-    let z = orbitalRadiusKm * Math.sin(angle);
-    
-    // Apply inclination rotation
-    const rotatedY = y * Math.cos(inclinationRad) - z * Math.sin(inclinationRad);
-    const rotatedZ = y * Math.sin(inclinationRad) + z * Math.cos(inclinationRad);
-    
-    // Convert back to lat/lon for position tracking
-    const distance = Math.sqrt(x * x + rotatedY * rotatedY + rotatedZ * rotatedZ);
-    
-    // Validate calculations before returning
-    const latitude = Math.asin(Math.max(-1, Math.min(1, rotatedY / distance))) * 180 / Math.PI;
-    const longitude = Math.atan2(rotatedZ, x) * 180 / Math.PI;
-    
-    // Final validation to ensure no NaN values
-    return {
-      latitude: isNaN(latitude) ? 0 : latitude,
-      longitude: isNaN(longitude) ? 0 : longitude,
-      altitude: isNaN(altitude) ? 400 : altitude,
-      timestamp: Date.now()
-    };
+    }, 3000);
   }
 
   stopRealTimeUpdates() {
@@ -359,17 +441,6 @@ class RealSatelliteAPI {
       agencies: ['NASA', 'SpaceX', 'ESA', 'NOAA', 'Intelsat', 'Roscosmos', 'CNSA'],
       statuses: ['active'] as SatelliteStatus[]
     };
-  }
-
-  // Load all real satellite data - no more fallback restrictions
-  async getSatellitesWithFallback(): Promise<Satellite[]> {
-    console.log('Loading all verified satellite data...');
-    console.log(`Attempting to load ${KNOWN_SATELLITES.length} satellites`);
-    
-    const realSatellites = await this.getSatellites();
-    console.log(`Successfully loaded ${realSatellites.length} satellites out of ${KNOWN_SATELLITES.length} attempted`);
-    
-    return realSatellites;
   }
 }
 
