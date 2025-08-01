@@ -300,9 +300,9 @@ class RealSatelliteAPI {
     
     // Fallback defaults when no data is loaded
     return {
-      types: ['space-station', 'constellation', 'navigation', 'weather', 'earth-observation'] as SatelliteType[],
-      countries: ['USA', 'International', 'Europe'],
-      agencies: ['NASA', 'SpaceX', 'ESA', 'NOAA'],
+      types: ['communication', 'weather', 'navigation', 'scientific', 'military', 'earth-observation', 'space-station', 'constellation'] as SatelliteType[],
+      countries: ['USA', 'International', 'Europe', 'Russia', 'China'],
+      agencies: ['NASA', 'SpaceX', 'ESA', 'NOAA', 'Intelsat', 'Roscosmos', 'CNSA'],
       statuses: ['active'] as SatelliteStatus[]
     };
   }
@@ -1380,6 +1380,84 @@ class RealSatelliteAPI {
           line2: `2 ${60000 + i}  ${70 + i * 7}.0000 ${72 + i * 36}.0000 00${10 + i}000  95.0000 265.0000 14.00000000000000`
         },
         footprint: 2500 + i * 400
+      })),
+
+      // GEOSTATIONARY COMMUNICATION SATELLITES (25)
+      ...Array.from({ length: 25 }, (_, i) => ({
+        id: `geosat-${50000 + i}`,
+        name: `INTELSAT-${30 + i}`,
+        type: 'communication' as const,
+        country: 'International',
+        agency: 'Intelsat',
+        launchDate: '2018-01-15',
+        status: 'active' as const,
+        description: 'Intelsat operates a fleet of geostationary communication satellites providing global broadband and video services. These satellites are positioned 35,786 km above the equator to provide coverage for specific regions of Earth.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/Intelsat',
+        orbital: {
+          altitude: 35786,
+          period: 1436,
+          inclination: 0.05,
+          eccentricity: 0.0001,
+          velocity: 3.07
+        },
+        position: generatePosition(0.1, i * 14.4), // Distributed around equator
+        tle: {
+          line1: `1 ${50000 + i}U 18015A   23001.00000000 -.00000295  00000-0  00000-0 0  999${i % 10}`,
+          line2: `2 ${50000 + i}   0.0500 ${(i * 14.4).toFixed(4)} 0000100 0.0000 0.0000  1.00270311 18000`
+        },
+        footprint: 18000
+      })),
+
+      // HIGH ALTITUDE SCIENTIFIC SATELLITES (15)
+      ...Array.from({ length: 15 }, (_, i) => ({
+        id: `hisci-${60000 + i}`,
+        name: `CLUSTER-${i + 1}`,
+        type: 'scientific' as const,
+        country: 'Europe',
+        agency: 'ESA',
+        launchDate: '2000-07-16',
+        status: 'active' as const,
+        description: 'High-altitude scientific satellites studying Earth\'s magnetosphere, solar wind interactions, and space weather phenomena. These satellites operate in highly elliptical orbits to study the outer regions of Earth\'s magnetic field.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/Cluster_(spacecraft)',
+        orbital: {
+          altitude: 19000 + i * 2000, // Varying altitudes from 19,000 to 47,000 km
+          period: 3000 + i * 200,
+          inclination: 60 + i * 5,
+          eccentricity: 0.8,
+          velocity: 2.5 - i * 0.05
+        },
+        position: generatePosition(3 + i * 0.5, 90 + i * 24),
+        tle: {
+          line1: `1 ${60000 + i}U 00045A   23001.00000000 -.00000100  00000-0  00000-0 0  999${i % 10}`,
+          line2: `2 ${60000 + i}  ${(60 + i * 5).toFixed(1)} 180.0000 8000000 0.0000 0.0000  0.50000000 12000`
+        },
+        footprint: 25000 + i * 1000
+      })),
+
+      // MOLNIYA ORBIT SATELLITES (10)
+      ...Array.from({ length: 10 }, (_, i) => ({
+        id: `molniya-${70000 + i}`,
+        name: `MOLNIYA-${3 + i}`,
+        type: 'communication' as const,
+        country: 'Russia',
+        agency: 'Roscosmos',
+        launchDate: '2015-12-17',
+        status: 'active' as const,
+        description: 'Molniya satellites operate in highly elliptical orbits designed to provide communications coverage for high-latitude regions, particularly Russia and northern territories. The orbit allows satellites to spend most of their time over the northern hemisphere.',
+        wikipediaUrl: 'https://en.wikipedia.org/wiki/Molniya_orbit',
+        orbital: {
+          altitude: 25000 + i * 1000, // Apogee altitude
+          period: 718, // 12-hour orbit
+          inclination: 63.4,
+          eccentricity: 0.75,
+          velocity: 3.9
+        },
+        position: generatePosition(8 + i * 0.8, 30 + i * 36),
+        tle: {
+          line1: `1 ${70000 + i}U 15071A   23001.00000000 -.00000050  00000-0  00000-0 0  999${i % 10}`,
+          line2: `2 ${70000 + i}  63.4000 ${(30 + i * 36).toFixed(4)} 7500000 270.0000 90.0000  2.00540000 8760`
+        },
+        footprint: 22000
       }))
     ];
     
