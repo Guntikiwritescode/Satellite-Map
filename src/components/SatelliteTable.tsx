@@ -203,7 +203,7 @@ const SatelliteTable: React.FC = React.memo(() => {
                   </div>
                 </div>
 
-                {/* Description - Show if available */}
+                {/* About section */}
                 <div className="bg-muted/20 rounded px-2 py-1.5">
                   <h4 className="text-xs font-medium text-foreground mb-1">About</h4>
                   <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
