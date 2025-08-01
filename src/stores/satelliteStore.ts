@@ -15,6 +15,7 @@ interface SatelliteStore {
   error: string | null;
   lastUpdate: number;
   viewMode: 'globe' | 'spreadsheet';
+  maxDisplaySatellites: number;
   
   // Computed
   filteredSatellites: Satellite[];
@@ -31,6 +32,7 @@ interface SatelliteStore {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setViewMode: (mode: 'globe' | 'spreadsheet') => void;
+  setMaxDisplaySatellites: (max: number) => void;
   
   // Utility
   getSatelliteById: (id: string) => Satellite | undefined;
@@ -71,6 +73,7 @@ export const useSatelliteStore = create<SatelliteStore>()(
     error: null,
     lastUpdate: 0,
     viewMode: 'globe',
+    maxDisplaySatellites: 1000,
     
     // Computed - since Zustand getters don't work well, we'll use a selector
     filteredSatellites: [],
@@ -148,6 +151,15 @@ export const useSatelliteStore = create<SatelliteStore>()(
     
     setViewMode: (viewMode) => set({ viewMode }),
     
+    setMaxDisplaySatellites: (maxDisplaySatellites) => {
+      const state = get();
+      const filtered = state.applyFilters(state.satellites, state.filters);
+      set({ 
+        maxDisplaySatellites,
+        filteredSatellites: filtered
+      });
+    },
+    
     // Utility functions
     getSatelliteById: (id) => {
       return get().satellites.find(sat => sat.id === id);
@@ -178,7 +190,7 @@ export const useSatelliteStore = create<SatelliteStore>()(
         return [];
       }
       
-      const filtered = satellites.filter(satellite => {
+      let filtered = satellites.filter(satellite => {
         // Type filter
         if (filters.types.length > 0 && !filters.types.includes(satellite.type)) {
           return false;
@@ -218,6 +230,18 @@ export const useSatelliteStore = create<SatelliteStore>()(
         
         return true;
       });
+      
+      // Sort by brightness/popularity (lower magnitude = brighter = more popular)
+      // Use altitude as popularity proxy for now (lower altitude = more visible)
+      filtered.sort((a, b) => {
+        return a.orbital.altitude - b.orbital.altitude;
+      });
+      
+      // Limit to max display satellites
+      const maxDisplay = get().maxDisplaySatellites;
+      if (filtered.length > maxDisplay) {
+        filtered = filtered.slice(0, maxDisplay);
+      }
       
       // Reduce console logging frequency
       if (Math.random() < 0.1) { // Only log 10% of the time
