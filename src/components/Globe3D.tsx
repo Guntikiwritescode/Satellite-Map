@@ -284,13 +284,13 @@ const CameraFocusController: React.FC = () => {
       enablePan={true}
       enableZoom={true}
       enableRotate={true}
-      minDistance={1.2}
-      maxDistance={8}
+      minDistance={0.1} // Allow zooming very close to surface/satellites
+      maxDistance={20} // Allow zooming much further out
       enableDamping={true}
       dampingFactor={0.05}
       rotateSpeed={0.5}
-      zoomSpeed={0.8}
-      panSpeed={0.5}
+      zoomSpeed={1.2} // Faster zoom speed for better UX
+      panSpeed={0.8} // Faster pan speed
       maxPolarAngle={Math.PI}
       minPolarAngle={0}
     />
