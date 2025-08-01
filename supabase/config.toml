@@ -1,1 +1,4 @@
 project_id = "dnjhvmwznqsunjpabacg"
+
+[functions.space-track-proxy]
+verify_jwt = false
