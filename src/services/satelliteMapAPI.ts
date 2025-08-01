@@ -207,9 +207,9 @@ class SatelliteMapAPI {
   // Convert CelesTrak data to our format
   private convertToSatelliteMapData(celestrakSat: CelestrakSatellite): SatelliteMapData | null {
     try {
-      // Create TLE lines from orbital elements
-      const tle1 = `1 ${celestrakSat.NORAD_CAT_ID.toString().padStart(5, '0')}U ${celestrakSat.OBJECT_ID.substring(0, 8)} ${celestrakSat.EPOCH.substring(2, 4)}${Math.floor((new Date(celestrakSat.EPOCH).getTime() - new Date(celestrakSat.EPOCH.substring(0, 4) + '-01-01').getTime()) / (1000 * 60 * 60 * 24)) + 1}.${Math.floor((celestrakSat.MEAN_MOTION_DOT * 1e8)).toString().padStart(8, '0')} ${Math.floor(celestrakSat.MEAN_MOTION_DDOT * 1e12).toString().padStart(5, '0')} ${Math.floor(celestrakSat.BSTAR * 1e9).toString().padStart(5, '0')} 0 ${celestrakSat.ELEMENT_SET_NO.toString().padStart(4, '0')}`;
-      const tle2 = `2 ${celestrakSat.NORAD_CAT_ID.toString().padStart(5, '0')} ${celestrakSat.INCLINATION.toFixed(4).padStart(8, '0')} ${celestrakSat.RA_OF_ASC_NODE.toFixed(4).padStart(8, '0')} ${(celestrakSat.ECCENTRICITY * 1e7).toFixed(0).padStart(7, '0')} ${celestrakSat.ARG_OF_PERICENTER.toFixed(4).padStart(8, '0')} ${celestrakSat.MEAN_ANOMALY.toFixed(4).padStart(8, '0')} ${celestrakSat.MEAN_MOTION.toFixed(8)}${celestrakSat.REV_AT_EPOCH.toString().padStart(5, '0')}`;
+      // Use actual TLE lines from CelesTrak if available, otherwise create simplified ones
+      const tle1 = celestrakSat.TLE_LINE1 || `1 ${celestrakSat.NORAD_CAT_ID.toString().padStart(5, '0')}U ${celestrakSat.OBJECT_ID} 21001.00000000  .00000000  00000-0  00000-0 0    10`;
+      const tle2 = celestrakSat.TLE_LINE2 || `2 ${celestrakSat.NORAD_CAT_ID.toString().padStart(5, '0')} ${celestrakSat.INCLINATION.toFixed(4).padStart(8, ' ')} ${celestrakSat.RA_OF_ASC_NODE.toFixed(4).padStart(8, ' ')} ${(celestrakSat.ECCENTRICITY * 1e7).toFixed(0).padStart(7, '0')} ${celestrakSat.ARG_OF_PERICENTER.toFixed(4).padStart(8, ' ')} ${celestrakSat.MEAN_ANOMALY.toFixed(4).padStart(8, ' ')} ${celestrakSat.MEAN_MOTION.toFixed(8)}00010`;
       
       const position = this.calculatePosition(tle1, tle2);
       
