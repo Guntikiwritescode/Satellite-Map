@@ -4,7 +4,6 @@ import SatelliteTable from '../components/SatelliteTable';
 import SatelliteSpreadsheet from '../components/SatelliteSpreadsheet';
 import Globe3D from '../components/Globe3D';
 import ControlPanel from '../components/ControlPanel';
-import SatelliteInfo from '../components/SatelliteInfo';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { useSatelliteData } from '../hooks/useSatelliteData';
 import { useSatelliteStore } from '../stores/satelliteStore';
@@ -121,7 +120,7 @@ const Index = () => {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 h-[calc(100vh-140px)]">
             {/* Left Panel - Satellite Table */}
-            <div className="lg:col-span-3 xl:col-span-3">
+            <div className="lg:col-span-4 xl:col-span-3">
               <Card className="glass-panel h-full">
                 <div className="p-3 h-full">
                   {isLoading ? (
@@ -136,7 +135,7 @@ const Index = () => {
             </div>
 
             {/* Center Panel - 3D Globe */}
-            <div className="lg:col-span-6 xl:col-span-6">
+            <div className="lg:col-span-6 xl:col-span-7">
               <Card className="glass-panel h-full">
                 <div className="p-1 h-full">
                   {isLoading ? (
@@ -152,11 +151,9 @@ const Index = () => {
               </Card>
             </div>
 
-            {/* Right Panel - Satellite Info & Controls */}
-            <div className="lg:col-span-3 xl:col-span-3">
-              <div className="h-full overflow-y-auto">
-                <SatelliteInfo />
-              </div>
+            {/* Right Panel - Controls */}
+            <div className="lg:col-span-2 xl:col-span-2">
+              <ControlPanel />
             </div>
           </div>
         )}
