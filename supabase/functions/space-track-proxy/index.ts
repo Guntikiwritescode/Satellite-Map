@@ -97,23 +97,37 @@ serve(async (req) => {
         body: `identity=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
       })
 
+      console.log('Auth response status:', authResponse.status)
+      
       if (!authResponse.ok) {
-        throw new Error(`Authentication failed: ${authResponse.status} ${authResponse.statusText}`)
+        const errorText = await authResponse.text()
+        console.error('Authentication failed:', {
+          status: authResponse.status,
+          statusText: authResponse.statusText,
+          response: errorText
+        })
+        throw new Error(`Authentication failed: ${authResponse.status} ${authResponse.statusText} - ${errorText}`)
       }
 
       // Extract session cookie
       const cookies = authResponse.headers.get('set-cookie')
+      console.log('Received cookies:', cookies ? 'Yes' : 'No')
+      
       let sessionCookie = null
       
       if (cookies) {
         const sessionMatch = cookies.match(/JSESSIONID=([^;]+)/)
         if (sessionMatch) {
           sessionCookie = sessionMatch[1]
+          console.log('Session cookie extracted successfully')
+        } else {
+          console.error('No JSESSIONID found in cookies:', cookies)
         }
       }
 
       if (!sessionCookie) {
-        throw new Error('Failed to obtain session cookie')
+        console.error('Failed to obtain session cookie from Space-Track.org')
+        throw new Error('Failed to obtain session cookie from Space-Track.org - authentication may have failed')
       }
 
       // Make the actual data request
