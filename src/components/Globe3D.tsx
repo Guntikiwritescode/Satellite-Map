@@ -57,24 +57,25 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
   const { globeSettings } = useSatelliteStore();
   const [isVisible, setIsVisible] = React.useState(true);
   
-  // Calculate satellite's actual 3D position on its orbital path - updated for new Earth scaling
+  // Calculate satellite's actual 3D position using real-time altitude data
   const position = useMemo(() => {
     const earthRadius = 5; // Updated to match new Earth radius
     const earthRadiusKm = 6371;
     
     // Validate input data
-    if (!satellite?.orbital) {
-      console.warn('Missing orbital data for satellite:', satellite?.id);
+    if (!satellite?.position || !satellite?.orbital) {
+      console.warn('Missing position or orbital data for satellite:', satellite?.id);
       return [0, earthRadius + 1, 0] as [number, number, number];
     }
     
-    // Calculate orbital radius (same as in OrbitPath) with validation
-    const altitudeKm = satellite.orbital.altitude || 400;
+    // Use REAL altitude from TLE calculation, not the orbital.altitude fallback
+    const realAltitudeKm = satellite.position.altitude || satellite.orbital.altitude || 400;
     const period = satellite.orbital.period || 90;
     const inclination = satellite.orbital.inclination || 0;
     
-    const orbitalRadiusKm = earthRadiusKm + altitudeKm;
-    const orbitalRadius = (orbitalRadiusKm / earthRadiusKm) * earthRadius; // Scale to new Earth size
+    // Convert real altitude to 3D scene scale
+    const orbitalRadiusKm = earthRadiusKm + realAltitudeKm;
+    const orbitalRadius = (orbitalRadiusKm / earthRadiusKm) * earthRadius; // Scale to Earth size
     const safeOrbitalRadius = Math.max(orbitalRadius, earthRadius + 0.1); // Prevent intersection with Earth
     
     // Get orbital inclination
@@ -91,12 +92,12 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     const satelliteOffset = (satelliteIdNum % 1000) / 1000 * Math.PI * 2;
     const angle = (time * orbitSpeed + satelliteOffset) % (Math.PI * 2);
     
-    // Position on orbital path (same calculation as OrbitPath)
+    // Position on orbital path at the REAL altitude
     let x = safeOrbitalRadius * Math.cos(angle);
     let y = 0;
     let z = safeOrbitalRadius * Math.sin(angle);
     
-    // Apply inclination rotation (same as OrbitPath)
+    // Apply inclination rotation
     const newY = y * Math.cos(inclinationRad) - z * Math.sin(inclinationRad);
     const newZ = y * Math.sin(inclinationRad) + z * Math.cos(inclinationRad);
     
@@ -107,7 +108,8 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     if (isNaN(finalPos[0]) || isNaN(finalPos[1]) || isNaN(finalPos[2])) {
       console.error('Invalid position calculated for satellite:', satellite.id, {
         position: finalPos,
-        altitude: altitudeKm,
+        realAltitude: realAltitudeKm,
+        fallbackAltitude: satellite.orbital.altitude,
         period: period,
         inclination: inclination,
         orbitalRadius: safeOrbitalRadius,
@@ -117,7 +119,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     }
     
     return finalPos;
-  }, [satellite.id, satellite.orbital?.altitude, satellite.orbital?.inclination, satellite.orbital?.period]);
+  }, [satellite.id, satellite.position?.altitude, satellite.orbital?.altitude, satellite.orbital?.inclination, satellite.orbital?.period]);
 
   // Get color based on satellite type with better contrast
   const color = useMemo(() => {
@@ -462,10 +464,11 @@ const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
       return new THREE.BufferGeometry();
     }
     
-    const altitudeKm = satellite.orbital.altitude || 400;
+    // Use REAL altitude from position data, same as SatelliteMarker
+    const realAltitudeKm = satellite.position?.altitude || satellite.orbital.altitude || 400;
     const inclination = satellite.orbital.inclination || 0;
     
-    const orbitalRadiusKm = earthRadiusKm + altitudeKm;
+    const orbitalRadiusKm = earthRadiusKm + realAltitudeKm;
     const orbitalRadius = (orbitalRadiusKm / earthRadiusKm) * earthRadius; // Scale to new Earth size
     const safeOrbitalRadius = Math.max(orbitalRadius, earthRadius + 0.1); // Prevent intersection with Earth
     
