@@ -134,10 +134,6 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = ({
         />
       </mesh>
       
-      {/* Orbital path visualization - show when toggle is enabled or satellite is selected */}
-      {(globeSettings.showOrbits || isSelected) && (
-        <OrbitPath satellite={satellite} />
-      )}
       
       {/* Satellite info on selection */}
       {isSelected && (
@@ -170,6 +166,12 @@ const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
     const points = [];
     const earthRadius = 1; // Our 3D Earth radius
     const earthRadiusKm = 6371; // Real Earth radius in km
+    
+    console.log(`Calculating orbit for ${satellite.name}:`, {
+      altitude: satellite.orbital.altitude,
+      inclination: satellite.orbital.inclination,
+      currentPosition: satellite.position
+    });
     
     // Calculate orbital radius from altitude - this is the distance from Earth's CENTER
     const altitudeKm = satellite.orbital.altitude;
@@ -279,6 +281,14 @@ const Scene: React.FC = () => {
           onClick={() => setSelectedSatellite(satellite.id)}
         />
       ))}
+      
+      {/* Orbital paths - rendered separately and centered on Earth */}
+      {filteredSatellites.map((satellite) => {
+        const isSelected = globeSettings.selectedSatelliteId === satellite.id;
+        return (globeSettings.showOrbits || isSelected) && (
+          <OrbitPath key={`orbit-${satellite.id}`} satellite={satellite} />
+        );
+      })}
       
       {/* Enhanced stars background */}
       <Stars />
