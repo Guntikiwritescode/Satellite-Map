@@ -189,35 +189,64 @@ class RealSatelliteAPI {
     // Initial load with fallback
     this.getSatellitesWithFallback().then(callback);
     
-    // Update satellite positions every 30 seconds
+    // Update satellite positions every 3 seconds
     this.updateInterval = setInterval(async () => {
       try {
         if (this.cachedSatellites.length > 0) {
-          console.log('Updating positions for', this.cachedSatellites.length, 'satellites');
+          console.log('Updating satellite positions every 3 seconds for', this.cachedSatellites.length, 'satellites');
           
-          // For mock satellites, simulate movement
           const updatedSatellites = this.cachedSatellites.map(satellite => {
-            const time = Date.now() / 1000;
-            const orbitSpeed = 0.1; // degrees per second
-            const baseOffset = parseInt(satellite.id) / 10000; // Use satellite ID for offset
-            
             return {
               ...satellite,
-              position: {
-                ...satellite.position,
-                latitude: Math.sin(time * orbitSpeed + baseOffset) * 60,
-                longitude: ((time * orbitSpeed + baseOffset * 45) % 360) - 180,
-                timestamp: Date.now()
-              }
+              position: this.calculateOrbitalPosition(satellite)
             };
           });
           
+          this.cachedSatellites = updatedSatellites;
           callback(updatedSatellites);
         }
       } catch (error) {
         console.error('Error updating satellite positions:', error);
       }
-    }, 30000); // 30 seconds
+    }, 3000); // 3 seconds
+  }
+
+  calculateOrbitalPosition(satellite: Satellite): Satellite['position'] {
+    const currentTime = Date.now() / 1000; // Current time in seconds
+    
+    // Calculate orbital parameters
+    const orbitPeriodSeconds = satellite.orbital.period * 60; // Convert minutes to seconds
+    const orbitSpeed = (2 * Math.PI) / orbitPeriodSeconds; // radians per second
+    
+    // Add satellite-specific offset for distribution along orbit
+    const satelliteOffset = (parseInt(satellite.id) % 1000) / 1000 * Math.PI * 2;
+    const angle = (currentTime * orbitSpeed + satelliteOffset) % (Math.PI * 2);
+    
+    // Earth parameters
+    const earthRadiusKm = 6371;
+    const orbitalRadiusKm = earthRadiusKm + satellite.orbital.altitude;
+    const inclination = (satellite.orbital.inclination * Math.PI) / 180;
+    
+    // Calculate position on orbital path
+    let x = orbitalRadiusKm * Math.cos(angle);
+    let y = 0;
+    let z = orbitalRadiusKm * Math.sin(angle);
+    
+    // Apply inclination rotation
+    const rotatedY = y * Math.cos(inclination) - z * Math.sin(inclination);
+    const rotatedZ = y * Math.sin(inclination) + z * Math.cos(inclination);
+    
+    // Convert back to lat/lon for position tracking
+    const distance = Math.sqrt(x * x + rotatedY * rotatedY + rotatedZ * rotatedZ);
+    const latitude = Math.asin(rotatedY / distance) * 180 / Math.PI;
+    const longitude = Math.atan2(rotatedZ, x) * 180 / Math.PI;
+    
+    return {
+      latitude: latitude,
+      longitude: longitude,
+      altitude: satellite.orbital.altitude,
+      timestamp: Date.now()
+    };
   }
 
   stopRealTimeUpdates() {

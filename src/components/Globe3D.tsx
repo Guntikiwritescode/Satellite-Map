@@ -86,7 +86,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = ({
     const newZ = y * Math.sin(inclination) + z * Math.cos(inclination);
     
     return [x, newY, newZ] as [number, number, number];
-  }, [satellite.orbital.altitude, satellite.orbital.inclination, satellite.orbital.period, satellite.id]);
+  }, [satellite.orbital.altitude, satellite.orbital.inclination, satellite.orbital.period, satellite.id, satellite.position.timestamp]); // Added timestamp to trigger updates
 
   // Get color based on satellite type with better contrast
   const color = useMemo(() => {
