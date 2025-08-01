@@ -239,8 +239,33 @@ class RealSatelliteAPI {
         const type = this.determineSatelliteType(sat.OBJECT_NAME, sat.OBJECT_TYPE, sat.COUNTRY_CODE);
         const agency = this.determineAgency(sat.OBJECT_NAME, country);
         
-        // Calculate current position using TLE
-        const position = this.calculateSatellitePositionFromTLE(sat.TLE_LINE1, sat.TLE_LINE2);
+        // Validate and ensure TLE lines exist
+        const tle1 = sat.TLE_LINE1 || '';
+        const tle2 = sat.TLE_LINE2 || '';
+        
+        // Calculate current position using TLE (with proper validation)
+        let position;
+        let realAltitude = sat.SEMIMAJOR_AXIS ? sat.SEMIMAJOR_AXIS - 6371 : 400; // Default fallback
+        
+        if (tle1 && tle2 && tle1.length >= 69 && tle2.length >= 69) {
+          // TLE lines are valid, calculate real position
+          position = this.calculateSatellitePositionFromTLE(tle1, tle2);
+          realAltitude = position.altitude; // Use calculated altitude
+          
+          // Debug logging for altitude verification
+          if (Math.random() < 0.05) { // Log 5% of satellites for verification
+            console.log(`✅ Real altitude for ${sat.OBJECT_NAME}: ${realAltitude.toFixed(1)}km (vs fallback: ${sat.SEMIMAJOR_AXIS ? (sat.SEMIMAJOR_AXIS - 6371).toFixed(1) : 'N/A'}km)`);
+          }
+        } else {
+          console.warn(`Invalid TLE data for satellite ${sat.OBJECT_NAME}:`, { tle1: tle1?.length, tle2: tle2?.length });
+          // Use fallback position with semimajor axis altitude if available
+          position = {
+            latitude: 0,
+            longitude: 0,
+            altitude: realAltitude,
+            timestamp: Date.now()
+          };
+        }
         
         return {
           id: sat.NORAD_CAT_ID.toString(),
@@ -251,7 +276,7 @@ class RealSatelliteAPI {
           launchDate: sat.LAUNCH_DATE || '1957-01-01',
           status: sat.DECAY_DATE ? 'inactive' : 'active' as SatelliteStatus,
           orbital: {
-            altitude: sat.SEMIMAJOR_AXIS ? sat.SEMIMAJOR_AXIS - 6371 : 400, // Convert to altitude
+            altitude: realAltitude, // Use real altitude from calculation or semimajor axis
             period: sat.PERIOD || 90,
             inclination: sat.INCLINATION || 0,
             eccentricity: sat.ECCENTRICITY || 0,
@@ -259,10 +284,10 @@ class RealSatelliteAPI {
           },
           position,
           tle: {
-            line1: sat.TLE_LINE1,
-            line2: sat.TLE_LINE2
+            line1: tle1,
+            line2: tle2
           },
-          footprint: this.calculateFootprint(sat.SEMIMAJOR_AXIS ? sat.SEMIMAJOR_AXIS - 6371 : 400)
+          footprint: this.calculateFootprint(realAltitude)
         };
       });
       
