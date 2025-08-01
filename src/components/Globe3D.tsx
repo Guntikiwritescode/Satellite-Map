@@ -127,6 +127,13 @@ const OrbitalPath: React.FC<OrbitalPathProps> = ({ satellite: sat }) => {
       const period = sat.orbital.period; // minutes
       const totalPoints = 100;
       
+      // Calculate the satellite's current position first
+      const currentPosAndVel = satellite.propagate(satrec, now);
+      if (!currentPosAndVel.position || typeof currentPosAndVel.position !== 'object') {
+        return points;
+      }
+      
+      // Start the orbit path from current time and go one full period
       for (let i = 0; i <= totalPoints; i++) {
         const timeOffset = (i / totalPoints) * period * 60 * 1000; // convert to milliseconds
         const time = new Date(now.getTime() + timeOffset);
@@ -154,6 +161,11 @@ const OrbitalPath: React.FC<OrbitalPathProps> = ({ satellite: sat }) => {
             points.push(new THREE.Vector3(x, y, z));
           }
         }
+      }
+      
+      // Ensure the path forms a complete loop by adding the first point at the end
+      if (points.length > 0) {
+        points.push(points[0].clone());
       }
     } catch (error) {
       console.warn('Error calculating orbital path:', error);
