@@ -246,8 +246,8 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
   const orbitalType = getOrbitalType(satellite.position.altitude);
 
   return (
-    <Card className="w-full bg-background/95 backdrop-blur-sm border border-border">
-      <CardHeader className="pb-3">
+    <Card className="w-full bg-background/95 backdrop-blur-sm border border-border max-h-[80vh] flex flex-col">
+      <CardHeader className="pb-3 flex-shrink-0">
         <CardTitle className="flex items-center justify-between text-base">
           <div className="flex items-center space-x-2">
             {getSatelliteIcon(satellite.type)}
@@ -273,7 +273,7 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className={`pt-0 ${isExpanded ? 'overflow-y-auto flex-1' : ''}`}>
         <div className="space-y-4">
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-3 text-sm">
