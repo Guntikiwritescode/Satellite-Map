@@ -298,10 +298,10 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     
     if (markerRef.current && modelRef.current) {
       // Distance-based scaling for marker - scales down as you get closer
-      const baseScale = Math.max(0.05, Math.min(1.5, cameraDistance * 0.1));
+      const baseScale = Math.max(0.01, Math.min(1.5, cameraDistance * 0.5));
       
-      // Show 3D model when reasonably close - increased threshold for higher altitude satellites
-      const showModel = cameraDistance < 25.0;
+      // Show 3D model only when EXTREMELY close - realistic satellite scale
+      const showModel = cameraDistance < 0.05;
       
       markerRef.current.visible = !showModel;
       modelRef.current.visible = showModel;
@@ -502,7 +502,7 @@ const CameraFocusController: React.FC = () => {
       enablePan={true}
       enableZoom={true}
       enableRotate={true}
-      minDistance={5.2} // Prevent camera from going inside Earth (Earth radius = 5 + small buffer)
+      minDistance={0.001} // Allow extreme close-up to satellite scale - much smaller than Earth
       maxDistance={200} // Much further zoom out for system overview
       enableDamping={true}
       dampingFactor={0.05}
