@@ -70,7 +70,9 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
       'earth-observation': '#10b981',
       'communication': '#06b6d4',
       'scientific': '#8b5cf6',
-      'military': '#ef4444'
+      'military': '#ef4444',
+      'commercial': '#f59e0b',
+      'rocket-body': '#9ca3af'
     };
     return colors[satellite.type as keyof typeof colors] || '#6b7280';
   }, [satellite.type]);

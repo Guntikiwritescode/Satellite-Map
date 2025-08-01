@@ -66,6 +66,30 @@ export class SpaceTrackAPI {
     });
   }
 
+  async getAllActiveSatellites(limit: number = 1000): Promise<Satellite[]> {
+    try {
+      // Get all active satellites regardless of orbit type - much more comprehensive
+      const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/orderby/NORAD_CAT_ID asc/limit/${limit}/format/json`;
+      const data: SpaceTrackGPData[] = await this.makeProxyRequest(endpoint);
+      
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        throw new Error('No satellite data received');
+      }
+
+      return data.map(sat => this.convertToSatellite(sat)).map(sat => {
+        try {
+          const position = this.calculatePosition(sat.tle.line1, sat.tle.line2);
+          return { ...sat, position: { ...position, timestamp: Date.now() } };
+        } catch (error) {
+          return sat;
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching satellites:', error);
+      throw error;
+    }
+  }
+
   async getLEOSatellites(limit: number = 200): Promise<Satellite[]> {
     try {
       const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/MEAN_MOTION/>11/orderby/NORAD_CAT_ID asc/limit/${limit}/format/json`;
@@ -154,12 +178,16 @@ export class SpaceTrackAPI {
 
   private determineSatelliteType(name: string, objectType: string) {
     const lowerName = name.toLowerCase();
+    const lowerType = objectType.toLowerCase();
     
-    if (lowerName.includes('iss')) return 'space-station';
-    if (lowerName.includes('starlink') || lowerName.includes('oneweb')) return 'constellation';
-    if (lowerName.includes('gps') || lowerName.includes('galileo')) return 'navigation';
-    if (lowerName.includes('weather')) return 'weather';
-    if (lowerName.includes('telescope')) return 'scientific';
+    if (lowerName.includes('iss') || lowerName.includes('station')) return 'space-station';
+    if (lowerName.includes('starlink') || lowerName.includes('oneweb') || lowerName.includes('kuiper')) return 'constellation';
+    if (lowerName.includes('gps') || lowerName.includes('galileo') || lowerName.includes('glonass') || lowerName.includes('beidou')) return 'navigation';
+    if (lowerName.includes('weather') || lowerName.includes('meteo') || lowerName.includes('goes') || lowerName.includes('noaa')) return 'weather';
+    if (lowerName.includes('telescope') || lowerName.includes('hubble') || lowerName.includes('kepler') || lowerName.includes('tess')) return 'scientific';
+    if (lowerName.includes('landsat') || lowerName.includes('worldview') || lowerName.includes('sentinel') || lowerName.includes('spot')) return 'earth-observation';
+    if (lowerType.includes('rocket') || lowerName.includes('r/b') || lowerName.includes('rocket body')) return 'rocket-body';
+    if (lowerName.includes('military') || lowerName.includes('defense') || lowerName.includes('classified')) return 'military';
     
     return 'communication';
   }
@@ -169,8 +197,14 @@ export class SpaceTrackAPI {
     
     if (lowerName.includes('starlink')) return 'Starlink';
     if (lowerName.includes('oneweb')) return 'OneWeb';
+    if (lowerName.includes('kuiper')) return 'Project Kuiper';
     if (lowerName.includes('gps')) return 'GPS';
     if (lowerName.includes('galileo')) return 'Galileo';
+    if (lowerName.includes('glonass')) return 'GLONASS';
+    if (lowerName.includes('beidou')) return 'BeiDou';
+    if (lowerName.includes('iridium')) return 'Iridium';
+    if (lowerName.includes('globalstar')) return 'Globalstar';
+    if (lowerName.includes('orbcomm')) return 'ORBCOMM';
     
     return 'Other';
   }
