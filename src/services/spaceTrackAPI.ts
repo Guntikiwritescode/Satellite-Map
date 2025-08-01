@@ -150,11 +150,19 @@ export class SpaceTrackAPI {
 
   calculatePosition(tle1: string, tle2: string) {
     try {
+      if (!tle1 || !tle2) {
+        return { latitude: 0, longitude: 0, altitude: 400 };
+      }
+      
       const satrec = satellite.twoline2satrec(tle1, tle2);
+      if (!satrec) {
+        return { latitude: 0, longitude: 0, altitude: 400 };
+      }
+      
       const now = new Date();
       const positionAndVelocity = satellite.propagate(satrec, now);
       
-      if (positionAndVelocity.position && typeof positionAndVelocity.position === 'object') {
+      if (positionAndVelocity.position && typeof positionAndVelocity.position === 'object' && positionAndVelocity.position !== null) {
         const positionEci = positionAndVelocity.position as any;
         const gmst = satellite.gstime(now);
         const positionGd = satellite.eciToGeodetic(positionEci, gmst);
