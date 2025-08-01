@@ -52,30 +52,41 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = ({
   const markerRef = useRef<THREE.Mesh>(null);
   const { globeSettings } = useSatelliteStore();
   
-  // Calculate satellite's actual 3D position in space (not ground track)
+  // Calculate satellite's actual 3D position on its orbital path
   const position = useMemo(() => {
-    // Ground track coordinates (where satellite projects onto Earth's surface)
-    const groundLat = (satellite.position.latitude * Math.PI) / 180;
-    const groundLon = (satellite.position.longitude * Math.PI) / 180;
-    
-    // Earth radius in our 3D scene
     const earthRadius = 1;
+    const earthRadiusKm = 6371;
     
-    // Calculate actual altitude above Earth's surface
-    const actualAltitudeKm = satellite.orbital.altitude;
-    const earthRadiusKm = 6371; // Earth's actual radius in km
+    // Calculate orbital radius (same as in OrbitPath)
+    const altitudeKm = satellite.orbital.altitude;
+    const orbitalRadiusKm = earthRadiusKm + altitudeKm;
+    const orbitalRadius = orbitalRadiusKm / earthRadiusKm;
+    const safeOrbitalRadius = Math.max(orbitalRadius, 1.02);
     
-    // Convert real altitude to our 3D scene scale
-    const altitudeScale = actualAltitudeKm / earthRadiusKm; // Ratio of altitude to Earth radius
-    const actualRadius = earthRadius + altitudeScale; // Total distance from Earth center
+    // Get orbital inclination
+    const inclination = (satellite.orbital.inclination * Math.PI) / 180;
     
-    // Calculate 3D position: satellite is at ground track lat/lon but at orbital altitude
-    const x = actualRadius * Math.cos(groundLat) * Math.cos(groundLon);
-    const y = actualRadius * Math.sin(groundLat);
-    const z = actualRadius * Math.cos(groundLat) * Math.sin(groundLon);
+    // Calculate satellite's position along its orbital path
+    // Use current time and satellite's orbital period to determine where it is on the orbit
+    const time = Date.now() / 1000;
+    const orbitPeriodSeconds = satellite.orbital.period * 60; // Convert minutes to seconds
+    const orbitSpeed = (2 * Math.PI) / orbitPeriodSeconds; // radians per second
     
-    return [x, y, z] as [number, number, number];
-  }, [satellite.position, satellite.orbital.altitude]);
+    // Add satellite-specific offset based on its ID for distribution
+    const satelliteOffset = (parseInt(satellite.id) % 1000) / 1000 * Math.PI * 2;
+    const angle = (time * orbitSpeed + satelliteOffset) % (Math.PI * 2);
+    
+    // Position on orbital path (same calculation as OrbitPath)
+    let x = safeOrbitalRadius * Math.cos(angle);
+    let y = 0;
+    let z = safeOrbitalRadius * Math.sin(angle);
+    
+    // Apply inclination rotation (same as OrbitPath)
+    const newY = y * Math.cos(inclination) - z * Math.sin(inclination);
+    const newZ = y * Math.sin(inclination) + z * Math.cos(inclination);
+    
+    return [x, newY, newZ] as [number, number, number];
+  }, [satellite.orbital.altitude, satellite.orbital.inclination, satellite.orbital.period, satellite.id]);
 
   // Get color based on satellite type with better contrast
   const color = useMemo(() => {
