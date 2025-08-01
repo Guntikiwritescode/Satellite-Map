@@ -293,15 +293,18 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     }
   };
 
+  const [cameraDistance, setCameraDistance] = React.useState(10);
+
   useFrame((state) => {
-    const cameraDistance = state.camera.position.distanceTo(new THREE.Vector3(...position));
+    const currentDistance = state.camera.position.distanceTo(new THREE.Vector3(...position));
+    setCameraDistance(currentDistance);
     
     if (markerRef.current && modelRef.current) {
       // Distance-based scaling for marker - scales down as you get closer
-      const baseScale = Math.max(0.01, Math.min(1.5, cameraDistance * 0.5));
+      const baseScale = Math.max(0.01, Math.min(1.5, currentDistance * 0.5));
       
       // Show 3D model only when EXTREMELY close - realistic satellite scale
-      const showModel = cameraDistance < 0.05;
+      const showModel = currentDistance < 0.05;
       
       markerRef.current.visible = !showModel;
       modelRef.current.visible = showModel;
@@ -364,12 +367,12 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         <SatelliteModel />
       </group>
       
-      {/* Satellite info on selection */}
+      {/* Satellite info on selection - scales with camera distance */}
       {isSelected && (
         <Html 
           position={[0.05, 0.05, 0]} 
           style={{ pointerEvents: 'none' }}
-          distanceFactor={8}
+          distanceFactor={Math.max(1, cameraDistance * 4)} // Dynamic scaling based on camera distance
         >
           <div className="bg-card/95 backdrop-blur border border-border rounded-lg p-3 text-xs min-w-52 shadow-lg">
             <div className="font-semibold text-foreground mb-1">{satellite.name}</div>
