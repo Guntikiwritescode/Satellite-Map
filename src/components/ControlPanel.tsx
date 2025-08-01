@@ -1,10 +1,9 @@
 import React from 'react';
-import { RotateCcw, Eye, EyeOff, Orbit, MapPin, Clock, Zap, Filter, Activity, MousePointerClick, Pause, Play } from 'lucide-react';
+import { RotateCcw, Eye, EyeOff, Orbit, MapPin, Clock, Zap, Filter, Activity, MousePointerClick } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
 import { useSatelliteStore } from '../stores/satelliteStore';
 
 const ControlPanel: React.FC = () => {
@@ -129,64 +128,6 @@ const ControlPanel: React.FC = () => {
                   onCheckedChange={(checked) => updateGlobeSettings({ showTerminator: checked })}
                 />
               </div>
-            </div>
-            
-            {/* Slider Controls */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-foreground">Time Speed</span>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => updateGlobeSettings({ isPaused: !globeSettings.isPaused })}
-                    className="h-6 w-6 p-0"
-                  >
-                    {globeSettings.isPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
-                  </Button>
-                  <span className="text-xs font-mono text-primary min-w-[2rem] text-center">
-                    {globeSettings.timeSpeed.toFixed(1)}x
-                  </span>
-                </div>
-              </div>
-              <Slider
-                value={[globeSettings.timeSpeed]}
-                onValueChange={(value) => updateGlobeSettings({ timeSpeed: value[0] })}
-                max={10}
-                min={0.1}
-                step={0.1}
-                className="w-full"
-              />
-              
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-foreground">Display Limit</span>
-                <span className="text-xs font-mono text-primary min-w-[3rem] text-center">
-                  {maxDisplaySatellites}
-                </span>
-              </div>
-              <Slider
-                value={[maxDisplaySatellites]}
-                onValueChange={(value) => setMaxDisplaySatellites(value[0])}
-                max={Math.min(satellites.length, 5000)}
-                min={100}
-                step={100}
-                className="w-full"
-              />
-              
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-foreground">Globe Quality</span>
-                <span className="text-xs font-mono text-primary min-w-[2rem] text-center">
-                  {globeSettings.globeQuality.toFixed(1)}x
-                </span>
-              </div>
-              <Slider
-                value={[globeSettings.globeQuality]}
-                onValueChange={(value) => updateGlobeSettings({ globeQuality: value[0] })}
-                max={3}
-                min={0.5}
-                step={0.1}
-                className="w-full"
-              />
             </div>
           </div>
         </Card>
