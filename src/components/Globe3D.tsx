@@ -44,7 +44,7 @@ interface SatelliteMarkerProps {
   onClick: () => void;
 }
 
-const SatelliteMarker: React.FC<SatelliteMarkerProps> = ({ 
+const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({ 
   satellite, 
   isSelected, 
   onClick 
@@ -52,7 +52,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = ({
   const markerRef = useRef<THREE.Mesh>(null);
   const { globeSettings } = useSatelliteStore();
   
-  // Calculate satellite's actual 3D position on its orbital path
+  // Calculate satellite's actual 3D position on its orbital path - now stable with memo
   const position = useMemo(() => {
     const earthRadius = 1;
     const earthRadiusKm = 6371;
@@ -86,7 +86,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = ({
     const newZ = y * Math.sin(inclination) + z * Math.cos(inclination);
     
     return [x, newY, newZ] as [number, number, number];
-  }, [satellite.orbital.altitude, satellite.orbital.inclination, satellite.orbital.period, satellite.id, satellite.position.timestamp]); // Added timestamp to trigger updates
+  }, [satellite.id, satellite.orbital.altitude, satellite.orbital.inclination, satellite.orbital.period, satellite.position.timestamp]); // Keep timestamp for updates
 
   // Get color based on satellite type with better contrast
   const color = useMemo(() => {
@@ -165,7 +165,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = ({
       )}
     </group>
   );
-};
+});
 
 // Orbital path component
 interface OrbitPathProps {

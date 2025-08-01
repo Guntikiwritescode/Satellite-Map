@@ -4,7 +4,7 @@ import { useSatelliteStore } from '../stores/satelliteStore';
 import { satelliteAPI } from '../services/satelliteAPI';
 
 export const useSatelliteData = () => {
-  const { setSatellites, setLaunches, setLoading, setError } = useSatelliteStore();
+  const { setSatellites, updateSatellitePositions, setLaunches, setLoading, setError } = useSatelliteStore();
 
   // Fetch initial satellite data with fallback
   const { data: satellites, isLoading: satellitesLoading, error: satellitesError } = useQuery({
@@ -56,23 +56,29 @@ export const useSatelliteData = () => {
     setLoading(loading);
   }, [satellitesLoading, launchesLoading, setLoading]);
 
-  // Start real-time updates
+  // Start real-time updates with smooth position updates
   useEffect(() => {
-    const handleRealTimeUpdate = (updatedSatellites: any[]) => {
-      console.log('Real-time update received:', updatedSatellites.length, 'satellites');
-      setSatellites(updatedSatellites);
+    const handlePositionUpdate = (updatedSatellites: any[]) => {
+      // Extract only position updates to avoid full re-render
+      const positionUpdates = updatedSatellites.map(sat => ({
+        id: sat.id,
+        position: sat.position
+      }));
+      
+      console.log('Smooth position update for', positionUpdates.length, 'satellites');
+      updateSatellitePositions(positionUpdates);
     };
 
-    // Only start real-time updates if we have initial data
+    // Only start real-time updates if we have initial data and avoid dependency loops
     if (satellites && satellites.length > 0) {
-      console.log('Starting real-time updates for', satellites.length, 'satellites');
-      satelliteAPI.startRealTimeUpdates(handleRealTimeUpdate);
+      console.log('Starting smooth real-time updates for', satellites.length, 'satellites');
+      satelliteAPI.startRealTimeUpdates(handlePositionUpdate);
     }
 
     return () => {
       satelliteAPI.stopRealTimeUpdates();
     };
-  }, [satellites, setSatellites]); // Add satellites as dependency
+  }, [satellites?.length, updateSatellitePositions]); // Only depend on satellite count, not full array
 
   // Get geolocation for user
   useEffect(() => {
