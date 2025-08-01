@@ -144,10 +144,11 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
       const groupRef = useRef<THREE.Group>(null);
       const scale = getRealWorldScale('space-station');
       
-      useFrame(() => {
+      useFrame((state) => {
         if (groupRef.current) {
-          // Realistic ISS rotation (about 4 rpm around its axis)
-          groupRef.current.rotation.y += 0.004;
+          // Use time-based rotation to prevent resetting when position updates
+          // ISS rotates at about 4 RPM = 0.4188 rad/min = 0.006981 rad/s
+          groupRef.current.rotation.y = state.clock.getElapsedTime() * 0.006981;
         }
       });
 
@@ -159,8 +160,16 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     } catch (error) {
       console.warn('Failed to load ISS model, using fallback');
       // Fallback to procedural ISS model
+      const groupRef = useRef<THREE.Group>(null);
+      
+      useFrame((state) => {
+        if (groupRef.current) {
+          groupRef.current.rotation.y = state.clock.getElapsedTime() * 0.006981;
+        }
+      });
+      
       return (
-        <group scale={[getRealWorldScale('space-station').x, getRealWorldScale('space-station').y, getRealWorldScale('space-station').z]}>
+        <group ref={groupRef} scale={[getRealWorldScale('space-station').x, getRealWorldScale('space-station').y, getRealWorldScale('space-station').z]}>
           <mesh>
             <boxGeometry args={[2, 0.4, 1]} />
             <meshPhongMaterial color={color} />
@@ -183,11 +192,12 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     const groupRef = useRef<THREE.Group>(null);
     const scale = getRealWorldScale(satellite.type);
     
-    useFrame(() => {
+    useFrame((state) => {
       if (groupRef.current) {
-        // Realistic satellite rotation based on type
-        const rotationSpeed = satellite.type === 'space-station' ? 0.004 : 0.01;
-        groupRef.current.rotation.y += rotationSpeed;
+        // Use time-based rotation to prevent janky resets on position updates
+        // Different satellites rotate at different speeds for realism
+        const rotationSpeed = satellite.type === 'space-station' ? 0.006981 : 0.02; // rad/s
+        groupRef.current.rotation.y = state.clock.getElapsedTime() * rotationSpeed;
       }
     });
 
@@ -285,10 +295,10 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     
     if (markerRef.current && modelRef.current) {
       // Distance-based scaling for marker - scales down as you get closer
-      const baseScale = Math.max(0.1, Math.min(1.5, cameraDistance * 0.3));
+      const baseScale = Math.max(0.05, Math.min(1.5, cameraDistance * 0.2));
       
-      // Show 3D model when closer than 2 units (reasonable zoom distance)
-      const showModel = cameraDistance < 2.0;
+      // Show 3D model only when VERY close (distance < 0.15 units)
+      const showModel = cameraDistance < 0.15;
       
       markerRef.current.visible = !showModel;
       modelRef.current.visible = showModel;
@@ -305,9 +315,8 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         // Billboard effect - always face camera
         markerRef.current.lookAt(state.camera.position);
       } else {
-        // Keep 3D model at proportional real-world scale when viewing it
-        // No additional scaling needed as it's already at real-world proportions
-        const fixedModelScale = 1.0; // Keep consistent scale
+        // Keep 3D model at fixed scale when viewing it
+        const fixedModelScale = 1.0;
         modelRef.current.scale.setScalar(fixedModelScale);
       }
     }
