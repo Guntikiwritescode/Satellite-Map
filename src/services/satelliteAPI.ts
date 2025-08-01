@@ -4,26 +4,47 @@ import * as satellite from 'satellite.js';
 // Launch API for upcoming launches
 const LAUNCH_API = 'https://ll.thespacedevs.com/2.2.0/launch';
 
-// Priority bulk satellite data APIs - limited to 500 most popular satellites
-const PRIORITY_SATELLITE_GROUPS = [
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=json', // Space stations (all)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=json', // Bright satellites (all)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=json', // Weather satellites (all)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=goes&FORMAT=json', // GOES satellites (all)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=json&LIMIT=30', // Earth resources (limited)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops&FORMAT=json', // GPS operational (all)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo&FORMAT=json', // Galileo (all)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=beidou&FORMAT=json', // BeiDou (all)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=json&LIMIT=50', // Starlink (limited to 50)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=oneweb&FORMAT=json&LIMIT=25', // OneWeb (limited to 25)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium-NEXT&FORMAT=json&LIMIT=30', // Iridium NEXT (limited)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=intelsat&FORMAT=json&LIMIT=20', // Intelsat (limited)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=ses&FORMAT=json&LIMIT=15', // SES (limited)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=json&LIMIT=40', // Science satellites (limited)
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=geo&FORMAT=json&LIMIT=30' // Geostationary (limited)
-];
+// N2YO.com API for real-time satellite tracking
+const N2YO_API_KEY = 'YC2LYP-RKU24Y-S8P44S-539N'; // Free API key for testing
+const N2YO_BASE_URL = 'https://api.n2yo.com/rest/v1/satellite';
 
-const MAX_SATELLITES = 500; // Hard limit to prevent crashes
+// Get most popular satellites from different categories
+const POPULAR_SATELLITE_NORAD_IDS = [
+  // Space Stations
+  25544, // ISS
+  48274, // Chinese Space Station (Tianhe)
+  
+  // Navigation satellites (GPS)
+  32711, 35752, 36585, 37753, 38833, 39166, 39533, 40105, 40294, 40534,
+  
+  // Communication satellites  
+  23439, 26038, 26900, 27380, 27453, 28628, 29236, 31307, 32951, 33376,
+  
+  // Weather satellites
+  29155, 33591, 35491, 40069, 41932, 43013, 43226, 43493,
+  
+  // Earth observation
+  25994, 27424, 28376, 32060, 39084, 40053, 40697, 42063,
+  
+  // Scientific satellites
+  20580, // Hubble
+  25867, // Chandra
+  25989, // XMM-Newton
+  28485, // Swift
+  33053, // Fermi
+  36411, // Kepler
+  
+  // Popular Starlink satellites (sample)
+  44713, 44714, 44715, 44716, 44717, 44718, 44719, 44720, 44721, 44722,
+  44723, 44724, 44725, 44726, 44727, 44728, 44729, 44730, 44731, 44732,
+  
+  // Popular OneWeb satellites (sample)
+  44058, 44059, 44060, 44061, 44062, 45132, 45133, 45134, 45136, 45137,
+  
+  // Popular Iridium NEXT satellites
+  41917, 41918, 41919, 41920, 41921, 41922, 41923, 41924, 41925, 41926,
+  42803, 42804, 42805, 42806, 42807, 42808, 42809, 42810, 42811, 42812
+];
 
 interface CelestrakSatellite {
   OBJECT_NAME: string;
@@ -445,71 +466,116 @@ class RealSatelliteAPI {
     return Math.sqrt(heightAboveEarth * (heightAboveEarth + 2 * earthRadius));
   }
 
-  // Load satellites from all priority groups
+  // Fetch satellite data from N2YO API using NORAD IDs
+  private async fetchSatelliteFromN2YO(noradId: number): Promise<Satellite | null> {
+    try {
+      const url = `${N2YO_BASE_URL}/positions/${noradId}/41.702/-76.014/0/1/?apiKey=${N2YO_API_KEY}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.positions || data.positions.length === 0) {
+        return null;
+      }
+      
+      const satInfo = data.info;
+      const position = data.positions[0];
+      
+      // Determine satellite properties
+      const type = this.determineSatelliteType(satInfo.satname, '', '');
+      const country = this.determineCountryFromName(satInfo.satname);
+      const agency = this.determineAgency(satInfo.satname, country);
+      const realAltitude = this.getRealisticAltitude(satInfo.satname, type);
+      
+      return {
+        id: noradId.toString(),
+        name: satInfo.satname,
+        type,
+        country,
+        agency,
+        launchDate: '2000-01-01', // N2YO doesn't provide launch date
+        status: 'active' as SatelliteStatus,
+        orbital: {
+          altitude: realAltitude,
+          period: this.calculateOrbitalPeriod(realAltitude),
+          inclination: this.getTypicalInclination(type),
+          eccentricity: 0,
+          velocity: Math.sqrt(398600.4418 / (6371 + realAltitude))
+        },
+        position: {
+          latitude: position.satlatitude,
+          longitude: position.satlongitude,
+          altitude: position.sataltitude,
+          timestamp: position.timestamp * 1000
+        },
+        tle: {
+          line1: '',
+          line2: ''
+        },
+        footprint: this.calculateFootprint(position.sataltitude)
+      };
+    } catch (error) {
+      console.error(`Error fetching satellite ${noradId} from N2YO:`, error);
+      return null;
+    }
+  }
+
+  // Determine country from satellite name when country code is not available
+  private determineCountryFromName(name: string): string {
+    const nameUpper = name.toUpperCase();
+    
+    if (nameUpper.includes('ISS') || nameUpper.includes('INTERNATIONAL')) return 'International';
+    if (nameUpper.includes('STARLINK') || nameUpper.includes('GPS') || nameUpper.includes('GOES')) return 'USA';
+    if (nameUpper.includes('GALILEO') || nameUpper.includes('SENTINEL') || nameUpper.includes('METEOSAT')) return 'Europe';
+    if (nameUpper.includes('GLONASS') || nameUpper.includes('COSMOS')) return 'Russia';
+    if (nameUpper.includes('BEIDOU') || nameUpper.includes('TIANHE') || nameUpper.includes('TIANGONG')) return 'China';
+    if (nameUpper.includes('HIMAWARI')) return 'Japan';
+    if (nameUpper.includes('IRIDIUM') || nameUpper.includes('ONEWEB')) return 'International';
+    
+    return 'Unknown';
+  }
+
+  // Load satellites using N2YO API with popular NORAD IDs
   async getSatellitesWithFallback(): Promise<Satellite[]> {
-    console.log('🚀 Loading satellites from bulk APIs...');
-    const allSatellites: Satellite[] = [];
-    const uniqueSatellites = new Map<string, Satellite>();
+    console.log('🚀 Loading satellites from N2YO API...');
+    const satellites: Satellite[] = [];
     
-    // Fetch from each priority group
-    for (const [index, apiUrl] of PRIORITY_SATELLITE_GROUPS.entries()) {
-      try {
-        console.log(`📡 Fetching group ${index + 1}/${PRIORITY_SATELLITE_GROUPS.length}...`);
-        const satellites = await this.fetchBulkSatellites(apiUrl);
-        
-        // Add unique satellites (avoid duplicates)
-        satellites.forEach(sat => {
-          if (!uniqueSatellites.has(sat.id)) {
-            uniqueSatellites.set(sat.id, sat);
-          }
-        });
-        
-        console.log(`✅ Group ${index + 1}: ${satellites.length} satellites (${uniqueSatellites.size} unique total)`);
-      } catch (error) {
-        console.error(`❌ Failed to fetch group ${index + 1}:`, error);
+    // Limit to first 100 satellites to avoid API rate limits
+    const limitedIds = POPULAR_SATELLITE_NORAD_IDS.slice(0, 100);
+    
+    console.log(`📡 Fetching ${limitedIds.length} popular satellites...`);
+    
+    // Fetch satellites in batches to avoid overwhelming the API
+    const batchSize = 5;
+    for (let i = 0; i < limitedIds.length; i += batchSize) {
+      const batch = limitedIds.slice(i, i + batchSize);
+      
+      const batchPromises = batch.map(noradId => this.fetchSatelliteFromN2YO(noradId));
+      const batchResults = await Promise.all(batchPromises);
+      
+      batchResults.forEach(satellite => {
+        if (satellite) {
+          satellites.push(satellite);
+        }
+      });
+      
+      console.log(`✅ Batch ${Math.floor(i/batchSize) + 1}: ${batchResults.filter(s => s !== null).length} satellites loaded`);
+      
+      // Add delay between batches to respect API rate limits
+      if (i + batchSize < limitedIds.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
     
-    // Convert map to array and apply 500 satellite limit
-    let finalSatellites = Array.from(uniqueSatellites.values());
+    console.log(`🎯 FINAL RESULT: ${satellites.length} satellites loaded successfully!`);
+    console.log(`📊 Breakdown by type:`, this.getTypeBreakdown(satellites));
     
-    // Enforce hard limit of 500 satellites to prevent crashes
-    if (finalSatellites.length > MAX_SATELLITES) {
-      console.log(`⚠️ Limiting satellites from ${finalSatellites.length} to ${MAX_SATELLITES} to prevent crashes`);
-      
-      // Prioritize satellites by type importance
-      const priorityOrder: SatelliteType[] = [
-        'space-station', 'weather', 'navigation', 'scientific', 
-        'communication', 'earth-observation', 'constellation', 'military'
-      ];
-      
-      const prioritizedSatellites: Satellite[] = [];
-      
-      // Add satellites by priority, keeping a balanced mix
-      for (const type of priorityOrder) {
-        const satellitesOfType = finalSatellites.filter(sat => sat.type === type);
-        const maxPerType = Math.min(satellitesOfType.length, Math.floor(MAX_SATELLITES / priorityOrder.length));
-        prioritizedSatellites.push(...satellitesOfType.slice(0, maxPerType));
-        
-        if (prioritizedSatellites.length >= MAX_SATELLITES) break;
-      }
-      
-      // Fill remaining slots with any leftover satellites
-      const remaining = MAX_SATELLITES - prioritizedSatellites.length;
-      if (remaining > 0) {
-        const usedIds = new Set(prioritizedSatellites.map(sat => sat.id));
-        const leftoverSatellites = finalSatellites.filter(sat => !usedIds.has(sat.id));
-        prioritizedSatellites.push(...leftoverSatellites.slice(0, remaining));
-      }
-      
-      finalSatellites = prioritizedSatellites.slice(0, MAX_SATELLITES);
-    }
-    
-    console.log(`🎯 FINAL RESULT: ${finalSatellites.length} satellites loaded successfully!`);
-    console.log(`📊 Breakdown by type:`, this.getTypeBreakdown(finalSatellites));
-    
-    this.cachedSatellites = finalSatellites;
-    return finalSatellites;
+    this.cachedSatellites = satellites;
+    return satellites;
   }
 
   // Helper method to show satellite type breakdown
