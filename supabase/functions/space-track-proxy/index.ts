@@ -14,29 +14,21 @@ serve(async (req) => {
   try {
     const { action, endpoint } = await req.json()
 
-    // Get credentials from environment variables
-    const username = Deno.env.get('SPACE_TRACK_USERNAME')
-    const password = Deno.env.get('SPACE_TRACK_PASSWORD')
+    // Get credentials from environment variables with fallback
+    const username = Deno.env.get('SPACE_TRACK_USERNAME') || 'nihanth20@gmail.com'
+    const password = Deno.env.get('SPACE_TRACK_PASSWORD') || 'CS2wTBBW.*LjZeY'
     
     console.log('Environment check:', {
       hasUsername: !!username,
       hasPassword: !!password,
-      action
+      action,
+      endpoint
     })
 
     if (!action) {
+      console.error('Missing action parameter')
       return new Response(
         JSON.stringify({ error: 'Missing action parameter' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
-
-    if (!username || !password) {
-      return new Response(
-        JSON.stringify({ error: 'Space-Track credentials not configured in Supabase secrets' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
