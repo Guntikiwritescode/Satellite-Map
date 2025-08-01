@@ -57,7 +57,6 @@ const defaultGlobeSettings: Globe3DSettings = {
   timeSpeed: 1,
   isPaused: false,
   selectedSatelliteId: null,
-  cameraFollowSatellite: false,
 };
 
 export const useSatelliteStore = create<SatelliteStore>()(

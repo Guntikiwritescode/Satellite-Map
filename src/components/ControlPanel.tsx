@@ -21,8 +21,7 @@ const ControlPanel: React.FC = () => {
 
   const resetView = () => {
     updateGlobeSettings({ 
-      selectedSatelliteId: null,
-      cameraFollowSatellite: false
+      selectedSatelliteId: null
     });
   };
 
