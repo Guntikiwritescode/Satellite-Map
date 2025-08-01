@@ -1,29 +1,61 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
+// Secure CORS headers - restrict to your domain in production
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'https://db206876-4992-4720-8f1f-11cdcdfaaedd.lovableproject.com',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
 }
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders })
+  }
+
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      { 
+        status: 405, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    )
   }
 
   try {
+    // Validate request body
+    const contentType = req.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      return new Response(
+        JSON.stringify({ error: 'Content-Type must be application/json' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
     const { action, endpoint } = await req.json()
 
-    // Get credentials from environment variables with fallback
-    const username = Deno.env.get('SPACE_TRACK_USERNAME') || 'nihanth20@gmail.com'
-    const password = Deno.env.get('SPACE_TRACK_PASSWORD') || 'CS2wTBBW.*LjZeY'
+    // Get credentials from environment variables - fail securely if missing
+    const username = Deno.env.get('SPACE_TRACK_USERNAME')
+    const password = Deno.env.get('SPACE_TRACK_PASSWORD')
     
-    console.log('Environment check:', {
-      hasUsername: !!username,
-      hasPassword: !!password,
-      action,
-      endpoint
-    })
+    if (!username || !password) {
+      console.error('Space-Track credentials not configured')
+      return new Response(
+        JSON.stringify({ error: 'Service configuration error' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
 
     if (!action) {
       console.error('Missing action parameter')
@@ -86,7 +118,35 @@ serve(async (req) => {
         )
       }
 
-      console.log(`Making Space-Track request: ${endpoint}`)
+      // Validate endpoint to prevent injection attacks
+      if (typeof endpoint !== 'string' || endpoint.length > 500) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid endpoint parameter' }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
+
+      // Only allow specific Space-Track API endpoints
+      const allowedEndpoints = [
+        '/basicspacedata/query/class/gp/',
+        '/basicspacedata/query/class/tle_latest/',
+        '/basicspacedata/query/class/satcat/'
+      ]
+      
+      const isValidEndpoint = allowedEndpoints.some(allowed => endpoint.startsWith(allowed))
+      if (!isValidEndpoint) {
+        console.warn('Blocked unauthorized endpoint access attempt')
+        return new Response(
+          JSON.stringify({ error: 'Endpoint not allowed' }),
+          { 
+            status: 403, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
 
       // First authenticate to get session cookie
       const authResponse = await fetch(`${baseUrl}/ajaxauth/login`, {
@@ -96,48 +156,38 @@ serve(async (req) => {
         },
         body: `identity=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
       })
-
-      console.log('Auth response status:', authResponse.status)
       
       if (!authResponse.ok) {
-        const errorText = await authResponse.text()
-        console.error('Authentication failed:', {
-          status: authResponse.status,
-          statusText: authResponse.statusText,
-          response: errorText
-        })
-        throw new Error(`Authentication failed: ${authResponse.status} ${authResponse.statusText}`)
+        console.error('Authentication failed')
+        throw new Error('Authentication failed')
       }
 
       // According to Space-Track.org docs, successful auth returns empty response
       const authResponseText = await authResponse.text()
-      console.log('Auth response text:', authResponseText)
       
       if (authResponseText !== '""' && authResponseText !== '') {
-        console.error('Authentication may have failed - unexpected response:', authResponseText)
-        throw new Error(`Authentication failed - unexpected response: ${authResponseText}`)
+        console.error('Authentication failed - unexpected response')
+        throw new Error('Authentication failed')
       }
 
       // Extract all cookies from the response
       const cookies = authResponse.headers.get('set-cookie')
-      console.log('Received cookies:', cookies ? 'Yes' : 'No')
       
       if (!cookies) {
-        console.error('No cookies received from Space-Track.org authentication')
-        throw new Error('No authentication cookies received from Space-Track.org')
+        console.error('No authentication cookies received')
+        throw new Error('Authentication failed')
       }
-
-      console.log('Authentication successful, proceeding with data request')
 
       // Make the actual data request using the authenticated session
       const dataResponse = await fetch(`${baseUrl}${endpoint}`, {
         headers: {
-          'Cookie': cookies, // Use all cookies from auth response
+          'Cookie': cookies,
         },
       })
 
       if (!dataResponse.ok) {
-        throw new Error(`Space-Track API error: ${dataResponse.status} ${dataResponse.statusText}`)
+        console.error('Space-Track API request failed')
+        throw new Error('External API error')
       }
 
       const data = await dataResponse.json()
@@ -159,12 +209,11 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Space-Track proxy error:', error)
+    console.error('Space-Track proxy error occurred')
     
     return new Response(
       JSON.stringify({ 
-        error: 'Space-Track proxy error', 
-        message: error.message 
+        error: 'Internal server error' 
       }),
       { 
         status: 500, 
