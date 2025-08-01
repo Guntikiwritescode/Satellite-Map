@@ -54,10 +54,26 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = ({
   const position = useMemo(() => {
     const lat = (satellite.position.latitude * Math.PI) / 180;
     const lon = (satellite.position.longitude * Math.PI) / 180;
-    // Better altitude scaling - Earth radius is 1, so satellites should be clearly above it
+    
+    // Earth radius is 1, satellites should be clearly visible above Earth
     const earthRadius = 1;
-    const altitudeScale = 0.0002; // More realistic scaling
-    const radius = earthRadius + (satellite.orbital.altitude * altitudeScale);
+    const minAltitude = 0.1; // Minimum distance above Earth surface
+    const maxAltitude = 1.5; // Maximum distance for very high satellites
+    
+    // Scale altitude: LEO satellites (400-2000km) should be close, GEO (35,000km) should be far
+    let altitudeScale;
+    if (satellite.orbital.altitude < 2000) {
+      // Low Earth Orbit - scale from 0.1 to 0.3 above Earth
+      altitudeScale = minAltitude + (satellite.orbital.altitude / 2000) * 0.2;
+    } else if (satellite.orbital.altitude < 20000) {
+      // Medium Earth Orbit - scale from 0.3 to 0.8
+      altitudeScale = 0.3 + ((satellite.orbital.altitude - 2000) / 18000) * 0.5;
+    } else {
+      // Geostationary/High orbits - scale from 0.8 to 1.5
+      altitudeScale = 0.8 + Math.min((satellite.orbital.altitude - 20000) / 20000, 0.7);
+    }
+    
+    const radius = earthRadius + altitudeScale;
     
     const x = radius * Math.cos(lat) * Math.cos(lon);
     const y = radius * Math.sin(lat);
@@ -155,42 +171,52 @@ interface OrbitPathProps {
 }
 
 const OrbitPath: React.FC<OrbitPathProps> = ({ satellite }) => {
-  const orbitPoints = useMemo(() => {
+  const orbitGeometry = useMemo(() => {
     const points = [];
     const earthRadius = 1;
-    const altitudeScale = 0.0002;
-    const radius = earthRadius + (satellite.orbital.altitude * altitudeScale);
+    
+    // Use same altitude scaling as satellites
+    let altitudeScale;
+    if (satellite.orbital.altitude < 2000) {
+      altitudeScale = 0.1 + (satellite.orbital.altitude / 2000) * 0.2;
+    } else if (satellite.orbital.altitude < 20000) {
+      altitudeScale = 0.3 + ((satellite.orbital.altitude - 2000) / 18000) * 0.5;
+    } else {
+      altitudeScale = 0.8 + Math.min((satellite.orbital.altitude - 20000) / 20000, 0.7);
+    }
+    
+    const radius = earthRadius + altitudeScale;
     const inclination = (satellite.orbital.inclination * Math.PI) / 180;
     
-    // Create orbital ellipse points
+    // Create proper circular orbital path centered on Earth
     for (let i = 0; i <= 128; i++) {
       const angle = (i / 128) * Math.PI * 2;
       
-      // Basic orbital mechanics - create an elliptical path
+      // Create orbit in the XZ plane first, then apply inclination
       const x = radius * Math.cos(angle);
-      const y = radius * Math.sin(angle) * Math.sin(inclination);
-      const z = radius * Math.sin(angle) * Math.cos(inclination);
+      const z = radius * Math.sin(angle);
+      const y = 0;
       
-      points.push(x, y, z);
+      // Apply orbital inclination rotation around X axis
+      const rotatedY = y * Math.cos(inclination) - z * Math.sin(inclination);
+      const rotatedZ = y * Math.sin(inclination) + z * Math.cos(inclination);
+      
+      points.push(x, rotatedY, rotatedZ);
     }
     
-    return new Float32Array(points);
-  }, [satellite.orbital.altitude, satellite.orbital.inclination]);
-
-  // Create orbit geometry outside of render
-  const orbitGeometry = useMemo(() => {
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(orbitPoints, 3));
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(points), 3));
     return geometry;
-  }, [orbitPoints]);
+  }, [satellite.orbital.altitude, satellite.orbital.inclination]);
 
   return (
     <group>
       <primitive 
         object={new THREE.Line(orbitGeometry, new THREE.LineBasicMaterial({ 
-          color: '#3b82f6', 
+          color: '#00d9ff', 
           transparent: true, 
-          opacity: 0.4
+          opacity: 0.6,
+          linewidth: 1
         }))}
       />
     </group>
