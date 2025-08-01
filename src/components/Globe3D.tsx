@@ -306,10 +306,19 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
       // Show 3D model only when EXTREMELY close - realistic satellite scale
       const showModel = currentDistance < 0.05;
       
-      markerRef.current.visible = !showModel;
+      // ALWAYS keep markers visible - only hide when 3D model is showing
+      markerRef.current.visible = true; // Always visible
       modelRef.current.visible = showModel;
       
-      if (!showModel) {
+      // If showing 3D model, hide the marker, otherwise show marker
+      if (showModel) {
+        markerRef.current.visible = false;
+        // Keep 3D model at fixed scale when viewing it
+        const fixedModelScale = 1.0;
+        modelRef.current.scale.setScalar(fixedModelScale);
+      } else {
+        markerRef.current.visible = true;
+        
         // Pulsing effect for selected satellite
         if (isSelected) {
           const pulse = Math.sin(state.clock.getElapsedTime() * 4) * 0.3 + 1.2;
@@ -320,10 +329,6 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         
         // Billboard effect - always face camera
         markerRef.current.lookAt(state.camera.position);
-      } else {
-        // Keep 3D model at fixed scale when viewing it
-        const fixedModelScale = 1.0;
-        modelRef.current.scale.setScalar(fixedModelScale);
       }
     }
   });
