@@ -21,8 +21,8 @@ const Earth: React.FC = () => {
 
   return (
     <mesh ref={meshRef}>
-      <sphereGeometry args={[earthRadius, 32, 16]} />
-      <meshPhongMaterial map={earthTexture} />
+      <sphereGeometry args={[earthRadius, 16, 16]} />
+      <meshBasicMaterial map={earthTexture} />
     </mesh>
   );
 };
@@ -97,13 +97,13 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
           onClick();
         }}
       >
-        <sphereGeometry args={[0.03, 8, 8]} />
+        <sphereGeometry args={[0.03, 6, 6]} />
         <meshBasicMaterial color={color} transparent opacity={0.9} />
       </mesh>
       
       {isSelected && (
         <mesh>
-          <sphereGeometry args={[0.05, 8, 8]} />
+          <sphereGeometry args={[0.05, 6, 6]} />
           <meshBasicMaterial color={color} transparent opacity={0.3} />
         </mesh>
       )}
@@ -132,7 +132,7 @@ const OrbitalPath: React.FC<OrbitalPathProps> = ({ satellite: sat }) => {
 
       const now = new Date();
       const period = sat.orbital.period; // orbital period in minutes
-      const totalPoints = 120;
+      const totalPoints = 60; // Reduced from 120 for better performance
       
       // Generate orbital path by propagating the satellite through one complete orbit
       for (let i = 0; i <= totalPoints; i++) {
@@ -290,16 +290,16 @@ const Scene: React.FC = () => {
   const visibleSatellites = useMemo(() => {
     const { selectedSatelliteId } = globeSettings;
     
-    // Filter valid satellites and limit to 10,000 for performance
+    // Filter valid satellites and limit to 5,000 for better performance on weak devices
     let satellites = filteredSatellites
       .filter(sat => sat?.position?.latitude && sat?.position?.longitude && sat?.position?.altitude)
-      .slice(0, 10000);
+      .slice(0, 5000); // Reduced from 10,000
     
     // Ensure selected satellite is always visible
     if (selectedSatelliteId) {
       const selectedSat = filteredSatellites.find(sat => sat.id === selectedSatelliteId);
       if (selectedSat && !satellites.find(sat => sat.id === selectedSatelliteId)) {
-        satellites = [selectedSat, ...satellites.slice(0, 9999)];
+        satellites = [selectedSat, ...satellites.slice(0, 4999)];
       }
     }
     
@@ -337,15 +337,22 @@ const Scene: React.FC = () => {
   );
 };
 
-// Main Globe3D component
+// Main Globe3D component with performance optimizations
 const Globe3D: React.FC = () => {
   return (
     <div className="h-full w-full bg-gradient-cosmic rounded-lg overflow-hidden">
       <ErrorBoundary>
         <Canvas
           camera={{ position: [12, 8, 12], fov: 45 }}
-          gl={{ antialias: true, alpha: false }}
-          performance={{ min: 0.5 }}
+          gl={{ 
+            antialias: false, // Disable antialiasing for better performance
+            alpha: false,
+            powerPreference: "high-performance",
+            preserveDrawingBuffer: false
+          }}
+          performance={{ min: 0.1 }} // Lower minimum for weaker devices
+          frameloop="demand" // Only render when needed
+          flat // Disable tone mapping for better performance
         >
           <Scene />
           <CameraController />

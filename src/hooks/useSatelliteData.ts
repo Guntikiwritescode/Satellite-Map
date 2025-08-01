@@ -15,7 +15,7 @@ export const useSatelliteData = () => {
   } = useQuery({
     queryKey: ['satellites', 'unlimited'],
     queryFn: () => spaceTrackAPI.getAllActiveSatellites(),
-    refetchInterval: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 10 * 60 * 1000, // 10 minutes - reduced frequency for performance
     staleTime: 0, // Force immediate refresh to see the change
     retry: 3
   });
@@ -47,8 +47,8 @@ export const useSatelliteData = () => {
 
     const updatePositions = async () => {
       try {
-        // Process satellites in smaller batches to avoid blocking
-        const batchSize = 100;
+        // Process satellites in smaller batches to avoid blocking (reduced for performance)
+        const batchSize = 50; // Reduced from 100
         const updatedSatellites = [...satellites];
         
         for (let i = 0; i < satellites.length; i += batchSize) {
@@ -84,8 +84,8 @@ export const useSatelliteData = () => {
       }
     };
 
-    // Reduced frequency from 3 seconds to 10 seconds for better performance
-    const interval = setInterval(updatePositions, 10000);
+    // Reduced frequency from 10 seconds to 15 seconds for weaker devices
+    const interval = setInterval(updatePositions, 15000);
     return () => clearInterval(interval);
   }, [satellites.length, setSatellites]); // Only depend on satellites.length, not the entire array
 
