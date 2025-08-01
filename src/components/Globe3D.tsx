@@ -23,9 +23,11 @@ const Earth: React.FC = () => {
 
   useFrame(() => {
     if (meshRef.current) {
-      // Earth rotates 360 degrees in 24 hours = 0.25 degrees per minute = 0.004167 degrees per second
-      // In our 60fps animation, that's 0.004167/60 = 0.0000694 radians per frame
-      meshRef.current.rotation.y += 0.0000694; // Realistic Earth rotation speed
+      // Earth rotates 360 degrees in 24 hours
+      // In real time: 360° / (24 * 60 * 60) = 0.004167° per second
+      // In 60fps: 0.004167° / 60 = 0.0000694° per frame = 0.00000121 radians per frame
+      // Let's make it 100x faster for visibility: 0.000121 radians per frame
+      meshRef.current.rotation.y += 0.000121; // Realistic but visible Earth rotation
     }
   });
 
@@ -58,9 +60,9 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
   const { globeSettings } = useSatelliteStore();
   const [isVisible, setIsVisible] = React.useState(true);
   
-  // Calculate satellite position from REAL TLE data - no fallbacks
+  // Calculate satellite position from REAL TLE data with proper altitude
   const position = useMemo(() => {
-    const earthRadius = 5;
+    const earthRadius = 5; // Same as Earth component
     
     // Only use real position data from TLE calculations
     if (!satellite?.position?.latitude || !satellite?.position?.longitude || !satellite?.position?.altitude) {
@@ -71,9 +73,12 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     const lat = (satellite.position.latitude * Math.PI) / 180;
     const lon = (satellite.position.longitude * Math.PI) / 180;
     
-    // Use real altitude with minimal scaling for visibility
-    const altitudeScale = Math.max(0.01, satellite.position.altitude / 50000);
-    const radius = earthRadius + altitudeScale;
+    // Use real altitude with proper scaling
+    // Real Earth radius = 6371 km, typical LEO = 400-2000 km above surface
+    // Our Earth radius = 5, so scale factor = 5/6371
+    const altitudeKm = satellite.position.altitude;
+    const scaledAltitude = (altitudeKm * 5) / 6371; // Proper altitude scaling
+    const radius = earthRadius + scaledAltitude;
     
     const x = radius * Math.cos(lat) * Math.cos(lon);
     const y = radius * Math.sin(lat);
