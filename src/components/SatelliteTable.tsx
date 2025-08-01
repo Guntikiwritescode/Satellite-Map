@@ -101,7 +101,7 @@ const SatelliteTable: React.FC = React.memo(() => {
   };
 
   return (
-    <div className="h-full flex flex-col space-y-3">
+    <div className="h-full flex flex-col space-y-3 relative overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
@@ -231,10 +231,12 @@ const SatelliteTable: React.FC = React.memo(() => {
         </div>
       </div>
       
-      {/* Selected Satellite Detail */}
+      {/* Selected Satellite Detail - Positioned Absolutely */}
       {selectedSatellite && (
-        <div className="mt-3">
-          <SatelliteDetail satellite={selectedSatellite} />
+        <div className="absolute top-0 right-0 w-80 h-full overflow-hidden z-10 pointer-events-none">
+          <div className="p-3 h-full pointer-events-auto">
+            <SatelliteDetail satellite={selectedSatellite} />
+          </div>
         </div>
       )}
     </div>
