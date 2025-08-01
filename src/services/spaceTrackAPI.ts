@@ -46,15 +46,198 @@ interface SpaceTrackGPData {
 
 export class SpaceTrackAPI {
   private baseUrl = 'https://www.space-track.org';
+  private sessionCookie: string | null = null;
+  private lastRequest = 0;
+  private requestQueue: Promise<any> = Promise.resolve();
+  
+  // Rate limiting: 30 requests per minute, 300 per hour
+  private readonly RATE_LIMIT_DELAY = 2000; // 2 seconds between requests to be safe
 
   constructor() {
-    console.log('SpaceTrackAPI initialized - requires authentication for real data');
+    console.log('SpaceTrackAPI initialized with authentication');
+  }
+
+  private async rateLimit(): Promise<void> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequest;
+    
+    if (timeSinceLastRequest < this.RATE_LIMIT_DELAY) {
+      const delay = this.RATE_LIMIT_DELAY - timeSinceLastRequest;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    
+    this.lastRequest = Date.now();
+  }
+
+  private async queueRequest<T>(requestFn: () => Promise<T>): Promise<T> {
+    return this.requestQueue = this.requestQueue.then(async () => {
+      await this.rateLimit();
+      return requestFn();
+    });
+  }
+
+  async authenticate(): Promise<void> {
+    console.log('Authenticating with Space-Track.org...');
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/ajaxauth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'identity=nihanth20@gmail.com&password=CS2wTBBW.*LjZeY',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
+      }
+
+      // Extract session cookie
+      const cookies = response.headers.get('set-cookie');
+      if (cookies) {
+        const sessionMatch = cookies.match(/JSESSIONID=([^;]+)/);
+        if (sessionMatch) {
+          this.sessionCookie = sessionMatch[1];
+        }
+      }
+
+      console.log('Successfully authenticated with Space-Track.org');
+    } catch (error) {
+      console.error('Authentication error:', error);
+      throw error;
+    }
+  }
+
+  private async makeRequest(endpoint: string): Promise<any> {
+    return this.queueRequest(async () => {
+      if (!this.sessionCookie) {
+        await this.authenticate();
+      }
+
+      const url = `${this.baseUrl}${endpoint}`;
+      console.log(`Making Space-Track request: ${endpoint}`);
+
+      const response = await fetch(url, {
+        headers: {
+          'Cookie': this.sessionCookie ? `JSESSIONID=${this.sessionCookie}` : '',
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // Session expired, re-authenticate
+          this.sessionCookie = null;
+          await this.authenticate();
+          
+          // Retry the request
+          const retryResponse = await fetch(url, {
+            headers: {
+              'Cookie': this.sessionCookie ? `JSESSIONID=${this.sessionCookie}` : '',
+            },
+            credentials: 'include'
+          });
+          
+          if (!retryResponse.ok) {
+            throw new Error(`Space-Track API error after retry: ${retryResponse.status} ${retryResponse.statusText}`);
+          }
+          
+          return retryResponse.json();
+        }
+        
+        throw new Error(`Space-Track API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    });
   }
 
   async getLEOSatellites(limit: number = 200): Promise<Satellite[]> {
-    // Space-Track.org requires user authentication which we can't provide in a demo
-    // For now, we'll throw an error to fall back to alternative data sources
-    throw new Error('Space-Track.org requires user authentication. Please register at space-track.org for access to real-time satellite data.');
+    try {
+      console.log(`Fetching LEO satellites from Space-Track.org (limit: ${limit})...`);
+      
+      // Get current GP data for LEO satellites (altitude < 2000 km roughly corresponds to mean motion > 11)
+      const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/MEAN_MOTION/>11/orderby/NORAD_CAT_ID asc/limit/${limit}/format/json`;
+      
+      const data: SpaceTrackGPData[] = await this.makeRequest(endpoint);
+      
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        throw new Error('No satellite data received from Space-Track.org');
+      }
+
+      console.log(`Processing ${data.length} satellites from Space-Track.org...`);
+
+      const satellites: Satellite[] = data.map(sat => this.convertToSatellite(sat));
+      
+      // Calculate real-time positions for all satellites
+      const satellitesWithPositions = satellites.map(sat => {
+        try {
+          const position = this.calculatePosition(sat.tle.line1, sat.tle.line2);
+          return {
+            ...sat,
+            position: {
+              ...position,
+              timestamp: Date.now()
+            },
+            velocity: position.velocity || sat.velocity,
+            heading: position.heading || sat.heading
+          };
+        } catch (error) {
+          console.warn(`Failed to calculate position for satellite ${sat.name}:`, error);
+          return sat;
+        }
+      });
+
+      console.log(`Successfully processed ${satellitesWithPositions.length} LEO satellites from Space-Track.org`);
+      return satellitesWithPositions;
+
+    } catch (error) {
+      console.error('Error fetching LEO satellites from Space-Track.org:', error);
+      throw error;
+    }
+  }
+
+  private convertToSatellite(sat: SpaceTrackGPData): Satellite {
+    // Determine satellite type based on object type and name
+    const type = this.determineSatelliteType(sat.OBJECT_NAME, sat.OBJECT_TYPE, sat.SEMIMAJOR_AXIS);
+    
+    // Determine status
+    const status = sat.DECAY_DATE ? 'decayed' : 'active';
+
+    return {
+      id: sat.NORAD_CAT_ID.toString(),
+      name: sat.OBJECT_NAME || `NORAD ${sat.NORAD_CAT_ID}`,
+      type,
+      status,
+      position: {
+        latitude: 0, // Will be calculated
+        longitude: 0, // Will be calculated
+        altitude: (sat.SEMIMAJOR_AXIS - 6371) || 400, // Convert from km radius to altitude
+        timestamp: Date.now()
+      },
+      velocity: 7.8, // Will be calculated
+      heading: 0, // Will be calculated
+      orbital: {
+        period: sat.PERIOD || 90,
+        inclination: sat.INCLINATION || 0,
+        eccentricity: sat.ECCENTRICITY || 0,
+        perigee: sat.PERIAPSIS || 400,
+        apogee: sat.APOAPSIS || 450,
+        epoch: sat.EPOCH || new Date().toISOString()
+      },
+      metadata: {
+        constellation: sat.CONSTELLATION || this.extractConstellation(sat.OBJECT_NAME),
+        country: sat.COUNTRY_CODE || 'Unknown',
+        launchDate: sat.LAUNCH_DATE || new Date().toISOString(),
+        purpose: this.determinePurpose(sat.OBJECT_NAME, sat.OBJECT_TYPE)
+      },
+      tle: {
+        line1: sat.TLE_LINE1 || `1 ${sat.NORAD_CAT_ID}`,
+        line2: sat.TLE_LINE2 || `2 ${sat.NORAD_CAT_ID}`
+      }
+    };
   }
 
   calculatePosition(tle1: string, tle2: string) {
@@ -103,6 +286,56 @@ export class SpaceTrackAPI {
       velocity: 7.8,
       heading: 0
     };
+  }
+
+  private determineSatelliteType(name: string, objectType: string, altitude: number): 'space-station' | 'constellation' | 'earth-observation' | 'communication' {
+    const lowerName = name.toLowerCase();
+    const lowerType = objectType.toLowerCase();
+    
+    if (lowerName.includes('iss') || lowerName.includes('international space station')) {
+      return 'space-station';
+    }
+    
+    if (lowerType.includes('deb') || lowerName.includes('debris')) {
+      return 'earth-observation'; // Classify debris as earth observation for filtering
+    }
+    
+    if (lowerType.includes('rocket') || lowerType.includes('r/b') || lowerName.includes('rocket')) {
+      return 'communication'; // Classify rocket bodies as communication for filtering
+    }
+    
+    return 'constellation';
+  }
+
+  private extractConstellation(name: string): string {
+    const lowerName = name.toLowerCase();
+    
+    if (lowerName.includes('starlink')) return 'Starlink';
+    if (lowerName.includes('oneweb')) return 'OneWeb';
+    if (lowerName.includes('cosmos')) return 'COSMOS';
+    if (lowerName.includes('iridium')) return 'Iridium';
+    if (lowerName.includes('globalstar')) return 'Globalstar';
+    if (lowerName.includes('galileo')) return 'Galileo';
+    if (lowerName.includes('gps') || lowerName.includes('navstar')) return 'GPS';
+    if (lowerName.includes('glonass')) return 'GLONASS';
+    if (lowerName.includes('beidou')) return 'BeiDou';
+    
+    return 'Other';
+  }
+
+  private determinePurpose(name: string, objectType: string): string {
+    const lowerName = name.toLowerCase();
+    const lowerType = objectType.toLowerCase();
+    
+    if (lowerName.includes('iss')) return 'Space Station';
+    if (lowerName.includes('starlink') || lowerName.includes('oneweb')) return 'Internet Constellation';
+    if (lowerName.includes('gps') || lowerName.includes('galileo') || lowerName.includes('glonass') || lowerName.includes('beidou')) return 'Navigation';
+    if (lowerName.includes('weather') || lowerName.includes('noaa')) return 'Weather Monitoring';
+    if (lowerName.includes('telescope') || lowerName.includes('hubble')) return 'Space Telescope';
+    if (lowerType.includes('deb')) return 'Space Debris';
+    if (lowerType.includes('rocket')) return 'Rocket Body';
+    
+    return 'Satellite Operations';
   }
 }
 
