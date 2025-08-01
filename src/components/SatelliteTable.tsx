@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { Satellite, SatelliteType } from '../types/satellite.types';
+import SatelliteDetail from './SatelliteDetail';
 
 const SatelliteTable: React.FC = React.memo(() => {
   const { 
@@ -15,8 +16,11 @@ const SatelliteTable: React.FC = React.memo(() => {
     filters, 
     updateFilters, 
     setSelectedSatellite,
-    globeSettings 
+    globeSettings,
+    getSatelliteById
   } = useSatelliteStore();
+
+  const selectedSatellite = getSatelliteById(globeSettings.selectedSatelliteId || '');
 
   // Memoize logging to reduce console spam
   const logData = useMemo(() => ({
@@ -237,6 +241,13 @@ const SatelliteTable: React.FC = React.memo(() => {
           )}
         </div>
       </div>
+      
+      {/* Selected Satellite Detail */}
+      {selectedSatellite && (
+        <div className="mt-3">
+          <SatelliteDetail satellite={selectedSatellite} />
+        </div>
+      )}
     </div>
   );
 });

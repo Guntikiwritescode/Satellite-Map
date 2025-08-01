@@ -1,10 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronDown, Filter, X } from 'lucide-react';
+import { ChevronDown, Filter, X, Search, Globe, Navigation, Satellite } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { satelliteAPI } from '../services/satelliteAPI';
 
@@ -37,7 +40,7 @@ const FilterPanel: React.FC = () => {
     ...filters.countries,
     ...filters.agencies,
     ...filters.status
-  ].length;
+  ].length + (filters.searchQuery ? 1 : 0);
 
   const handleTypeChange = (type: string, checked: boolean) => {
     const newTypes = checked 
@@ -60,13 +63,25 @@ const FilterPanel: React.FC = () => {
     updateFilters({ agencies: newAgencies });
   };
 
+  const handleAltitudeFilter = (range: string) => {
+    let altitudeRange: [number, number];
+    switch (range) {
+      case 'leo': altitudeRange = [0, 2000]; break;
+      case 'meo': altitudeRange = [2000, 35786]; break;
+      case 'geo': altitudeRange = [35786, 50000]; break;
+      default: altitudeRange = [0, 50000];
+    }
+    updateFilters({ altitudeRange });
+  };
+
   const clearAllFilters = () => {
     updateFilters({
       types: [],
       countries: [],
       agencies: [],
       status: [],
-      searchQuery: ''
+      searchQuery: '',
+      altitudeRange: [0, 50000]
     });
   };
 
@@ -85,7 +100,7 @@ const FilterPanel: React.FC = () => {
         </Button>
       </PopoverTrigger>
       
-      <PopoverContent className="w-80 glass-panel" align="end">
+      <PopoverContent className="w-80 bg-background border border-border shadow-lg z-50" align="end">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-semibold text-foreground">Filter Satellites</h4>
@@ -96,6 +111,55 @@ const FilterPanel: React.FC = () => {
               </Button>
             )}
           </div>
+
+          {/* Search */}
+          <div className="space-y-2">
+            <h5 className="text-sm font-medium text-foreground">Search</h5>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search satellites..."
+                value={filters.searchQuery || ''}
+                onChange={(e) => updateFilters({ searchQuery: e.target.value })}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Altitude Range */}
+          <div className="space-y-2">
+            <h5 className="text-sm font-medium text-foreground">Orbital Altitude</h5>
+            <Select onValueChange={handleAltitudeFilter}>
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder="All altitudes" />
+              </SelectTrigger>
+              <SelectContent className="bg-background border border-border shadow-lg z-50">
+                <SelectItem value="all">All Altitudes</SelectItem>
+                <SelectItem value="leo">
+                  <div className="flex items-center space-x-2">
+                    <Globe className="h-4 w-4" />
+                    <span>Low Earth Orbit (0-2,000km)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="meo">
+                  <div className="flex items-center space-x-2">
+                    <Navigation className="h-4 w-4" />
+                    <span>Medium Earth Orbit (2,000-35,786km)</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="geo">
+                  <div className="flex items-center space-x-2">
+                    <Satellite className="h-4 w-4" />
+                    <span>Geostationary Orbit (35,786km+)</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Separator />
 
           {/* Satellite Types */}
           <div className="space-y-2">
