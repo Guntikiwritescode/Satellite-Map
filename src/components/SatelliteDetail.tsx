@@ -162,7 +162,8 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
     return date.toLocaleString();
   };
 
-  const formatAltitude = (altitude: number) => {
+  const formatAltitude = (altitude: number | undefined) => {
+    if (!altitude) return 'N/A';
     return altitude > 1000 ? `${(altitude / 1000).toFixed(1)}K km` : `${altitude.toFixed(0)} km`;
   };
 
@@ -179,7 +180,7 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
   };
 
   const history = getSatelliteHistory(satellite.name, satellite.type);
-  const orbitalType = getOrbitalType(satellite.orbital.altitude);
+  const orbitalType = getOrbitalType(satellite.position.altitude);
 
   return (
     <Card className="w-full bg-background/95 backdrop-blur-sm border border-border">
@@ -216,17 +217,17 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
             <div className="flex items-center space-x-2">
               <Building className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">Agency:</span>
-              <span className="font-medium">{satellite.agency}</span>
+              <span className="font-medium">{satellite.metadata?.constellation || 'Unknown'}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Flag className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">Country:</span>
-              <span className="font-medium">{satellite.country}</span>
+              <span className="font-medium">{satellite.metadata?.country || 'Unknown'}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Globe className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">Altitude:</span>
-              <span className="font-medium">{formatAltitude(satellite.orbital.altitude)}</span>
+              <span className="font-medium">{formatAltitude(satellite.position.altitude)}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Clock className="h-3 w-3 text-muted-foreground" />
@@ -282,7 +283,7 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
                 <div className="grid grid-cols-1 gap-2 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Altitude:</span>
-                    <span className="font-mono">{satellite.orbital.altitude.toLocaleString()} km</span>
+                    <span className="font-mono">{satellite.position.altitude.toLocaleString()} km</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Orbital Period:</span>
@@ -298,7 +299,7 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Velocity:</span>
-                    <span className="font-mono">{satellite.orbital.velocity.toFixed(2)} km/s</span>
+                    <span className="font-mono">{satellite.velocity?.toFixed(2) || 'N/A'} km/s</span>
                   </div>
                   {satellite.footprint && (
                     <div className="flex justify-between">
@@ -342,7 +343,7 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
                 <div className="grid grid-cols-1 gap-2 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Launch Date:</span>
-                    <span className="font-mono">{satellite.launchDate}</span>
+                    <span className="font-mono">{satellite.metadata?.launchDate ? new Date(satellite.metadata.launchDate).toLocaleDateString() : 'Unknown'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">NORAD ID:</span>

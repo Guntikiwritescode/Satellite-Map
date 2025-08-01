@@ -37,11 +37,11 @@ const SatelliteSpreadsheet: React.FC = () => {
 
       // Handle nested properties
       if (sortField === 'altitude') {
-        aVal = a.orbital.altitude;
-        bVal = b.orbital.altitude;
+        aVal = a.position.altitude;
+        bVal = b.position.altitude;
       } else if (sortField === 'velocity') {
-        aVal = a.orbital.velocity;
-        bVal = b.orbital.velocity;
+        aVal = a.velocity;
+        bVal = b.velocity;
       } else if (sortField === 'period') {
         aVal = a.orbital.period;
         bVal = b.orbital.period;
@@ -69,11 +69,13 @@ const SatelliteSpreadsheet: React.FC = () => {
     });
   }, [filteredSatellites, sortField, sortDirection]);
 
-  const formatAltitude = (altitude: number) => {
+  const formatAltitude = (altitude: number | undefined) => {
+    if (!altitude) return 'N/A';
     return altitude > 1000 ? `${(altitude / 1000).toFixed(1)}K km` : `${altitude.toFixed(0)} km`;
   };
 
-  const formatVelocity = (velocity: number) => {
+  const formatVelocity = (velocity: number | undefined) => {
+    if (!velocity) return 'N/A';
     return `${velocity.toFixed(2)} km/s`;
   };
 
@@ -190,11 +192,9 @@ const SatelliteSpreadsheet: React.FC = () => {
                   <td className="p-3">
                     <div>
                       <div className="font-medium text-foreground">{satellite.name}</div>
-                      {satellite.description && (
-                        <div className="text-xs text-muted-foreground line-clamp-2 mt-1 max-w-xs">
-                          {satellite.description}
-                        </div>
-                      )}
+                      <div className="text-xs text-muted-foreground line-clamp-2 mt-1 max-w-xs">
+                        {satellite.metadata?.purpose || 'Satellite'}
+                      </div>
                     </div>
                   </td>
                   <td className="p-3">
@@ -202,18 +202,18 @@ const SatelliteSpreadsheet: React.FC = () => {
                       {satellite.type.replace('-', ' ')}
                     </Badge>
                   </td>
-                  <td className="p-3 text-muted-foreground">{satellite.agency}</td>
-                  <td className="p-3 text-muted-foreground">{satellite.country}</td>
+                  <td className="p-3 text-muted-foreground">{satellite.metadata?.constellation || 'Unknown'}</td>
+                  <td className="p-3 text-muted-foreground">{satellite.metadata?.country || 'Unknown'}</td>
                   <td className="p-3">
                     <Badge className={`text-xs ${getStatusColor(satellite.status)}`}>
                       {satellite.status}
                     </Badge>
                   </td>
                   <td className="p-3 text-right font-mono text-primary">
-                    {formatAltitude(satellite.orbital.altitude)}
+                    {formatAltitude(satellite.position.altitude)}
                   </td>
                   <td className="p-3 text-right font-mono text-stellar-cyan">
-                    {formatVelocity(satellite.orbital.velocity)}
+                    {formatVelocity(satellite.velocity)}
                   </td>
                   <td className="p-3 text-right font-mono text-jupiter-amber">
                     {formatPeriod(satellite.orbital.period)}
@@ -228,17 +228,7 @@ const SatelliteSpreadsheet: React.FC = () => {
                     </div>
                   </td>
                   <td className="p-3 text-center">
-                    {satellite.wikipediaUrl && (
-                      <a
-                        href={satellite.wikipediaUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center text-primary hover:text-primary/80 transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    )}
+                    {/* No external links available */}
                   </td>
                 </tr>
               ))}

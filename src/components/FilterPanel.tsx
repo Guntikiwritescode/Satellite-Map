@@ -18,12 +18,12 @@ const FilterPanel: React.FC = () => {
   // Get filter options from the actual loaded satellites
   const filterOptions = useMemo(() => {
     if (satellites.length === 0) {
-      return satelliteAPI.getFilterOptions(); // fallback options
+      return { types: [], countries: [], agencies: [], statuses: [] };
     }
     
     const types = [...new Set(satellites.map(s => s.type))].sort();
-    const countries = [...new Set(satellites.map(s => s.country))].sort();
-    const agencies = [...new Set(satellites.map(s => s.agency))].sort();
+    const countries = [...new Set(satellites.map(s => s.metadata?.country).filter(Boolean))].sort();
+    const agencies = [...new Set(satellites.map(s => s.metadata?.constellation).filter(Boolean))].sort();
     const statuses = [...new Set(satellites.map(s => s.status))].sort();
     
     return { types, countries, agencies, statuses };

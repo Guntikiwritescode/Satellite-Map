@@ -187,14 +187,14 @@ const ControlPanel: React.FC = () => {
               <div className="space-y-1">
                 <div className="text-muted-foreground">LEO</div>
                 <div className="font-mono text-jupiter-amber text-sm">
-                  {filteredSatellites.filter(s => s.orbital.altitude < 2000).length}
+                  {filteredSatellites.filter(s => s.position.altitude < 2000).length}
                 </div>
               </div>
               
               <div className="space-y-1">
                 <div className="text-muted-foreground">GEO</div>
                 <div className="font-mono text-nebula-purple text-sm">
-                  {filteredSatellites.filter(s => s.orbital.altitude > 35000).length}
+                  {filteredSatellites.filter(s => s.position.altitude > 35000).length}
                 </div>
               </div>
             </div>
@@ -226,7 +226,7 @@ const ControlPanel: React.FC = () => {
                     {selectedSatellite.name}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {selectedSatellite.agency}
+                    {selectedSatellite.metadata?.constellation || 'Unknown'}
                   </div>
                 </div>
                 
@@ -237,9 +237,9 @@ const ControlPanel: React.FC = () => {
                       <span className="text-muted-foreground">Alt:</span>
                     </div>
                     <div className="font-mono text-primary text-xs">
-                      {selectedSatellite.orbital.altitude > 1000 
-                        ? `${(selectedSatellite.orbital.altitude / 1000).toFixed(1)}K km`
-                        : `${selectedSatellite.orbital.altitude.toFixed(0)} km`
+                      {selectedSatellite.position.altitude > 1000 
+                        ? `${(selectedSatellite.position.altitude / 1000).toFixed(1)}K km`
+                        : `${selectedSatellite.position.altitude.toFixed(0)} km`
                       }
                     </div>
                   </div>
@@ -250,7 +250,7 @@ const ControlPanel: React.FC = () => {
                       <span className="text-muted-foreground">Vel:</span>
                     </div>
                     <div className="font-mono text-stellar-cyan text-xs">
-                      {selectedSatellite.orbital.velocity.toFixed(2)} km/s
+                      {selectedSatellite.velocity?.toFixed(2) || 'N/A'} km/s
                     </div>
                   </div>
                   
