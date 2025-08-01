@@ -689,13 +689,13 @@ const Scene: React.FC = () => {
         />
       ))}
       
-      {/* Orbital paths - rendered separately and centered on Earth */}
-      {visibleSatellites.map((satellite) => {
-        const isSelected = globeSettings.selectedSatelliteId === satellite.id;
-        return (globeSettings.showOrbits || isSelected) && (
-          <OrbitPath key={`orbit-${satellite.id}`} satellite={satellite} />
-        );
-      })}
+      {/* Orbital path - only for selected satellite to prevent lag */}
+      {globeSettings.showOrbits && globeSettings.selectedSatelliteId && (() => {
+        const selectedSatellite = visibleSatellites.find(sat => sat.id === globeSettings.selectedSatelliteId);
+        return selectedSatellite ? (
+          <OrbitPath key={`orbit-${selectedSatellite.id}`} satellite={selectedSatellite} />
+        ) : null;
+      })()}
       
       {/* Enhanced stars background */}
       <Stars />
