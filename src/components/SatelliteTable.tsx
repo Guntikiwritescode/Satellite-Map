@@ -52,6 +52,11 @@ const SatelliteTable: React.FC = React.memo(() => {
     return `${velocity.toFixed(2)} km/s`;
   };
 
+  const formatNumber = (value: any, decimals: number = 1): string => {
+    const num = typeof value === 'number' ? value : parseFloat(value);
+    return isNaN(num) ? 'N/A' : num.toFixed(decimals);
+  };
+
   const formatPeriod = (period: number) => {
     const hours = Math.floor(period / 60);
     const minutes = Math.floor(period % 60);
@@ -187,7 +192,7 @@ const SatelliteTable: React.FC = React.memo(() => {
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Inc:</span>
                       <span className="font-mono text-nebula-purple">
-                        {satellite.orbital.inclination.toFixed(1)}°
+                        {formatNumber(satellite.orbital.inclination)}°
                       </span>
                     </div>
                   </div>
@@ -198,7 +203,7 @@ const SatelliteTable: React.FC = React.memo(() => {
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Position:</span>
                     <span className="font-mono text-primary">
-                      {satellite.position.latitude.toFixed(2)}°, {satellite.position.longitude.toFixed(2)}°
+                      {formatNumber(satellite.position.latitude, 2)}°, {formatNumber(satellite.position.longitude, 2)}°
                     </span>
                   </div>
                 </div>
