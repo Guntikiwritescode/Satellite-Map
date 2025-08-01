@@ -277,20 +277,28 @@ const Stars: React.FC = () => {
 // Main Globe3D component
 const Globe3D: React.FC = () => {
   return (
-    <div className="h-full w-full bg-gradient-cosmic rounded-lg overflow-hidden">
-      <Canvas
-        camera={{ position: [3, 1, 3], fov: 60 }}
-        style={{ background: 'transparent' }}
-      >
-        <Scene />
-        <OrbitControls
-          enablePan={true}
-          enableZoom={true}
-          enableRotate={true}
-          minDistance={1.5}
-          maxDistance={10}
-        />
-      </Canvas>
+    <div className="h-full w-full bg-gradient-cosmic rounded-lg overflow-hidden relative">
+      <div className="absolute inset-0">
+        <Canvas
+          camera={{ position: [3, 1, 3], fov: 60 }}
+          style={{ background: 'transparent' }}
+          gl={{ antialias: true, alpha: true }}
+          onCreated={({ gl }) => {
+            gl.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          }}
+        >
+          <Scene />
+          <OrbitControls
+            enablePan={true}
+            enableZoom={true}
+            enableRotate={true}
+            minDistance={1.5}
+            maxDistance={10}
+            enableDamping={true}
+            dampingFactor={0.05}
+          />
+        </Canvas>
+      </div>
     </div>
   );
 };
