@@ -111,7 +111,7 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
   );
 });
 
-// Orbital path component for selected satellite
+// Orbital path component using proper SGP4 propagation
 interface OrbitalPathProps {
   satellite: Satellite;
 }
@@ -122,43 +122,53 @@ const OrbitalPath: React.FC<OrbitalPathProps> = ({ satellite: sat }) => {
     const earthRadius = 5;
     
     try {
-      const { latitude, longitude, altitude } = sat.position;
-      if (!latitude || !longitude || !altitude) return points;
+      // Create the satellite record from TLE data
+      const satrec = satellite.twoline2satrec(sat.tle.line1, sat.tle.line2);
       
-      // Convert satellite's current position to 3D coordinates
-      const lat = (latitude * Math.PI) / 180;
-      const lon = (longitude * Math.PI) / 180;
-      const satelliteRadius = earthRadius + (altitude * 5) / 6371;
-      
-      // Current satellite position in 3D space
-      const satX = satelliteRadius * Math.cos(lat) * Math.cos(lon);
-      const satY = satelliteRadius * Math.sin(lat);
-      const satZ = satelliteRadius * Math.cos(lat) * Math.sin(lon);
-      
-      // Create a simple circular orbit at the satellite's distance from Earth center
-      const orbitRadius = Math.sqrt(satX * satX + satY * satY + satZ * satZ);
-      const totalPoints = 100;
-      
-      // Find the current angle of the satellite in its orbital plane
-      const currentAngle = Math.atan2(satZ, satX);
-      
-      // Create circular orbit points starting from satellite's current position
-      for (let i = 0; i <= totalPoints; i++) {
-        const angle = currentAngle + (i / totalPoints) * 2 * Math.PI;
-        
-        // Simple circular orbit in the XZ plane at satellite's distance
-        const x = orbitRadius * Math.cos(angle);
-        const y = satY; // Keep same Y level for now (will apply inclination)
-        const z = orbitRadius * Math.sin(angle);
-        
-        // Apply inclination by rotating around X axis
-        const inclination = (sat.orbital.inclination * Math.PI) / 180;
-        const rotatedY = y * Math.cos(inclination);
-        const rotatedZ = z * Math.cos(inclination) + y * Math.sin(inclination);
-        
-        points.push(new THREE.Vector3(x, rotatedY, rotatedZ));
+      if (!satrec) {
+        console.warn('Failed to create satellite record');
+        return points;
       }
+
+      const now = new Date();
+      const period = sat.orbital.period; // orbital period in minutes
+      const totalPoints = 120;
       
+      // Generate orbital path by propagating the satellite through one complete orbit
+      for (let i = 0; i <= totalPoints; i++) {
+        // Calculate time offset for this point (spread over one orbital period)
+        const timeOffsetMinutes = (i / totalPoints) * period;
+        const time = new Date(now.getTime() + timeOffsetMinutes * 60 * 1000);
+        
+        // Use SGP4 to propagate satellite position at this time
+        const positionAndVelocity = satellite.propagate(satrec, time);
+        
+        if (positionAndVelocity.position && typeof positionAndVelocity.position === 'object') {
+          const positionEci = positionAndVelocity.position as any;
+          
+          // Convert ECI coordinates to geodetic (lat/lon/alt)
+          const gmst = satellite.gstime(time);
+          const positionGd = satellite.eciToGeodetic(positionEci, gmst);
+          
+          const longitude = satellite.degreesLong(positionGd.longitude);
+          const latitude = satellite.degreesLat(positionGd.latitude);
+          const altitude = positionGd.height;
+          
+          // Validate the coordinates
+          if (!isNaN(latitude) && !isNaN(longitude) && !isNaN(altitude)) {
+            // Convert to our 3D coordinate system (same as satellite markers)
+            const lat = (latitude * Math.PI) / 180;
+            const lon = (longitude * Math.PI) / 180;
+            const radius = earthRadius + (altitude * 5) / 6371;
+            
+            const x = radius * Math.cos(lat) * Math.cos(lon);
+            const y = radius * Math.sin(lat);
+            const z = radius * Math.cos(lat) * Math.sin(lon);
+            
+            points.push(new THREE.Vector3(x, y, z));
+          }
+        }
+      }
     } catch (error) {
       console.warn('Error calculating orbital path:', error);
     }
@@ -179,7 +189,7 @@ const OrbitalPath: React.FC<OrbitalPathProps> = ({ satellite: sat }) => {
             itemSize={3}
           />
         </bufferGeometry>
-        <lineBasicMaterial color="#00d9ff" opacity={0.6} transparent />
+        <lineBasicMaterial color="#00d9ff" opacity={0.7} transparent linewidth={2} />
       </lineSegments>
     </group>
   );
@@ -301,7 +311,7 @@ const Scene: React.FC = () => {
       
       <Earth />
       
-      {/* Show orbital path for selected satellite */}
+      {/* Show orbital path for selected satellite using proper SGP4 propagation */}
       {selectedSatellite && <OrbitalPath satellite={selectedSatellite} />}
       
       {visibleSatellites.map((satellite) => (
