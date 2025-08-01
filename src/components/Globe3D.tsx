@@ -19,7 +19,9 @@ const Earth: React.FC = () => {
 
   useFrame(() => {
     if (meshRef.current) {
-      meshRef.current.rotation.y += 0.001; // Slow realistic rotation
+      // Earth rotates 360 degrees in 24 hours = 0.25 degrees per minute = 0.004167 degrees per second
+      // In our 60fps animation, that's 0.004167/60 = 0.0000694 radians per frame
+      meshRef.current.rotation.y += 0.0000694; // Realistic Earth rotation speed
     }
   });
 

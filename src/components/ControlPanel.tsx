@@ -37,217 +37,217 @@ const ControlPanel: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Real-time Status */}
-      <Card className="glass-panel p-4">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-foreground flex items-center space-x-2">
-              <Activity className="h-4 w-4 text-green-400" />
-              <span>Live Tracking</span>
-            </h3>
-            <Badge variant="outline" className="cosmic-border text-green-400 border-green-400/30">
-              Real-time
-            </Badge>
-          </div>
-          
-          <div className="text-sm text-muted-foreground">
-            Positions updated every 30 seconds using live TLE data from Celestrak
-          </div>
-          
-          <div className="flex space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={resetView}
-              className="cosmic-border flex-1"
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Reset View
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={resetFilters}
-              className="cosmic-border flex-1"
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Clear Filters
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* Display Options */}
-      <Card className="glass-panel p-4">
-        <div className="space-y-4">
-          <h3 className="font-semibold text-foreground flex items-center space-x-2">
-            <Eye className="h-4 w-4 text-primary" />
-            <span>Display Options</span>
-          </h3>
-          
+    <div className="h-full flex flex-col">
+      <div className="flex-1 min-h-0 max-h-[calc(100vh-160px)] overflow-y-auto space-y-3 pr-1 scrollbar-thin">
+        {/* Real-time Status */}
+        <Card className="glass-panel p-3">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-foreground">Orbital Paths</span>
-              <Switch
-                checked={globeSettings.showOrbits}
-                onCheckedChange={(checked) => updateGlobeSettings({ showOrbits: checked })}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-foreground">Coverage Areas</span>
-              <Switch
-                checked={globeSettings.showFootprints}
-                onCheckedChange={(checked) => updateGlobeSettings({ showFootprints: checked })}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-foreground">Major Cities</span>
-              <Switch
-                checked={globeSettings.showCities}
-                onCheckedChange={(checked) => updateGlobeSettings({ showCities: checked })}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-foreground">Day/Night Line</span>
-              <Switch
-                checked={globeSettings.showTerminator}
-                onCheckedChange={(checked) => updateGlobeSettings({ showTerminator: checked })}
-              />
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Statistics */}
-      <Card className="glass-panel p-4">
-        <div className="space-y-4">
-          <h3 className="font-semibold text-foreground flex items-center space-x-2">
-            <Zap className="h-4 w-4 text-primary" />
-            <span>Statistics</span>
-          </h3>
-          
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Tracked Satellites</div>
-              <div className="font-mono text-primary text-lg">
-                {filteredSatellites.length}
-              </div>
-            </div>
-            
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Active Missions</div>
-              <div className="font-mono text-stellar-cyan text-lg">
-                {filteredSatellites.filter(s => s.status === 'active').length}
-              </div>
-            </div>
-            
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Low Earth Orbit</div>
-              <div className="font-mono text-jupiter-amber text-lg">
-                {filteredSatellites.filter(s => s.orbital.altitude < 2000).length}
-              </div>
-            </div>
-            
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Geostationary</div>
-              <div className="font-mono text-nebula-purple text-lg">
-                {filteredSatellites.filter(s => s.orbital.altitude > 35000).length}
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Selected Satellite Details */}
-      {selectedSatellite && (
-        <Card className="glass-panel p-4 border-primary/30">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-foreground flex items-center space-x-2">
-                <Orbit className="h-4 w-4 text-primary" />
-                <span>Selected Satellite</span>
+              <h3 className="font-medium text-sm text-foreground flex items-center space-x-2">
+                <Activity className="h-3 w-3 text-green-400" />
+                <span>Live Tracking</span>
               </h3>
+              <Badge variant="outline" className="cosmic-border text-green-400 border-green-400/30 text-xs">
+                Real-time
+              </Badge>
+            </div>
+            
+            <div className="text-xs text-muted-foreground">
+              Positions updated every 30 seconds using live TLE data
+            </div>
+            
+            <div className="flex space-x-2">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                onClick={() => updateGlobeSettings({ selectedSatelliteId: null })}
+                onClick={resetView}
+                className="cosmic-border flex-1 h-7 text-xs"
               >
-                <EyeOff className="h-4 w-4" />
+                <RotateCcw className="h-3 w-3 mr-1" />
+                Reset
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetFilters}
+                className="cosmic-border flex-1 h-7 text-xs"
+              >
+                <Filter className="h-3 w-3 mr-1" />
+                Clear
               </Button>
             </div>
+          </div>
+        </Card>
+
+        {/* Display Options */}
+        <Card className="glass-panel p-3">
+          <div className="space-y-3">
+            <h3 className="font-medium text-sm text-foreground flex items-center space-x-2">
+              <Eye className="h-3 w-3 text-primary" />
+              <span>Display</span>
+            </h3>
             
-            <div className="space-y-3">
-              <div>
-                <div className="font-semibold text-foreground line-clamp-2">
-                  {selectedSatellite.name}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {selectedSatellite.agency} • {selectedSatellite.country}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-foreground">Orbital Paths</span>
+                <Switch
+                  checked={globeSettings.showOrbits}
+                  onCheckedChange={(checked) => updateGlobeSettings({ showOrbits: checked })}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-foreground">Coverage Areas</span>
+                <Switch
+                  checked={globeSettings.showFootprints}
+                  onCheckedChange={(checked) => updateGlobeSettings({ showFootprints: checked })}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-foreground">Major Cities</span>
+                <Switch
+                  checked={globeSettings.showCities}
+                  onCheckedChange={(checked) => updateGlobeSettings({ showCities: checked })}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-foreground">Day/Night Line</span>
+                <Switch
+                  checked={globeSettings.showTerminator}
+                  onCheckedChange={(checked) => updateGlobeSettings({ showTerminator: checked })}
+                />
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Statistics */}
+        <Card className="glass-panel p-3">
+          <div className="space-y-3">
+            <h3 className="font-medium text-sm text-foreground flex items-center space-x-2">
+              <Zap className="h-3 w-3 text-primary" />
+              <span>Statistics</span>
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="space-y-1">
+                <div className="text-muted-foreground">Tracked</div>
+                <div className="font-mono text-primary text-sm">
+                  {filteredSatellites.length}
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-muted-foreground">Altitude:</span>
-                  </div>
-                  <div className="font-mono text-primary pl-5">
-                    {selectedSatellite.orbital.altitude > 1000 
-                      ? `${(selectedSatellite.orbital.altitude / 1000).toFixed(1)}K km`
-                      : `${selectedSatellite.orbital.altitude.toFixed(0)} km`
-                    }
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Zap className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-muted-foreground">Velocity:</span>
-                  </div>
-                  <div className="font-mono text-stellar-cyan pl-5">
-                    {selectedSatellite.orbital.velocity.toFixed(2)} km/s
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-muted-foreground">Period:</span>
-                  </div>
-                  <div className="font-mono text-jupiter-amber pl-5">
-                    {Math.floor(selectedSatellite.orbital.period / 60)}h {Math.floor(selectedSatellite.orbital.period % 60)}m
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Orbit className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-muted-foreground">Inclination:</span>
-                  </div>
-                  <div className="font-mono text-nebula-purple pl-5">
-                    {selectedSatellite.orbital.inclination.toFixed(1)}°
-                  </div>
+              <div className="space-y-1">
+                <div className="text-muted-foreground">Active</div>
+                <div className="font-mono text-stellar-cyan text-sm">
+                  {filteredSatellites.filter(s => s.status === 'active').length}
                 </div>
               </div>
               
-              <div className="bg-muted/30 rounded-lg p-3">
-                <div className="text-sm text-muted-foreground mb-1">Current Position</div>
-                <div className="font-mono text-primary">
-                  {selectedSatellite.position.latitude.toFixed(3)}°, {selectedSatellite.position.longitude.toFixed(3)}°
+              <div className="space-y-1">
+                <div className="text-muted-foreground">LEO</div>
+                <div className="font-mono text-jupiter-amber text-sm">
+                  {filteredSatellites.filter(s => s.orbital.altitude < 2000).length}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Updated {new Date(selectedSatellite.position.timestamp).toLocaleTimeString()}
+              </div>
+              
+              <div className="space-y-1">
+                <div className="text-muted-foreground">GEO</div>
+                <div className="font-mono text-nebula-purple text-sm">
+                  {filteredSatellites.filter(s => s.orbital.altitude > 35000).length}
                 </div>
               </div>
             </div>
           </div>
         </Card>
-      )}
+
+        {/* Selected Satellite Details */}
+        {selectedSatellite && (
+          <Card className="glass-panel p-3 border-primary/30">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium text-sm text-foreground flex items-center space-x-2">
+                  <Orbit className="h-3 w-3 text-primary" />
+                  <span>Selected</span>
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => updateGlobeSettings({ selectedSatelliteId: null })}
+                  className="h-6 w-6 p-0"
+                >
+                  <EyeOff className="h-3 w-3" />
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                <div>
+                  <div className="font-medium text-xs text-foreground line-clamp-2">
+                    {selectedSatellite.name}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {selectedSatellite.agency}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-1">
+                      <MapPin className="h-2 w-2 text-muted-foreground" />
+                      <span className="text-muted-foreground">Alt:</span>
+                    </div>
+                    <div className="font-mono text-primary text-xs">
+                      {selectedSatellite.orbital.altitude > 1000 
+                        ? `${(selectedSatellite.orbital.altitude / 1000).toFixed(1)}K km`
+                        : `${selectedSatellite.orbital.altitude.toFixed(0)} km`
+                      }
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-1">
+                      <Zap className="h-2 w-2 text-muted-foreground" />
+                      <span className="text-muted-foreground">Vel:</span>
+                    </div>
+                    <div className="font-mono text-stellar-cyan text-xs">
+                      {selectedSatellite.orbital.velocity.toFixed(2)} km/s
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-1">
+                      <Clock className="h-2 w-2 text-muted-foreground" />
+                      <span className="text-muted-foreground">Period:</span>
+                    </div>
+                    <div className="font-mono text-jupiter-amber text-xs">
+                      {Math.floor(selectedSatellite.orbital.period / 60)}h {Math.floor(selectedSatellite.orbital.period % 60)}m
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-1">
+                      <Orbit className="h-2 w-2 text-muted-foreground" />
+                      <span className="text-muted-foreground">Inc:</span>
+                    </div>
+                    <div className="font-mono text-nebula-purple text-xs">
+                      {selectedSatellite.orbital.inclination.toFixed(1)}°
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-muted/30 rounded p-2">
+                  <div className="text-xs text-muted-foreground mb-1">Position</div>
+                  <div className="font-mono text-primary text-xs">
+                    {selectedSatellite.position.latitude.toFixed(2)}°, {selectedSatellite.position.longitude.toFixed(2)}°
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+      </div>
     </div>
   );
 };
