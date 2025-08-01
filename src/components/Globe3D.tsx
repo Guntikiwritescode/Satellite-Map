@@ -380,26 +380,16 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
         <SatelliteModel />
       </group>
       
-      {/* Satellite info on selection - scales with camera distance */}
+      {/* Simple selection indicator - no HTML component */}
       {isSelected && (
-        <Html 
-          position={[0.05, 0.05, 0]} 
-          style={{ pointerEvents: 'none' }}
-          distanceFactor={Math.max(1, Math.min(20, cameraDistance * 4))} // Clamp scaling to prevent crashes
-          transform
-          occlude
-        >
-          <div className="bg-card/95 backdrop-blur border border-border rounded-lg p-2 text-xs min-w-44 shadow-lg">
-            <div className="font-semibold text-foreground mb-1 text-xs">
-              {satellite?.name || 'Unknown Satellite'}
-            </div>
-            <div className="text-muted-foreground space-y-0.5 text-xs">
-              <div>Alt: {(satellite?.position?.altitude || 0).toFixed(0)} km</div>
-              <div>Vel: {(satellite?.orbital?.velocity || 0).toFixed(2)} km/s</div>
-              <div>Pos: {(satellite?.position?.latitude || 0).toFixed(2)}°, {(satellite?.position?.longitude || 0).toFixed(2)}°</div>
-            </div>
-          </div>
-        </Html>
+        <mesh position={[0, 0.1, 0]}>
+          <sphereGeometry args={[0.03, 8, 8]} />
+          <meshBasicMaterial 
+            color="#ffffff" 
+            transparent={true}
+            opacity={0.8}
+          />
+        </mesh>
       )}
     </group>
   );
