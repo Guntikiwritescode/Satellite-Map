@@ -374,10 +374,10 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
           style={{ pointerEvents: 'none' }}
           distanceFactor={Math.max(1, cameraDistance * 4)} // Dynamic scaling based on camera distance
         >
-          <div className="bg-card/95 backdrop-blur border border-border rounded-lg p-3 text-xs min-w-52 shadow-lg">
-            <div className="font-semibold text-foreground mb-1">{satellite.name}</div>
-            <div className="text-muted-foreground space-y-1">
-              <div>Alt: {satellite.orbital.altitude.toFixed(0)} km</div>
+          <div className="bg-card/95 backdrop-blur border border-border rounded-lg p-2 text-xs min-w-44 shadow-lg">
+            <div className="font-semibold text-foreground mb-1 text-xs">{satellite.name}</div>
+            <div className="text-muted-foreground space-y-0.5 text-xs">
+              <div>Alt: {satellite.position.altitude.toFixed(0)} km</div>
               <div>Vel: {satellite.orbital.velocity.toFixed(2)} km/s</div>
               <div>Pos: {satellite.position.latitude.toFixed(2)}°, {satellite.position.longitude.toFixed(2)}°</div>
             </div>
