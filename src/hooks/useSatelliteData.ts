@@ -1,108 +1,94 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSatelliteStore } from '../stores/satelliteStore';
-import { satelliteAPI } from '../services/satelliteAPI';
+import { spaceTrackAPI } from '../services/spaceTrackAPI';
 
 export const useSatelliteData = () => {
-  const { setSatellites, updateSatellitePositions, setLaunches, setLoading, setError } = useSatelliteStore();
+  const { setSatellites, setError, setLoading } = useSatelliteStore();
 
-  // Fetch initial satellite data with fallback
-  const { data: satellites, isLoading: satellitesLoading, error: satellitesError } = useQuery({
+  // Fetch satellite data
+  const { 
+    data: satellites = [], 
+    error: satelliteError, 
+    isLoading: satelliteLoading,
+    refetch: refetchSatellites 
+  } = useQuery({
     queryKey: ['satellites'],
-    queryFn: () => satelliteAPI.getSatellitesWithFallback(),
-    refetchInterval: 30000, // Refetch every 30 seconds
-    staleTime: 10000, // Consider data stale after 10 seconds
+    queryFn: () => spaceTrackAPI.getLEOSatellites(200),
+    refetchInterval: 5 * 60 * 1000, // 5 minutes
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    retry: 3
   });
 
-  // Fetch launch data
-  const { data: launches, isLoading: launchesLoading, error: launchesError } = useQuery({
-    queryKey: ['launches'],
-    queryFn: () => satelliteAPI.getLaunches(),
-    refetchInterval: 60000, // Refetch every minute
-    staleTime: 30000,
-  });
-
-  // Update store when data changes
+  // Update store with satellite data
   useEffect(() => {
-    if (satellites) {
-      console.log('Loading satellites:', satellites.length);
+    if (satellites.length > 0) {
       setSatellites(satellites);
     }
   }, [satellites, setSatellites]);
 
+  // Update store with loading state
   useEffect(() => {
-    if (launches) {
-      console.log('Loading launches:', launches.length);
-      setLaunches(launches);
-    }
-  }, [launches, setLaunches]);
+    setLoading(satelliteLoading);
+  }, [satelliteLoading, setLoading]);
 
-  // Handle errors
+  // Update store with error state
   useEffect(() => {
-    if (satellitesError) {
-      console.error('Error loading satellites:', satellitesError);
-      setError(`Failed to load satellite data: ${satellitesError.message}`);
+    if (satelliteError) {
+      setError(`Failed to load satellite data: ${satelliteError.message}`);
+    } else {
+      setError(null);
     }
-    if (launchesError) {
-      console.error('Error loading launches:', launchesError);
-      setError(`Failed to load launch data: ${launchesError.message}`);
-    }
-  }, [satellitesError, launchesError, setError]);
+  }, [satelliteError, setError]);
 
-  // Update loading state
+  // Real-time position updates
   useEffect(() => {
-    const loading = satellitesLoading || launchesLoading;
-    console.log('Loading state:', loading);
-    setLoading(loading);
-  }, [satellitesLoading, launchesLoading, setLoading]);
+    if (satellites.length === 0) return;
 
-  // Start real-time updates with smooth position updates
-  useEffect(() => {
-    const handlePositionUpdate = (updatedSatellites: any[]) => {
-      // Extract only position updates to avoid full re-render
-      const positionUpdates = updatedSatellites.map(sat => ({
-        id: sat.id,
-        position: sat.position
-      }));
-      
-      console.log('Smooth position update for', positionUpdates.length, 'satellites');
-      updateSatellitePositions(positionUpdates);
+    const updatePositions = async () => {
+      try {
+        const updatedSatellites = satellites.map(sat => {
+          try {
+            const position = spaceTrackAPI.calculatePosition(sat.tle.line1, sat.tle.line2);
+            return {
+              ...sat,
+              position: {
+                ...position,
+                timestamp: Date.now()
+              }
+            };
+          } catch (error) {
+            return sat;
+          }
+        });
+        setSatellites(updatedSatellites);
+      } catch (error) {
+        console.error('Error updating satellite positions:', error);
+      }
     };
 
-    // Only start real-time updates if we have initial data and avoid dependency loops
-    if (satellites && satellites.length > 0) {
-      console.log('Starting smooth real-time updates for', satellites.length, 'satellites');
-      satelliteAPI.startRealTimeUpdates(handlePositionUpdate);
-    }
+    const interval = setInterval(updatePositions, 30000); // 30 seconds
+    return () => clearInterval(interval);
+  }, [satellites, setSatellites]);
 
-    return () => {
-      satelliteAPI.stopRealTimeUpdates();
-    };
-  }, [satellites?.length, updateSatellitePositions]); // Only depend on satellite count, not full array
-
-  // Get geolocation for user
+  // Get user location
   useEffect(() => {
-    if ('geolocation' in navigator) {
+    if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const { latitude, longitude } = position.coords;
-          useSatelliteStore.getState().setUserLocation({ latitude, longitude });
+          // User location logic can be added here if needed
         },
         (error) => {
-          console.warn('Failed to get user location:', error);
-          // Default to a central location if geolocation fails
-          useSatelliteStore.getState().setUserLocation({ 
-            latitude: 40.7128, 
-            longitude: -74.0060 // New York City
-          });
+          console.warn('Could not get user location:', error);
         }
       );
     }
   }, []);
 
   return {
-    isLoading: satellitesLoading || launchesLoading,
     satellites,
-    launches,
+    isLoading: satelliteLoading,
+    error: satelliteError,
+    refetch: refetchSatellites
   };
 };

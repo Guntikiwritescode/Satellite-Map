@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useSatelliteStore } from '../stores/satelliteStore';
-import { satelliteAPI } from '../services/satelliteAPI';
+import { spaceTrackAPI } from '../services/spaceTrackAPI';
 
 const FilterPanel: React.FC = () => {
   const { filters, updateFilters, satellites } = useSatelliteStore();
