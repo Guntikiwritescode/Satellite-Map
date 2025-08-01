@@ -67,7 +67,7 @@ export const useSatelliteData = () => {
       }
     };
 
-    const interval = setInterval(updatePositions, 30000); // 30 seconds
+    const interval = setInterval(updatePositions, 3000); // 3 seconds
     return () => clearInterval(interval);
   }, [satellites, setSatellites]);
 
