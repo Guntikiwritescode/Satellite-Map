@@ -1,5 +1,5 @@
 import React from 'react';
-import { RotateCcw, Eye, EyeOff, Orbit, MapPin, Clock, Zap, Filter, Activity } from 'lucide-react';
+import { RotateCcw, Eye, EyeOff, Orbit, MapPin, Clock, Zap, Filter, Activity, MousePointerClick } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -13,7 +13,8 @@ const ControlPanel: React.FC = () => {
     getSelectedSatellite,
     filteredSatellites,
     filters,
-    updateFilters
+    updateFilters,
+    setSelectedSatellite
   } = useSatelliteStore();
 
   const selectedSatellite = getSelectedSatellite();
@@ -36,6 +37,10 @@ const ControlPanel: React.FC = () => {
     });
   };
 
+  const deselectSatellite = () => {
+    setSelectedSatellite(null);
+  };
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 min-h-0 max-h-[calc(100vh-160px)] overflow-y-auto space-y-3 pr-1 scrollbar-thin">
@@ -56,12 +61,12 @@ const ControlPanel: React.FC = () => {
               Positions updated every 30 seconds using live TLE data
             </div>
             
-            <div className="flex space-x-2">
+            <div className="grid grid-cols-3 gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={resetView}
-                className="cosmic-border flex-1 h-7 text-xs"
+                className="cosmic-border h-7 text-xs"
               >
                 <RotateCcw className="h-3 w-3 mr-1" />
                 Reset
@@ -70,10 +75,20 @@ const ControlPanel: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={resetFilters}
-                className="cosmic-border flex-1 h-7 text-xs"
+                className="cosmic-border h-7 text-xs"
               >
                 <Filter className="h-3 w-3 mr-1" />
                 Clear
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={deselectSatellite}
+                disabled={!globeSettings.selectedSatelliteId}
+                className="cosmic-border h-7 text-xs disabled:opacity-50"
+              >
+                <MousePointerClick className="h-3 w-3 mr-1" />
+                Deselect
               </Button>
             </div>
           </div>
