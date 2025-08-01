@@ -14,6 +14,7 @@ interface SatelliteStore {
   isLoading: boolean;
   error: string | null;
   lastUpdate: number;
+  viewMode: 'globe' | 'spreadsheet';
   
   // Computed
   filteredSatellites: Satellite[];
@@ -29,6 +30,7 @@ interface SatelliteStore {
   setSelectedSatellite: (id: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setViewMode: (mode: 'globe' | 'spreadsheet') => void;
   
   // Utility
   getSatelliteById: (id: string) => Satellite | undefined;
@@ -70,6 +72,7 @@ export const useSatelliteStore = create<SatelliteStore>()(
     isLoading: false,
     error: null,
     lastUpdate: 0,
+    viewMode: 'globe',
     
     // Computed - since Zustand getters don't work well, we'll use a selector
     filteredSatellites: [],
@@ -144,6 +147,8 @@ export const useSatelliteStore = create<SatelliteStore>()(
     setLoading: (isLoading) => set({ isLoading }),
     
     setError: (error) => set({ error }),
+    
+    setViewMode: (viewMode) => set({ viewMode }),
     
     // Utility functions
     getSatelliteById: (id) => {

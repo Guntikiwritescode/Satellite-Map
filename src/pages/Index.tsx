@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
-import { Satellite, Loader2, Activity } from 'lucide-react';
+import { Satellite, Loader2, Activity, Table, Globe } from 'lucide-react';
 import SatelliteTable from '../components/SatelliteTable';
+import SatelliteSpreadsheet from '../components/SatelliteSpreadsheet';
 import Globe3D from '../components/Globe3D';
 import ControlPanel from '../components/ControlPanel';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -8,6 +9,7 @@ import { useSatelliteData } from '../hooks/useSatelliteData';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import spaceHero from '../assets/space-hero.jpg';
 
 const LoadingSpinner = () => (
@@ -35,7 +37,7 @@ const ErrorFallback = ({ error }: { error: string }) => (
 
 const Index = () => {
   const { isLoading } = useSatelliteData();
-  const { error, satellites } = useSatelliteStore();
+  const { error, satellites, viewMode, setViewMode } = useSatelliteStore();
 
   if (error) {
     return (
@@ -72,12 +74,29 @@ const Index = () => {
             </div>
             
             <div className="flex items-center space-x-2">
+              <div className="flex items-center bg-muted/50 rounded-lg p-1">
+                <Button
+                  variant={viewMode === 'globe' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('globe')}
+                  className="h-7 px-2 text-xs"
+                >
+                  <Globe className="h-3 w-3 mr-1" />
+                  Globe
+                </Button>
+                <Button
+                  variant={viewMode === 'spreadsheet' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('spreadsheet')}
+                  className="h-7 px-2 text-xs"
+                >
+                  <Table className="h-3 w-3 mr-1" />
+                  Spreadsheet
+                </Button>
+              </div>
               <Badge className="glass-panel border-primary/30 text-sm">
                 <Activity className="h-3 w-3 mr-1" />
                 Live Data
-              </Badge>
-              <Badge variant="outline" className="cosmic-border text-sm">
-                Global Coverage
               </Badge>
             </div>
           </div>
@@ -86,44 +105,58 @@ const Index = () => {
 
       {/* Main Content - Reduced height */}
       <div className="container mx-auto px-4 py-3">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 h-[calc(100vh-140px)]">
-          {/* Left Panel - Satellite Table */}
-          <div className="lg:col-span-4 xl:col-span-3">
-            <Card className="glass-panel h-full">
-              <div className="p-3 h-full">
-                {isLoading ? (
-                  <LoadingSpinner />
-                ) : satellites.length === 0 ? (
-                  <ErrorFallback error="No satellite data available. Please try refreshing the page." />
-                ) : (
-                  <SatelliteTable />
-                )}
-              </div>
-            </Card>
-          </div>
+        {viewMode === 'spreadsheet' ? (
+          <Card className="glass-panel h-[calc(100vh-140px)]">
+            <div className="p-6 h-full">
+              {isLoading ? (
+                <LoadingSpinner />
+              ) : satellites.length === 0 ? (
+                <ErrorFallback error="No satellite data available. Please try refreshing the page." />
+              ) : (
+                <SatelliteSpreadsheet />
+              )}
+            </div>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 h-[calc(100vh-140px)]">
+            {/* Left Panel - Satellite Table */}
+            <div className="lg:col-span-4 xl:col-span-3">
+              <Card className="glass-panel h-full">
+                <div className="p-3 h-full">
+                  {isLoading ? (
+                    <LoadingSpinner />
+                  ) : satellites.length === 0 ? (
+                    <ErrorFallback error="No satellite data available. Please try refreshing the page." />
+                  ) : (
+                    <SatelliteTable />
+                  )}
+                </div>
+              </Card>
+            </div>
 
-          {/* Center Panel - 3D Globe */}
-          <div className="lg:col-span-6 xl:col-span-7">
-            <Card className="glass-panel h-full">
-              <div className="p-1 h-full">
-                {isLoading ? (
-                  <LoadingSpinner />
-                ) : (
-                  <ErrorBoundary>
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <Globe3D />
-                    </Suspense>
-                  </ErrorBoundary>
-                )}
-              </div>
-            </Card>
-          </div>
+            {/* Center Panel - 3D Globe */}
+            <div className="lg:col-span-6 xl:col-span-7">
+              <Card className="glass-panel h-full">
+                <div className="p-1 h-full">
+                  {isLoading ? (
+                    <LoadingSpinner />
+                  ) : (
+                    <ErrorBoundary>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <Globe3D />
+                      </Suspense>
+                    </ErrorBoundary>
+                  )}
+                </div>
+              </Card>
+            </div>
 
-          {/* Right Panel - Controls */}
-          <div className="lg:col-span-2 xl:col-span-2">
-            <ControlPanel />
+            {/* Right Panel - Controls */}
+            <div className="lg:col-span-2 xl:col-span-2">
+              <ControlPanel />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
