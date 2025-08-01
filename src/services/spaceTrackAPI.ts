@@ -8,22 +8,22 @@ interface SpaceTrackGPData {
   CLASSIFICATION_TYPE: string;
   INTLDES: string;
   EPOCH: string;
-  MEAN_MOTION: number;
-  ECCENTRICITY: number;
-  INCLINATION: number;
-  RA_OF_ASC_NODE: number;
-  ARG_OF_PERICENTER: number;
-  MEAN_ANOMALY: number;
+  MEAN_MOTION: number | string;
+  ECCENTRICITY: number | string;
+  INCLINATION: number | string;
+  RA_OF_ASC_NODE: number | string;
+  ARG_OF_PERICENTER: number | string;
+  MEAN_ANOMALY: number | string;
   EPHEMERIS_TYPE: number;
   ELEMENT_SET_NO: number;
   REV_AT_EPOCH: number;
-  BSTAR: number;
-  MEAN_MOTION_DOT: number;
-  MEAN_MOTION_DDOT: number;
-  SEMIMAJOR_AXIS: number;
-  PERIOD: number;
-  APOAPSIS: number;
-  PERIAPSIS: number;
+  BSTAR: number | string;
+  MEAN_MOTION_DOT: number | string;
+  MEAN_MOTION_DDOT: number | string;
+  SEMIMAJOR_AXIS: number | string;
+  PERIOD: number | string;
+  APOAPSIS: number | string;
+  PERIAPSIS: number | string;
   OBJECT_ID: string;
   OBJECT_NUMBER: number;
   TLE_LINE1: string;
@@ -152,7 +152,7 @@ export class SpaceTrackAPI {
 
   private convertToSatellite(sat: SpaceTrackGPData): Satellite {
     // Determine satellite type based on object type and name
-    const type = this.determineSatelliteType(sat.OBJECT_NAME, sat.OBJECT_TYPE, sat.SEMIMAJOR_AXIS);
+    const type = this.determineSatelliteType(sat.OBJECT_NAME, sat.OBJECT_TYPE, this.safeParseFloat(sat.SEMIMAJOR_AXIS));
     
     // Determine status
     const status = sat.DECAY_DATE ? 'decayed' : 'active';
@@ -165,17 +165,17 @@ export class SpaceTrackAPI {
       position: {
         latitude: 0, // Will be calculated
         longitude: 0, // Will be calculated
-        altitude: (sat.SEMIMAJOR_AXIS - 6371) || 400, // Convert from km radius to altitude
+        altitude: this.safeParseFloat(sat.SEMIMAJOR_AXIS) ? (this.safeParseFloat(sat.SEMIMAJOR_AXIS) - 6371) : 400,
         timestamp: Date.now()
       },
       velocity: 7.8, // Will be calculated
       heading: 0, // Will be calculated
       orbital: {
-        period: sat.PERIOD || 90,
-        inclination: sat.INCLINATION || 0,
-        eccentricity: sat.ECCENTRICITY || 0,
-        perigee: sat.PERIAPSIS || 400,
-        apogee: sat.APOAPSIS || 450,
+        period: this.safeParseFloat(sat.PERIOD) || 90,
+        inclination: this.safeParseFloat(sat.INCLINATION) || 0,
+        eccentricity: this.safeParseFloat(sat.ECCENTRICITY) || 0,
+        perigee: this.safeParseFloat(sat.PERIAPSIS) || 400,
+        apogee: this.safeParseFloat(sat.APOAPSIS) || 450,
         epoch: sat.EPOCH || new Date().toISOString()
       },
       metadata: {
@@ -287,6 +287,12 @@ export class SpaceTrackAPI {
     if (lowerType.includes('rocket')) return 'Rocket Body';
     
     return 'Satellite Operations';
+  }
+
+  private safeParseFloat(value: number | string | undefined): number {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') return parseFloat(value);
+    return 0;
   }
 }
 
