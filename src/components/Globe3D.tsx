@@ -122,51 +122,55 @@ const OrbitalPath: React.FC<OrbitalPathProps> = ({ satellite: sat }) => {
     const earthRadius = 5;
     
     try {
-      const satrec = satellite.twoline2satrec(sat.tle.line1, sat.tle.line2);
-      const now = new Date();
-      const period = sat.orbital.period; // minutes
-      const totalPoints = 100;
+      const { latitude, longitude, altitude } = sat.position;
+      if (!latitude || !longitude || !altitude) return points;
       
-      // Calculate the satellite's current position first
-      const currentPosAndVel = satellite.propagate(satrec, now);
-      if (!currentPosAndVel.position || typeof currentPosAndVel.position !== 'object') {
-        return points;
-      }
+      // Convert current position to 3D coordinates
+      const currentLat = (latitude * Math.PI) / 180;
+      const currentLon = (longitude * Math.PI) / 180;
+      const currentRadius = earthRadius + (altitude * 5) / 6371;
       
-      // Start the orbit path from current time and go one full period
+      // Get orbital parameters
+      const inclination = (sat.orbital.inclination * Math.PI) / 180;
+      const perigee = earthRadius + (sat.orbital.perigee * 5) / 6371;
+      const apogee = earthRadius + (sat.orbital.apogee * 5) / 6371;
+      const avgRadius = (perigee + apogee) / 2;
+      const eccentricity = sat.orbital.eccentricity;
+      
+      // Create orbital plane vectors
+      const totalPoints = 120;
+      
       for (let i = 0; i <= totalPoints; i++) {
-        const timeOffset = (i / totalPoints) * period * 60 * 1000; // convert to milliseconds
-        const time = new Date(now.getTime() + timeOffset);
+        const angle = (i / totalPoints) * 2 * Math.PI;
         
-        const positionAndVelocity = satellite.propagate(satrec, time);
+        // Calculate radius for elliptical orbit
+        const radius = avgRadius * (1 - eccentricity * eccentricity) / 
+                      (1 + eccentricity * Math.cos(angle));
         
-        if (positionAndVelocity.position && typeof positionAndVelocity.position === 'object') {
-          const positionEci = positionAndVelocity.position as any;
-          const gmst = satellite.gstime(time);
-          const positionGd = satellite.eciToGeodetic(positionEci, gmst);
-          
-          const longitude = satellite.degreesLong(positionGd.longitude);
-          const latitude = satellite.degreesLat(positionGd.latitude);
-          const altitude = positionGd.height;
-          
-          if (!isNaN(latitude) && !isNaN(longitude) && !isNaN(altitude)) {
-            const lat = (latitude * Math.PI) / 180;
-            const lon = (longitude * Math.PI) / 180;
-            const radius = earthRadius + (altitude * 5) / 6371;
-            
-            const x = radius * Math.cos(lat) * Math.cos(lon);
-            const y = radius * Math.sin(lat);
-            const z = radius * Math.cos(lat) * Math.sin(lon);
-            
-            points.push(new THREE.Vector3(x, y, z));
-          }
-        }
+        // Position in orbital plane
+        const x_orbit = radius * Math.cos(angle);
+        const y_orbit = radius * Math.sin(angle) * Math.cos(inclination);
+        const z_orbit = radius * Math.sin(angle) * Math.sin(inclination);
+        
+        // Rotate to align with current satellite position
+        const rotationY = currentLon;
+        const rotationX = currentLat;
+        
+        // Apply rotations to place orbit correctly in 3D space
+        const x = x_orbit * Math.cos(rotationY) - z_orbit * Math.sin(rotationY);
+        const y = y_orbit * Math.cos(rotationX) - 
+                 (x_orbit * Math.sin(rotationY) + z_orbit * Math.cos(rotationY)) * Math.sin(rotationX);
+        const z = y_orbit * Math.sin(rotationX) + 
+                 (x_orbit * Math.sin(rotationY) + z_orbit * Math.cos(rotationY)) * Math.cos(rotationX);
+        
+        points.push(new THREE.Vector3(x, y, z));
       }
       
-      // Ensure the path forms a complete loop by adding the first point at the end
+      // Close the orbit loop
       if (points.length > 0) {
         points.push(points[0].clone());
       }
+      
     } catch (error) {
       console.warn('Error calculating orbital path:', error);
     }
