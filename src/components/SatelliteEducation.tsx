@@ -91,16 +91,6 @@ const SatelliteEducation = () => {
                     </ul>
                   </div>
                 </div>
-                <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src="https://www.youtube.com/embed/StTqXEQ2l-Y" 
-                    title="How Satellite Communication Works"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
               </div>
 
               {/* Earth Observation */}
@@ -134,16 +124,6 @@ const SatelliteEducation = () => {
                     </ul>
                   </div>
                 </div>
-                <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src="https://www.youtube.com/embed/P6MOnehCOUw" 
-                    title="Earth Observation Satellites Explained"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
               </div>
 
               {/* Navigation */}
@@ -156,16 +136,6 @@ const SatelliteEducation = () => {
                   Commercial applications of GNSS technology extend far beyond consumer GPS, 
                   enabling precision agriculture, autonomous vehicles, and location-based services.
                 </p>
-                <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src="https://www.youtube.com/embed/16R0HznhCTU" 
-                    title="GPS and GNSS Systems"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -212,16 +182,6 @@ const SatelliteEducation = () => {
                     </ul>
                   </div>
                 </div>
-                <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src="https://www.youtube.com/embed/QEIGBPAjNHQ" 
-                    title="Military Satellites and Space Operations"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
               </div>
 
               {/* Space Stations */}
@@ -254,16 +214,6 @@ const SatelliteEducation = () => {
                     </ul>
                   </div>
                 </div>
-                <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src="https://www.youtube.com/embed/SGP6Y0Pnhe4" 
-                    title="International Space Station Tour"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
               </div>
 
               {/* Weather Satellites */}
@@ -276,16 +226,6 @@ const SatelliteEducation = () => {
                   Government weather satellites provide critical data for weather forecasting, 
                   climate research, and disaster preparedness on a global scale.
                 </p>
-                <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src="https://www.youtube.com/embed/wKCaY5smR4Y" 
-                    title="Weather Satellites and Climate Monitoring"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -333,16 +273,6 @@ const SatelliteEducation = () => {
                     </ul>
                   </div>
                 </div>
-                <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src="https://www.youtube.com/embed/H1cQnP7rggE" 
-                    title="How Satellites Are Built"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
               </div>
 
               {/* Launch Systems */}
@@ -377,16 +307,6 @@ const SatelliteEducation = () => {
                     </ul>
                   </div>
                 </div>
-                <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src="https://www.youtube.com/embed/LbH1ZDImaI8" 
-                    title="How Rockets Work and Launch Satellites"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
               </div>
 
               {/* Mission Planning */}
@@ -399,16 +319,6 @@ const SatelliteEducation = () => {
                   Successful satellite missions require careful planning of orbits, launch windows, 
                   and deployment sequences to achieve mission objectives.
                 </p>
-                <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src="https://www.youtube.com/embed/vr_C6LQ7mHc" 
-                    title="Satellite Mission Planning and Orbital Mechanics"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -455,16 +365,6 @@ const SatelliteEducation = () => {
                     </ul>
                   </div>
                 </div>
-                <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src="https://www.youtube.com/embed/6stKaXldfG4" 
-                    title="Satellite Ground Control Operations"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
               </div>
 
               {/* Maintenance & Servicing */}
@@ -498,16 +398,6 @@ const SatelliteEducation = () => {
                     </ul>
                   </div>
                 </div>
-                <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src="https://www.youtube.com/embed/BpAqLZPsgKY" 
-                    title="Satellite Servicing and Maintenance in Space"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
               </div>
 
               {/* End of Life */}
@@ -539,16 +429,6 @@ const SatelliteEducation = () => {
                       <li>• International guidelines</li>
                     </ul>
                   </div>
-                </div>
-                <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src="https://www.youtube.com/embed/yS1ibDImAYU" 
-                    title="Space Debris and Satellite End-of-Life"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
                 </div>
               </div>
             </CardContent>
