@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { immer } from 'zustand/middleware/immer';
 
 export interface Lesson {
   id: string;
@@ -488,43 +487,43 @@ const initialCourses: Course[] = [
 
 export const useEducationStore = create<EducationStore>()(
   persist(
-    immer((set, get) => ({
+    (set, get) => ({
       courses: initialCourses,
       selectedCourse: null,
       selectedLesson: null,
       _totalProgress: null,
       _progressLastUpdate: 0,
 
-      setSelectedCourse: (courseId) => set((state) => {
-        state.selectedCourse = courseId;
-        state.selectedLesson = null;
-      }),
+      setSelectedCourse: (courseId) => set({ selectedCourse: courseId, selectedLesson: null }),
       
-      setSelectedLesson: (lessonId) => set((state) => {
-        state.selectedLesson = lessonId;
-      }),
+      setSelectedLesson: (lessonId) => set({ selectedLesson: lessonId }),
       
       markLessonComplete: (courseId, lessonId) => set((state) => {
-        const course = state.courses.find(c => c.id === courseId);
-        if (course) {
-          const lesson = course.lessons.find(l => l.id === lessonId);
-          if (lesson && !lesson.completed) {
-            lesson.completed = true;
-            course.completedLessons = course.lessons.filter(l => l.completed).length;
-            state._totalProgress = null; // Invalidate cache
+        const updatedCourses = state.courses.map(course => {
+          if (course.id === courseId) {
+            const updatedLessons = course.lessons.map(lesson => 
+              lesson.id === lessonId ? { ...lesson, completed: true } : lesson
+            );
+            const completedCount = updatedLessons.filter(lesson => lesson.completed).length;
+            return {
+              ...course,
+              lessons: updatedLessons,
+              completedLessons: completedCount
+            };
           }
-        }
+          return course;
+        });
+        return { courses: updatedCourses, _totalProgress: null };
       }),
       
-      resetProgress: () => set((state) => {
-        state.courses.forEach(course => {
-          course.completedLessons = 0;
-          course.lessons.forEach(lesson => {
-            lesson.completed = false;
-          });
-        });
-        state._totalProgress = null; // Invalidate cache
-      }),
+      resetProgress: () => set((state) => ({
+        courses: state.courses.map(course => ({
+          ...course,
+          completedLessons: 0,
+          lessons: course.lessons.map(lesson => ({ ...lesson, completed: false }))
+        })),
+        _totalProgress: null
+      })),
       
       getTotalProgress: () => {
         const state = get();
@@ -540,18 +539,13 @@ export const useEducationStore = create<EducationStore>()(
         const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
         
         // Cache the result
-        set((state) => {
-          state._totalProgress = progress;
-          state._progressLastUpdate = now;
-        });
+        set({ _totalProgress: progress, _progressLastUpdate: now });
         
         return progress;
       },
       
-      _invalidateProgressCache: () => set((state) => {
-        state._totalProgress = null;
-      })
-    })),
+      _invalidateProgressCache: () => set({ _totalProgress: null })
+    }),
     {
       name: 'satellite-education-progress',
       partialize: (state) => ({
