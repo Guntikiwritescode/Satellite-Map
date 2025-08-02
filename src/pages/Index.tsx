@@ -5,6 +5,7 @@ import SatelliteSpreadsheet from '../components/SatelliteSpreadsheet';
 import Globe3D from '../components/Globe3D';
 import ControlPanel from '../components/ControlPanel';
 import ErrorBoundary from '../components/ErrorBoundary';
+import AudioPlayer from '../components/AudioPlayer';
 import { useSatelliteData } from '../hooks/useSatelliteData';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { Card } from '@/components/ui/card';
@@ -184,6 +185,9 @@ const Index = () => {
           </div>
         )}
       </div>
+      
+      {/* 80s Audio Player */}
+      <AudioPlayer />
     </div>
   );
 };
