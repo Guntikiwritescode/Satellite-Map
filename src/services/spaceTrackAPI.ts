@@ -47,22 +47,43 @@ export class SpaceTrackAPI {
 
   private async makeProxyRequest(endpoint: string): Promise<any> {
     return this.queueRequest(async () => {
-      const response = await fetch(this.proxyUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'fetch', endpoint })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Proxy request failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(`Space-Track API error: ${data.error}`);
-      }
+      console.log('Making proxy request to:', this.proxyUrl);
+      console.log('Request payload:', { action: 'fetch', endpoint });
       
-      return data;
+      try {
+        const response = await fetch(this.proxyUrl, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ action: 'fetch', endpoint })
+        });
+
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Proxy request failed:', response.status, errorText);
+          throw new Error(`Proxy request failed: ${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        console.log('Response data received:', Array.isArray(data) ? `${data.length} items` : 'Non-array data');
+        
+        if (data.error) {
+          throw new Error(`Space-Track API error: ${data.error}`);
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('Fetch error details:', error);
+        if (error instanceof TypeError && error.message === 'Failed to fetch') {
+          throw new Error('Unable to connect to satellite data service. Please check if the service is running.');
+        }
+        throw error;
+      }
     });
   }
 
