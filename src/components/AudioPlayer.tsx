@@ -93,82 +93,80 @@ const AudioPlayer = () => {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      <div className="terminal-panel bg-black border-2 border-neon-cyan p-3 min-w-[280px]">
-        <audio
-          ref={audioRef}
-          src={currentTrack.file}
-          loop={false}
-          preload="metadata"
-        />
-        
-        {/* Track Info */}
-        <div className="mb-3">
-          <div className="text-xs font-terminal text-neon-cyan mb-1">
-            [ AUDIO CHANNEL ACTIVE ]
-          </div>
-          <div className="text-sm font-terminal text-terminal-green truncate">
-            {currentTrack.title}
-          </div>
+    <div className="glass-panel p-2">
+      <audio
+        ref={audioRef}
+        src={currentTrack.file}
+        loop={false}
+        preload="metadata"
+      />
+      
+      {/* Track Info */}
+      <div className="mb-2">
+        <div className="text-xs text-primary font-medium">
+          Audio
         </div>
+        <div className="text-xs text-foreground truncate">
+          {currentTrack.title}
+        </div>
+      </div>
 
-        {/* Controls */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={togglePlay}
-              className="terminal-button h-8 w-8 p-0 hover:bg-neon-cyan/20"
-            >
-              {isPlaying ? (
-                <Pause className="h-4 w-4 text-neon-cyan" />
-              ) : (
-                <Play className="h-4 w-4 text-neon-cyan" />
-              )}
-            </Button>
-            
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={nextTrack}
-              className="terminal-button h-8 w-8 p-0 hover:bg-neon-cyan/20"
-            >
-              <SkipForward className="h-4 w-4 text-neon-cyan" />
-            </Button>
-          </div>
-
+      {/* Controls */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center space-x-1">
           <Button
             size="sm"
             variant="ghost"
-            onClick={toggleMute}
-            className="terminal-button h-8 w-8 p-0 hover:bg-neon-cyan/20"
+            onClick={togglePlay}
+            className="h-6 w-6 p-0"
           >
-            {isMuted ? (
-              <VolumeX className="h-4 w-4 text-danger-red" />
+            {isPlaying ? (
+              <Pause className="h-3 w-3" />
             ) : (
-              <Volume2 className="h-4 w-4 text-neon-cyan" />
+              <Play className="h-3 w-3" />
             )}
+          </Button>
+          
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={nextTrack}
+            className="h-6 w-6 p-0"
+          >
+            <SkipForward className="h-3 w-3" />
           </Button>
         </div>
 
-        {/* Volume Slider */}
-        <div className="flex items-center space-x-2">
-          <VolumeX className="h-3 w-3 text-neon-cyan" />
-          <Slider
-            value={volume}
-            onValueChange={handleVolumeChange}
-            max={100}
-            step={1}
-            className="flex-1"
-          />
-          <Volume2 className="h-3 w-3 text-neon-cyan" />
-        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={toggleMute}
+          className="h-6 w-6 p-0"
+        >
+          {isMuted ? (
+            <VolumeX className="h-3 w-3 text-destructive" />
+          ) : (
+            <Volume2 className="h-3 w-3" />
+          )}
+        </Button>
+      </div>
 
-        {/* Track Counter */}
-        <div className="text-xs font-terminal text-neon-cyan mt-2 text-center">
-          {currentTrackIndex + 1} / {tracks.length}
-        </div>
+      {/* Volume Slider */}
+      <div className="flex items-center space-x-1 mb-1">
+        <VolumeX className="h-2 w-2 text-muted-foreground" />
+        <Slider
+          value={volume}
+          onValueChange={handleVolumeChange}
+          max={100}
+          step={1}
+          className="flex-1"
+        />
+        <Volume2 className="h-2 w-2 text-muted-foreground" />
+      </div>
+
+      {/* Track Counter */}
+      <div className="text-xs text-muted-foreground text-center">
+        {currentTrackIndex + 1} / {tracks.length}
       </div>
     </div>
   );

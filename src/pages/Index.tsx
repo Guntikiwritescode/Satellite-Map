@@ -176,9 +176,12 @@ const Index = () => {
 
             {/* Right Panel - Control Terminal */}
             <div className="lg:col-span-2 xl:col-span-2">
-              <div className="terminal-panel bg-black h-full">
-                <div className="p-2">
+              <div className="terminal-panel bg-black h-full flex flex-col">
+                <div className="flex-1 p-2">
                   <ControlPanel />
+                </div>
+                <div className="p-2 border-t border-muted/20">
+                  <AudioPlayer />
                 </div>
               </div>
             </div>
@@ -186,8 +189,6 @@ const Index = () => {
         )}
       </div>
       
-      {/* 80s Audio Player */}
-      <AudioPlayer />
     </div>
   );
 };
