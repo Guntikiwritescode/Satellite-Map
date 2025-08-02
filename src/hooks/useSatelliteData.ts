@@ -14,7 +14,24 @@ export const useSatelliteData = () => {
     refetch: refetchSatellites 
   } = useQuery({
     queryKey: ['satellites', 'unlimited'],
-    queryFn: () => spaceTrackAPI.getAllActiveSatellites(),
+    queryFn: async () => {
+      console.log('Starting satellite data fetch...');
+      try {
+        const result = await spaceTrackAPI.getAllActiveSatellites();
+        console.log(`Successfully fetched ${result.length} satellites`);
+        return result;
+      } catch (error) {
+        console.error('Satellite fetch error:', error);
+        // More specific error handling
+        if (error instanceof TypeError && error.message.includes('fetch')) {
+          throw new Error('Network connection failed. Please check your internet connection.');
+        }
+        if (error.message.includes('Failed to fetch')) {
+          throw new Error('Unable to connect to satellite data service.');
+        }
+        throw error;
+      }
+    },
     refetchInterval: 10 * 60 * 1000, // 10 minutes - reduced frequency for performance
     staleTime: 0, // Force immediate refresh to see the change
     retry: 3

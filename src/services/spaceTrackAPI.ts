@@ -76,14 +76,28 @@ export class SpaceTrackAPI {
         throw new Error('No satellite data received');
       }
 
-      return data.map(sat => this.convertToSatellite(sat)).map(sat => {
+      return data.map(sat => {
+        const convertedSat = this.convertToSatellite(sat);
         try {
-          const position = this.calculatePosition(sat.tle.line1, sat.tle.line2);
-          return { ...sat, position: { ...position, timestamp: Date.now() } };
+          // Add more defensive programming here
+          if (convertedSat.tle?.line1 && convertedSat.tle?.line2) {
+            const position = this.calculatePosition(convertedSat.tle.line1, convertedSat.tle.line2);
+            return { 
+              ...convertedSat, 
+              position: { 
+                ...position, 
+                timestamp: Date.now() 
+              } 
+            };
+          } else {
+            console.warn(`Invalid TLE data for satellite ${convertedSat.id}`);
+            return convertedSat;
+          }
         } catch (error) {
-          return sat;
+          console.warn(`Error calculating position for satellite ${convertedSat.id}:`, error);
+          return convertedSat;
         }
-      });
+      }).filter(sat => sat !== null); // Remove any null satellites
     } catch (error) {
       console.error('Error fetching satellites:', error);
       throw error;
