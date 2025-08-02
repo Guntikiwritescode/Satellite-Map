@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { Satellite, SatelliteFilters, Launch, UserLocation, Globe3DSettings, SatelliteType, SatelliteStatus } from '../types/satellite.types';
+import { getPerformanceSettings } from '../utils/performance';
 
 interface SatelliteStore {
   // Data
@@ -73,7 +74,7 @@ export const useSatelliteStore = create<SatelliteStore>()(
     error: null,
     lastUpdate: 0,
     viewMode: 'globe',
-    maxDisplaySatellites: 500, // Reduced from 1000 for better performance
+    maxDisplaySatellites: getPerformanceSettings().maxSatellites,
     
     // Computed - since Zustand getters don't work well, we'll use a selector
     filteredSatellites: [],
