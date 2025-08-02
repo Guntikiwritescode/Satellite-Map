@@ -1,11 +1,12 @@
 import React, { Suspense } from 'react';
-import { Satellite, Loader2, Activity, Table, Globe } from 'lucide-react';
+import { Satellite, Loader2, Activity, Table, Globe, BookOpen } from 'lucide-react';
 import SatelliteTable from '../components/SatelliteTable';
 import SatelliteSpreadsheet from '../components/SatelliteSpreadsheet';
 import Globe3D from '../components/Globe3D';
 import ControlPanel from '../components/ControlPanel';
 import ErrorBoundary from '../components/ErrorBoundary';
 import AudioPlayer from '../components/AudioPlayer';
+import UIGuide from '../components/UIGuide';
 import { useSatelliteData } from '../hooks/useSatelliteData';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { Card } from '@/components/ui/card';
@@ -111,6 +112,15 @@ const Index = () => {
                   <Table className="h-4 w-4 mr-2" />
                   DATA GRID
                 </Button>
+                <Button
+                  variant={viewMode === 'guide' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('guide')}
+                  className={`terminal-button h-8 px-3 text-xs ${viewMode === 'guide' ? 'bg-terminal-green/20 border-neon-cyan text-neon-cyan' : ''}`}
+                >
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  UI GUIDE
+                </Button>
               </div>
               <Badge className="terminal-button bg-danger-red/20 border-danger-red text-danger-red animate-terminal-flicker">
                 <Activity className="h-3 w-3 mr-1" />
@@ -123,7 +133,11 @@ const Index = () => {
 
       {/* Main Terminal Interface */}
       <div className="container mx-auto px-4 py-4">
-        {viewMode === 'spreadsheet' ? (
+        {viewMode === 'guide' ? (
+          <div className="terminal-panel h-[calc(100vh-160px)] bg-black">
+            <UIGuide />
+          </div>
+        ) : viewMode === 'spreadsheet' ? (
           <div className="terminal-panel h-[calc(100vh-160px)] bg-black">
             <div className="p-6 h-full font-terminal">
               {isLoading ? (
