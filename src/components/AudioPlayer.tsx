@@ -151,17 +151,19 @@ const AudioPlayer = () => {
         </Button>
       </div>
 
-      {/* Volume Slider */}
-      <div className="flex items-center space-x-1 mb-1">
+      {/* Volume Control */}
+      <div className="flex items-center space-x-2 mb-1">
         <VolumeX className="h-2 w-2 text-muted-foreground" />
-        <Slider
-          value={volume}
-          onValueChange={handleVolumeChange}
-          max={100}
-          step={1}
-          className="flex-1"
-        />
+        <div className="flex-1 bg-muted/30 rounded-full h-1">
+          <div 
+            className="h-full bg-primary rounded-full transition-all duration-200"
+            style={{ width: `${volume[0]}%` }}
+          />
+        </div>
         <Volume2 className="h-2 w-2 text-muted-foreground" />
+        <span className="text-xs font-mono text-muted-foreground min-w-[2rem] text-right">
+          {volume[0]}%
+        </span>
       </div>
 
       {/* Track Counter */}
