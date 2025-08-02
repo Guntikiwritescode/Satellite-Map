@@ -1,16 +1,30 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-// Secure CORS headers - restrict to your domain in production
-const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://db206876-4992-4720-8f1f-11cdcdfaaedd.lovableproject.com',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'X-XSS-Protection': '1; mode=block',
-}
+// Dynamic CORS headers - support both dev and production domains
+const getAllowedOrigins = () => {
+  const devOrigin = 'https://db206876-4992-4720-8f1f-11cdcdfaaedd.lovableproject.com';
+  const publishedOrigin = 'https://db206876-4992-4720-8f1f-11cdcdfaaedd.lovable.app';
+  return [devOrigin, publishedOrigin];
+};
+
+const getCorsHeaders = (requestOrigin: string | null) => {
+  const allowedOrigins = getAllowedOrigins();
+  const origin = allowedOrigins.includes(requestOrigin || '') ? requestOrigin : allowedOrigins[0];
+  
+  return {
+    'Access-Control-Allow-Origin': origin || allowedOrigins[0],
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+  };
+};
 
 serve(async (req) => {
+  const requestOrigin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(requestOrigin);
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
