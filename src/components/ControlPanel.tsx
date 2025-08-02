@@ -64,23 +64,23 @@ const ControlPanel: React.FC = () => {
             </div>
             
             <div className="space-y-1">
-              <div className="grid grid-cols-2 gap-1">
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={resetView}
-                  className="cosmic-border h-6 text-xs px-2"
+                  className="cosmic-border h-7 text-xs px-3 transition-all duration-200 hover:scale-105"
                 >
-                  <RotateCcw className="h-3 w-3 mr-1" />
+                  <RotateCcw className="h-3 w-3 mr-1.5" />
                   Reset
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={resetFilters}
-                  className="cosmic-border h-6 text-xs px-2"
+                  className="cosmic-border h-7 text-xs px-3 transition-all duration-200 hover:scale-105"
                 >
-                  <Filter className="h-3 w-3 mr-1" />
+                  <Filter className="h-3 w-3 mr-1.5" />
                   Clear
                 </Button>
               </div>
@@ -142,70 +142,72 @@ const ControlPanel: React.FC = () => {
               <span>Statistics</span>
             </h3>
             
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="bg-muted/20 rounded p-2 space-y-1">
                 <div className="text-muted-foreground">Displayed</div>
-                <div className="font-mono text-primary text-sm">
-                  {filteredSatellites.length}
+                <div className="font-mono text-primary text-sm font-medium">
+                  {filteredSatellites.length.toLocaleString()}
                 </div>
               </div>
               
-              <div className="space-y-1">
+              <div className="bg-muted/20 rounded p-2 space-y-1">
                 <div className="text-muted-foreground">Total</div>
-                <div className="font-mono text-muted-foreground text-sm">
-                  {satellites.length}
+                <div className="font-mono text-muted-foreground text-sm font-medium">
+                  {satellites.length.toLocaleString()}
                 </div>
               </div>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-foreground">Satellite Limit</span>
-                <div className="flex items-center space-x-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setMaxDisplaySatellites(Math.max(maxDisplaySatellites - 500, 500))}
-                    disabled={maxDisplaySatellites <= 500}
-                    className="h-6 px-2 text-xs"
-                  >
-                    -500
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setMaxDisplaySatellites(Math.min(maxDisplaySatellites + 500, satellites.length))}
-                    disabled={maxDisplaySatellites >= satellites.length}
-                    className="h-6 px-2 text-xs"
-                  >
-                    +500
-                  </Button>
-                  <span className="text-xs font-mono text-primary min-w-[3rem] text-center">
-                    {maxDisplaySatellites}
+                <div className="bg-muted/30 rounded px-2 py-1 min-w-[4rem] text-center">
+                  <span className="text-xs font-mono text-primary">
+                    {maxDisplaySatellites.toLocaleString()}
                   </span>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMaxDisplaySatellites(Math.max(maxDisplaySatellites - 500, 500))}
+                  disabled={maxDisplaySatellites <= 500}
+                  className="h-7 px-3 text-xs transition-all duration-200 hover:scale-105"
+                >
+                  -500
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMaxDisplaySatellites(Math.min(maxDisplaySatellites + 500, satellites.length))}
+                  disabled={maxDisplaySatellites >= satellites.length}
+                  className="h-7 px-3 text-xs transition-all duration-200 hover:scale-105"
+                >
+                  +500
+                </Button>
+              </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="space-y-1">
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="bg-muted/20 rounded p-2 space-y-1">
                 <div className="text-muted-foreground">Active</div>
-                <div className="font-mono text-stellar-cyan text-sm">
-                  {filteredSatellites.filter(s => s.status === 'active').length}
+                <div className="font-mono text-stellar-cyan text-sm font-medium">
+                  {filteredSatellites.filter(s => s.status === 'active').length.toLocaleString()}
                 </div>
               </div>
               
-              <div className="space-y-1">
+              <div className="bg-muted/20 rounded p-2 space-y-1">
                 <div className="text-muted-foreground">LEO</div>
-                <div className="font-mono text-jupiter-amber text-sm">
-                  {filteredSatellites.filter(s => s.position.altitude < 2000).length}
+                <div className="font-mono text-jupiter-amber text-sm font-medium">
+                  {filteredSatellites.filter(s => s.position.altitude < 2000).length.toLocaleString()}
                 </div>
               </div>
               
-              <div className="space-y-1">
+              <div className="bg-muted/20 rounded p-2 space-y-1">
                 <div className="text-muted-foreground">GEO</div>
-                <div className="font-mono text-nebula-purple text-sm">
-                  {filteredSatellites.filter(s => s.position.altitude > 35000).length}
+                <div className="font-mono text-nebula-purple text-sm font-medium">
+                  {filteredSatellites.filter(s => s.position.altitude > 35000).length.toLocaleString()}
                 </div>
               </div>
             </div>
@@ -241,13 +243,13 @@ const ControlPanel: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="space-y-1">
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="bg-muted/20 rounded p-2 space-y-1">
                     <div className="flex items-center space-x-1">
                       <MapPin className="h-2 w-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Alt:</span>
+                      <span className="text-muted-foreground">Altitude</span>
                     </div>
-                    <div className="font-mono text-primary text-xs">
+                    <div className="font-mono text-primary text-xs font-medium">
                       {selectedSatellite.position.altitude > 1000 
                         ? `${(selectedSatellite.position.altitude / 1000).toFixed(1)}K km`
                         : `${selectedSatellite.position.altitude.toFixed(0)} km`
@@ -255,32 +257,32 @@ const ControlPanel: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="space-y-1">
+                  <div className="bg-muted/20 rounded p-2 space-y-1">
                     <div className="flex items-center space-x-1">
                       <Zap className="h-2 w-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Vel:</span>
+                      <span className="text-muted-foreground">Velocity</span>
                     </div>
-                    <div className="font-mono text-stellar-cyan text-xs">
+                    <div className="font-mono text-stellar-cyan text-xs font-medium">
                       {selectedSatellite.velocity?.toFixed(2) || 'N/A'} km/s
                     </div>
                   </div>
                   
-                  <div className="space-y-1">
+                  <div className="bg-muted/20 rounded p-2 space-y-1">
                     <div className="flex items-center space-x-1">
                       <Clock className="h-2 w-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Period:</span>
+                      <span className="text-muted-foreground">Period</span>
                     </div>
-                    <div className="font-mono text-jupiter-amber text-xs">
+                    <div className="font-mono text-jupiter-amber text-xs font-medium">
                       {Math.floor(selectedSatellite.orbital.period / 60)}h {Math.floor(selectedSatellite.orbital.period % 60)}m
                     </div>
                   </div>
                   
-                  <div className="space-y-1">
+                  <div className="bg-muted/20 rounded p-2 space-y-1">
                     <div className="flex items-center space-x-1">
                       <Orbit className="h-2 w-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Inc:</span>
+                      <span className="text-muted-foreground">Inclination</span>
                     </div>
-                    <div className="font-mono text-nebula-purple text-xs">
+                    <div className="font-mono text-nebula-purple text-xs font-medium">
                       {selectedSatellite.orbital.inclination.toFixed(1)}°
                     </div>
                   </div>
