@@ -16,6 +16,19 @@ export const useSatelliteData = () => {
     queryKey: ['satellites', 'unlimited'],
     queryFn: async () => {
       console.log('Starting satellite data fetch...');
+      
+      // Test connectivity first
+      try {
+        console.log('Testing connectivity to Supabase...');
+        const testResponse = await fetch('https://dnjhvmwznqsunjpabacg.supabase.co/functions/v1/space-track-proxy', {
+          method: 'OPTIONS'
+        });
+        console.log('Connectivity test result:', testResponse.status);
+      } catch (error) {
+        console.error('Connectivity test failed:', error);
+        throw new Error('Cannot connect to satellite data service. The service may be temporarily unavailable.');
+      }
+      
       try {
         const result = await spaceTrackAPI.getAllActiveSatellites();
         console.log(`Successfully fetched ${result.length} satellites`);
@@ -24,10 +37,10 @@ export const useSatelliteData = () => {
         console.error('Satellite fetch error:', error);
         // More specific error handling
         if (error instanceof TypeError && error.message.includes('fetch')) {
-          throw new Error('Network connection failed. Please check your internet connection.');
+          throw new Error('Network connection failed. The satellite data service is not responding.');
         }
         if (error.message.includes('Failed to fetch')) {
-          throw new Error('Unable to connect to satellite data service.');
+          throw new Error('Unable to connect to satellite data service. Please try refreshing the page.');
         }
         throw error;
       }
