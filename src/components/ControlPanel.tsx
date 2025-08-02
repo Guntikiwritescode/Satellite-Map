@@ -165,6 +165,15 @@ const ControlPanel: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => setMaxDisplaySatellites(Math.max(maxDisplaySatellites - 500, 500))}
+                    disabled={maxDisplaySatellites <= 500}
+                    className="h-6 px-2 text-xs"
+                  >
+                    -500
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setMaxDisplaySatellites(Math.min(maxDisplaySatellites + 500, satellites.length))}
                     disabled={maxDisplaySatellites >= satellites.length}
                     className="h-6 px-2 text-xs"
