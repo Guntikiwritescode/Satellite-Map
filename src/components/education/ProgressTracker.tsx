@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -15,10 +15,15 @@ interface ProgressTrackerProps {
   course: Course;
 }
 
-const ProgressTracker: React.FC<ProgressTrackerProps> = ({ course }) => {
-  const progress = course.totalLessons > 0 ? (course.completedLessons / course.totalLessons) * 100 : 0;
-  const remainingLessons = course.totalLessons - course.completedLessons;
-  const estimatedTime = remainingLessons * 12; // 12 minutes average per lesson
+const ProgressTracker: React.FC<ProgressTrackerProps> = React.memo(({ course }) => {
+  // Memoize calculations
+  const stats = useMemo(() => {
+    const progress = course.totalLessons > 0 ? (course.completedLessons / course.totalLessons) * 100 : 0;
+    const remainingLessons = course.totalLessons - course.completedLessons;
+    const estimatedTime = remainingLessons * 12; // 12 minutes average per lesson
+    
+    return { progress, remainingLessons, estimatedTime };
+  }, [course.totalLessons, course.completedLessons]);
 
   return (
     <Card className="glass-panel">
@@ -38,8 +43,8 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ course }) => {
               {course.completedLessons}/{course.totalLessons} lessons
             </span>
           </div>
-          <Progress value={progress} className="h-3" />
-          <p className="text-xs text-muted-foreground mt-1">{Math.round(progress)}% complete</p>
+          <Progress value={stats.progress} className="h-3" />
+          <p className="text-xs text-muted-foreground mt-1">{Math.round(stats.progress)}% complete</p>
         </div>
 
         {/* Stats */}
@@ -52,7 +57,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ course }) => {
           
           <div className="text-center p-3 bg-muted/20 rounded-lg border border-muted/40">
             <Clock className="h-5 w-5 text-primary mx-auto mb-1" />
-            <p className="text-lg font-bold text-foreground">{estimatedTime}m</p>
+            <p className="text-lg font-bold text-foreground">{stats.estimatedTime}m</p>
             <p className="text-xs text-muted-foreground">Remaining</p>
           </div>
         </div>
@@ -87,7 +92,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ course }) => {
         </div>
 
         {/* Achievement */}
-        {progress >= 100 && (
+        {stats.progress >= 100 && (
           <div className="p-3 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-lg border border-yellow-500/30">
             <div className="flex items-center space-x-2">
               <TrendingUp className="h-5 w-5 text-yellow-500" />
@@ -101,6 +106,8 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ course }) => {
       </CardContent>
     </Card>
   );
-};
+});
+
+ProgressTracker.displayName = 'ProgressTracker';
 
 export default ProgressTracker;

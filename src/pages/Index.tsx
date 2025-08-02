@@ -1,13 +1,15 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import { Satellite, Loader2, Activity, Table, Globe, BookOpen } from 'lucide-react';
-import SatelliteTable from '../components/SatelliteTable';
-import SatelliteSpreadsheet from '../components/SatelliteSpreadsheet';
-import Globe3D from '../components/Globe3D';
-import ControlPanel from '../components/ControlPanel';
+
+// Lazy load heavy components for better initial load
+const SatelliteTable = React.lazy(() => import('../components/SatelliteTable'));
+const SatelliteSpreadsheet = React.lazy(() => import('../components/SatelliteSpreadsheet'));
+const Globe3D = React.lazy(() => import('../components/Globe3D'));
+const ControlPanel = React.lazy(() => import('../components/ControlPanel'));
+const AudioPlayer = React.lazy(() => import('../components/AudioPlayer'));
+const UIGuide = React.lazy(() => import('../components/UIGuide'));
+const SatelliteEducation = React.lazy(() => import('../components/SatelliteEducation'));
 import ErrorBoundary from '../components/ErrorBoundary';
-import AudioPlayer from '../components/AudioPlayer';
-import UIGuide from '../components/UIGuide';
-import SatelliteEducation from '../components/SatelliteEducation';
 import { useSatelliteData } from '../hooks/useSatelliteData';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { Card } from '@/components/ui/card';
@@ -55,9 +57,12 @@ const ErrorFallback = ({ error }: { error: string }) => (
   </div>
 );
 
-const Index = () => {
+const Index = React.memo(() => {
   const { isLoading } = useSatelliteData();
   const { error, satellites, viewMode, setViewMode } = useSatelliteStore();
+
+  // Memoize expensive computations
+  const hasNoSatellites = useMemo(() => satellites.length === 0, [satellites.length]);
 
   if (error) {
     return (
@@ -145,21 +150,27 @@ const Index = () => {
       <div className="container mx-auto px-4 py-4">
         {viewMode === 'guide' ? (
           <div className="terminal-panel h-[calc(100vh-160px)] bg-black">
-            <UIGuide />
+            <Suspense fallback={<LoadingSpinner />}>
+              <UIGuide />
+            </Suspense>
           </div>
         ) : viewMode === 'education' ? (
           <div className="terminal-panel h-[calc(100vh-160px)] bg-black">
-            <SatelliteEducation />
+            <Suspense fallback={<LoadingSpinner />}>
+              <SatelliteEducation />
+            </Suspense>
           </div>
         ) : viewMode === 'spreadsheet' ? (
           <div className="terminal-panel h-[calc(100vh-160px)] bg-black">
             <div className="p-6 h-full font-terminal">
               {isLoading ? (
                 <LoadingSpinner />
-              ) : satellites.length === 0 ? (
+              ) : hasNoSatellites ? (
                 <ErrorFallback error="No satellite data available. Please try refreshing the page." />
               ) : (
-                <SatelliteSpreadsheet />
+                <Suspense fallback={<LoadingSpinner />}>
+                  <SatelliteSpreadsheet />
+                </Suspense>
               )}
             </div>
           </div>
@@ -171,10 +182,12 @@ const Index = () => {
                 <div className="p-4 h-full font-terminal">
                   {isLoading ? (
                     <LoadingSpinner />
-                  ) : satellites.length === 0 ? (
+                  ) : hasNoSatellites ? (
                     <ErrorFallback error="No satellite data available. Please try refreshing the page." />
                   ) : (
-                    <SatelliteTable />
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <SatelliteTable />
+                    </Suspense>
                   )}
                 </div>
               </div>
@@ -206,10 +219,14 @@ const Index = () => {
             <div className="lg:col-span-2 xl:col-span-2">
               <div className="terminal-panel bg-black h-full flex flex-col">
                 <div className="flex-1 p-2">
-                  <ControlPanel />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ControlPanel />
+                  </Suspense>
                 </div>
                 <div className="p-2 border-t border-muted/20">
-                  <AudioPlayer />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AudioPlayer />
+                  </Suspense>
                 </div>
               </div>
             </div>
@@ -219,6 +236,8 @@ const Index = () => {
       
     </div>
   );
-};
+});
+
+Index.displayName = 'Index';
 
 export default Index;

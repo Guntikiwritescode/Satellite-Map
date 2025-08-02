@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
 
 export interface Lesson {
   id: string;
@@ -33,12 +34,19 @@ interface EducationStore {
   selectedCourse: string | null;
   selectedLesson: string | null;
   
+  // Cached calculations for performance
+  _totalProgress: number | null;
+  _progressLastUpdate: number;
+  
   // Actions
   setSelectedCourse: (courseId: string | null) => void;
   setSelectedLesson: (lessonId: string | null) => void;
   markLessonComplete: (courseId: string, lessonId: string) => void;
   resetProgress: () => void;
   getTotalProgress: () => number;
+  
+  // Internal optimizations
+  _invalidateProgressCache: () => void;
 }
 
 const initialCourses: Course[] = [
@@ -480,50 +488,77 @@ const initialCourses: Course[] = [
 
 export const useEducationStore = create<EducationStore>()(
   persist(
-    (set, get) => ({
+    immer((set, get) => ({
       courses: initialCourses,
       selectedCourse: null,
       selectedLesson: null,
+      _totalProgress: null,
+      _progressLastUpdate: 0,
 
-      setSelectedCourse: (courseId) => set({ selectedCourse: courseId, selectedLesson: null }),
-      
-      setSelectedLesson: (lessonId) => set({ selectedLesson: lessonId }),
-      
-      markLessonComplete: (courseId, lessonId) => set((state) => {
-        const updatedCourses = state.courses.map(course => {
-          if (course.id === courseId) {
-            const updatedLessons = course.lessons.map(lesson => 
-              lesson.id === lessonId ? { ...lesson, completed: true } : lesson
-            );
-            const completedCount = updatedLessons.filter(lesson => lesson.completed).length;
-            return {
-              ...course,
-              lessons: updatedLessons,
-              completedLessons: completedCount
-            };
-          }
-          return course;
-        });
-        return { courses: updatedCourses };
+      setSelectedCourse: (courseId) => set((state) => {
+        state.selectedCourse = courseId;
+        state.selectedLesson = null;
       }),
       
-      resetProgress: () => set((state) => ({
-        courses: state.courses.map(course => ({
-          ...course,
-          completedLessons: 0,
-          lessons: course.lessons.map(lesson => ({ ...lesson, completed: false }))
-        }))
-      })),
+      setSelectedLesson: (lessonId) => set((state) => {
+        state.selectedLesson = lessonId;
+      }),
+      
+      markLessonComplete: (courseId, lessonId) => set((state) => {
+        const course = state.courses.find(c => c.id === courseId);
+        if (course) {
+          const lesson = course.lessons.find(l => l.id === lessonId);
+          if (lesson && !lesson.completed) {
+            lesson.completed = true;
+            course.completedLessons = course.lessons.filter(l => l.completed).length;
+            state._totalProgress = null; // Invalidate cache
+          }
+        }
+      }),
+      
+      resetProgress: () => set((state) => {
+        state.courses.forEach(course => {
+          course.completedLessons = 0;
+          course.lessons.forEach(lesson => {
+            lesson.completed = false;
+          });
+        });
+        state._totalProgress = null; // Invalidate cache
+      }),
       
       getTotalProgress: () => {
-        const { courses } = get();
-        const totalLessons = courses.reduce((sum, course) => sum + course.totalLessons, 0);
-        const completedLessons = courses.reduce((sum, course) => sum + course.completedLessons, 0);
-        return totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-      }
-    }),
+        const state = get();
+        const now = Date.now();
+        
+        // Use cached value if still valid (cache for 1 second)
+        if (state._totalProgress !== null && (now - state._progressLastUpdate) < 1000) {
+          return state._totalProgress;
+        }
+        
+        const totalLessons = state.courses.reduce((sum, course) => sum + course.totalLessons, 0);
+        const completedLessons = state.courses.reduce((sum, course) => sum + course.completedLessons, 0);
+        const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+        
+        // Cache the result
+        set((state) => {
+          state._totalProgress = progress;
+          state._progressLastUpdate = now;
+        });
+        
+        return progress;
+      },
+      
+      _invalidateProgressCache: () => set((state) => {
+        state._totalProgress = null;
+      })
+    })),
     {
       name: 'satellite-education-progress',
+      partialize: (state) => ({
+        courses: state.courses,
+        selectedCourse: state.selectedCourse,
+        selectedLesson: state.selectedLesson
+      })
     }
   )
 );
