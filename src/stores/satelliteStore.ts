@@ -14,7 +14,7 @@ interface SatelliteStore {
   isLoading: boolean;
   error: string | null;
   lastUpdate: number;
-  viewMode: 'globe' | 'spreadsheet' | 'guide';
+  viewMode: 'globe' | 'spreadsheet' | 'guide' | 'education';
   maxDisplaySatellites: number;
   
   // Computed
@@ -31,7 +31,7 @@ interface SatelliteStore {
   setSelectedSatellite: (id: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  setViewMode: (mode: 'globe' | 'spreadsheet' | 'guide') => void;
+  setViewMode: (mode: 'globe' | 'spreadsheet' | 'guide' | 'education') => void;
   setMaxDisplaySatellites: (max: number) => void;
   
   // Utility

@@ -7,6 +7,7 @@ import ControlPanel from '../components/ControlPanel';
 import ErrorBoundary from '../components/ErrorBoundary';
 import AudioPlayer from '../components/AudioPlayer';
 import UIGuide from '../components/UIGuide';
+import SatelliteEducation from '../components/SatelliteEducation';
 import { useSatelliteData } from '../hooks/useSatelliteData';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { Card } from '@/components/ui/card';
@@ -118,8 +119,17 @@ const Index = () => {
                   onClick={() => setViewMode('guide')}
                   className={`terminal-button h-8 px-3 text-xs ${viewMode === 'guide' ? 'bg-terminal-green/20 border-neon-cyan text-neon-cyan' : ''}`}
                 >
-                  <BookOpen className="h-4 w-4 mr-2" />
+                  <Activity className="h-4 w-4 mr-2" />
                   UI GUIDE
+                </Button>
+                <Button
+                  variant={viewMode === 'education' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('education')}
+                  className={`terminal-button h-8 px-3 text-xs ${viewMode === 'education' ? 'bg-terminal-green/20 border-neon-cyan text-neon-cyan' : ''}`}
+                >
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  EDUCATION
                 </Button>
               </div>
               <Badge className="terminal-button bg-danger-red/20 border-danger-red text-danger-red animate-terminal-flicker">
@@ -136,6 +146,10 @@ const Index = () => {
         {viewMode === 'guide' ? (
           <div className="terminal-panel h-[calc(100vh-160px)] bg-black">
             <UIGuide />
+          </div>
+        ) : viewMode === 'education' ? (
+          <div className="terminal-panel h-[calc(100vh-160px)] bg-black">
+            <SatelliteEducation />
           </div>
         ) : viewMode === 'spreadsheet' ? (
           <div className="terminal-panel h-[calc(100vh-160px)] bg-black">
