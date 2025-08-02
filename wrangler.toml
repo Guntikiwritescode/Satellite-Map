@@ -1,8 +1,5 @@
 name = "satellite-map"
 compatibility_date = "2025-08-02"
 
-[env.production]
-pages_build_output_dir = "dist"
-
-[[env.production.pages_plugins]]
-name = "@cloudflare/pages-plugin-static-forms"
+[assets]
+directory = "./dist"
