@@ -1,5 +1,6 @@
 import { Satellite } from '../types/satellite.types';
 import * as satellite from 'satellite.js';
+import { validateTLE, validateCoordinates, validateAltitude, RateLimiter } from '../utils/security';
 
 interface SpaceTrackGPData {
   NORAD_CAT_ID: number;
@@ -21,10 +22,12 @@ interface SpaceTrackGPData {
 }
 
 export class SpaceTrackAPI {
-  private proxyUrl = 'https://dnjhvmwznqsunjpabacg.supabase.co/functions/v1/space-track-proxy';
+  private readonly proxyUrl = 'https://dnjhvmwznqsunjpabacg.supabase.co/functions/v1/space-track-proxy';
   private lastRequest = 0;
   private requestQueue: Promise<any> = Promise.resolve();
-  private readonly RATE_LIMIT_DELAY = 2000;
+  private readonly RATE_LIMIT_DELAY = 1500;
+  private readonly REQUEST_TIMEOUT = 30000;
+  private readonly rateLimiter = new RateLimiter(10, 60000); // 10 requests per minute
 
   private async rateLimit(): Promise<void> {
     const now = Date.now();
@@ -47,18 +50,30 @@ export class SpaceTrackAPI {
 
   private async makeProxyRequest(endpoint: string): Promise<any> {
     return this.queueRequest(async () => {
+      // Check rate limit
+      if (!this.rateLimiter.canMakeRequest()) {
+        const waitTime = this.rateLimiter.getTimeUntilReset();
+        throw new Error(`Rate limit exceeded. Please wait ${Math.ceil(waitTime / 1000)} seconds.`);
+      }
+      
       console.log('Making proxy request to:', this.proxyUrl);
       console.log('Request payload:', { action: 'fetch', endpoint });
       
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
+        
         const response = await fetch(this.proxyUrl, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          body: JSON.stringify({ action: 'fetch', endpoint })
+          body: JSON.stringify({ action: 'fetch', endpoint }),
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
 
         console.log('Response status:', response.status);
         console.log('Response headers:', response.headers);
@@ -189,6 +204,12 @@ export class SpaceTrackAPI {
         return { latitude: 0, longitude: 0, altitude: 400 };
       }
       
+      // Validate TLE format for security
+      if (!validateTLE(tle1, tle2)) {
+        console.warn('Invalid TLE format detected');
+        return { latitude: 0, longitude: 0, altitude: 400 };
+      }
+      
       const satrec = satellite.twoline2satrec(tle1, tle2);
       if (!satrec) {
         return { latitude: 0, longitude: 0, altitude: 400 };
@@ -223,10 +244,19 @@ export class SpaceTrackAPI {
         const latitude = satellite.degreesLat(positionGd.latitude);
         const altitude = positionGd.height;
         
+        // Validate coordinates for security
+        const validLat = isNaN(latitude) ? 0 : Math.max(-90, Math.min(90, latitude));
+        const validLon = isNaN(longitude) ? 0 : Math.max(-180, Math.min(180, longitude));
+        const validAlt = isNaN(altitude) ? 400 : Math.max(0, Math.min(100000, altitude));
+        
+        if (!validateCoordinates(validLat, validLon) || !validateAltitude(validAlt)) {
+          return { latitude: 0, longitude: 0, altitude: 400 };
+        }
+        
         return {
-          latitude: isNaN(latitude) ? 0 : latitude,
-          longitude: isNaN(longitude) ? 0 : longitude,
-          altitude: isNaN(altitude) ? 400 : altitude
+          latitude: validLat,
+          longitude: validLon,
+          altitude: validAlt
         };
       }
       
