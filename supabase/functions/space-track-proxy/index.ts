@@ -4,7 +4,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 const getAllowedOrigins = () => {
   const devOrigin = 'https://db206876-4992-4720-8f1f-11cdcdfaaedd.lovableproject.com';
   const publishedOrigin = 'https://db206876-4992-4720-8f1f-11cdcdfaaedd.lovable.app';
-  return [devOrigin, publishedOrigin];
+  const customDomain = 'https://alchemistsatmap.com';
+  return [devOrigin, publishedOrigin, customDomain];
 };
 
 const getCorsHeaders = (requestOrigin: string | null) => {
