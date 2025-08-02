@@ -4,6 +4,7 @@ import SatelliteTable from '../components/SatelliteTable';
 import SatelliteSpreadsheet from '../components/SatelliteSpreadsheet';
 import Globe3D from '../components/Globe3D';
 import ControlPanel from '../components/ControlPanel';
+import AudioControl from '../components/AudioControl';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { useSatelliteData } from '../hooks/useSatelliteData';
 import { useSatelliteStore } from '../stores/satelliteStore';
@@ -183,6 +184,7 @@ const Index = () => {
             </div>
           </div>
         )}
+        <AudioControl />
       </div>
     </div>
   );
