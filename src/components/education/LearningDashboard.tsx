@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -15,22 +15,27 @@ import {
 import { useEducationStore } from '@/stores/educationStore';
 import CourseCard from './CourseCard';
 
-const LearningDashboard = () => {
+const LearningDashboard = React.memo(() => {
   const { courses, getTotalProgress, resetProgress } = useEducationStore();
   
-  const totalProgress = getTotalProgress();
-  const totalLessons = courses.reduce((sum, course) => sum + course.totalLessons, 0);
-  const completedLessons = courses.reduce((sum, course) => sum + course.completedLessons, 0);
+  // Memoize expensive calculations
+  const stats = useMemo(() => {
+    const totalProgress = getTotalProgress();
+    const totalLessons = courses.reduce((sum, course) => sum + course.totalLessons, 0);
+    const completedLessons = courses.reduce((sum, course) => sum + course.completedLessons, 0);
+    const estimatedTime = Math.round((totalLessons - completedLessons) * 12);
+    
+    return { totalProgress, totalLessons, completedLessons, estimatedTime };
+  }, [courses, getTotalProgress]);
   
-  const getAchievementLevel = () => {
+  const achievement = useMemo(() => {
+    const { totalProgress } = stats;
     if (totalProgress >= 100) return { level: 'Master', icon: Trophy, color: 'text-yellow-500' };
     if (totalProgress >= 75) return { level: 'Expert', icon: Award, color: 'text-purple-500' };
     if (totalProgress >= 50) return { level: 'Proficient', icon: Target, color: 'text-blue-500' };
     if (totalProgress >= 25) return { level: 'Learning', icon: TrendingUp, color: 'text-green-500' };
     return { level: 'Beginner', icon: BookOpen, color: 'text-gray-500' };
-  };
-  
-  const achievement = getAchievementLevel();
+  }, [stats.totalProgress]);
   const Achievement = achievement.icon;
 
   return (
@@ -45,7 +50,7 @@ const LearningDashboard = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Progress</p>
-                <p className="text-lg font-bold text-foreground">{totalProgress}%</p>
+                <p className="text-lg font-bold text-foreground">{stats.totalProgress}%</p>
               </div>
             </div>
           </CardContent>
@@ -59,7 +64,7 @@ const LearningDashboard = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="text-lg font-bold text-foreground">{completedLessons}/{totalLessons}</p>
+                <p className="text-lg font-bold text-foreground">{stats.completedLessons}/{stats.totalLessons}</p>
               </div>
             </div>
           </CardContent>
@@ -87,7 +92,7 @@ const LearningDashboard = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Est. Time</p>
-                <p className="text-lg font-bold text-foreground">{Math.round((totalLessons - completedLessons) * 12)}m</p>
+                <p className="text-lg font-bold text-foreground">{stats.estimatedTime}m</p>
               </div>
             </div>
           </CardContent>
@@ -115,12 +120,12 @@ const LearningDashboard = () => {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Overall Completion</span>
-                <span className="text-sm text-muted-foreground">{completedLessons} of {totalLessons} lessons</span>
+                <span className="text-sm text-muted-foreground">{stats.completedLessons} of {stats.totalLessons} lessons</span>
               </div>
-              <Progress value={totalProgress} className="h-2" />
+              <Progress value={stats.totalProgress} className="h-2" />
             </div>
             
-            {totalProgress >= 25 && (
+            {stats.totalProgress >= 25 && (
               <div className="flex items-center space-x-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
                 <Achievement className={`h-5 w-5 ${achievement.color}`} />
                 <div>
@@ -177,6 +182,8 @@ const LearningDashboard = () => {
       </Card>
     </div>
   );
-};
+});
+
+LearningDashboard.displayName = 'LearningDashboard';
 
 export default LearningDashboard;

@@ -1,12 +1,21 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 import { useEducationStore } from '@/stores/educationStore';
-import LearningDashboard from './education/LearningDashboard';
-import LessonCard from './education/LessonCard';
-import ProgressTracker from './education/ProgressTracker';
 
-const SatelliteEducation = () => {
+// Lazy load components for better performance
+const LearningDashboard = React.lazy(() => import('./education/LearningDashboard'));
+const LessonCard = React.lazy(() => import('./education/LessonCard'));
+const ProgressTracker = React.lazy(() => import('./education/ProgressTracker'));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  </div>
+);
+
+const SatelliteEducation = React.memo(() => {
   const { 
     courses, 
     selectedCourse, 
@@ -39,7 +48,9 @@ const SatelliteEducation = () => {
           </p>
         </div>
 
-        <LearningDashboard />
+        <Suspense fallback={<LoadingFallback />}>
+          <LearningDashboard />
+        </Suspense>
       </div>
     );
   }
@@ -78,27 +89,33 @@ const SatelliteEducation = () => {
           </div>
           
           <div className="space-y-3">
-            {course.lessons.map((lesson, index) => {
-              const isLocked = index > 0 && !course.lessons[index - 1].completed;
-              return (
-                <LessonCard
-                  key={lesson.id}
-                  lesson={lesson}
-                  courseId={course.id}
-                  isLocked={isLocked}
-                />
-              );
-            })}
+            <Suspense fallback={<LoadingFallback />}>
+              {course.lessons.map((lesson, index) => {
+                const isLocked = index > 0 && !course.lessons[index - 1].completed;
+                return (
+                  <LessonCard
+                    key={lesson.id}
+                    lesson={lesson}
+                    courseId={course.id}
+                    isLocked={isLocked}
+                  />
+                );
+              })}
+            </Suspense>
           </div>
         </div>
 
         {/* Progress Sidebar */}
         <div className="lg:col-span-1">
-          <ProgressTracker course={course} />
+          <Suspense fallback={<LoadingFallback />}>
+            <ProgressTracker course={course} />
+          </Suspense>
         </div>
       </div>
     </div>
   );
-};
+});
+
+SatelliteEducation.displayName = 'SatelliteEducation';
 
 export default SatelliteEducation;

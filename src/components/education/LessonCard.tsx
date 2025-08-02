@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,22 +19,22 @@ interface LessonCardProps {
   isLocked?: boolean;
 }
 
-const LessonCard: React.FC<LessonCardProps> = ({ lesson, courseId, isLocked = false }) => {
+const LessonCard: React.FC<LessonCardProps> = React.memo(({ lesson, courseId, isLocked = false }) => {
   const { setSelectedLesson, markLessonComplete } = useEducationStore();
   const [showQuiz, setShowQuiz] = useState(false);
   const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
 
-  const handleStartLesson = () => {
+  const handleStartLesson = useCallback(() => {
     setSelectedLesson(lesson.id);
     setCurrentPage(0);
     setShowQuiz(false);
     setQuizAnswer(null);
     setShowExplanation(false);
-  };
+  }, [setSelectedLesson, lesson.id]);
 
-  const handleNextPage = () => {
+  const handleNextPage = useCallback(() => {
     if (currentPage < lesson.content.length - 1) {
       setCurrentPage(currentPage + 1);
     } else if (lesson.quiz && !showQuiz) {
@@ -42,26 +42,32 @@ const LessonCard: React.FC<LessonCardProps> = ({ lesson, courseId, isLocked = fa
     } else {
       handleCompleteLesson();
     }
-  };
+  }, [currentPage, lesson.content.length, lesson.quiz, showQuiz]);
 
-  const handleCompleteLesson = () => {
+  const handleCompleteLesson = useCallback(() => {
     markLessonComplete(courseId, lesson.id);
     setSelectedLesson(null);
-  };
+  }, [markLessonComplete, courseId, lesson.id, setSelectedLesson]);
 
-  const handleQuizAnswer = (answerIndex: number) => {
+  const handleQuizAnswer = useCallback((answerIndex: number) => {
     setQuizAnswer(answerIndex);
     setShowExplanation(true);
-  };
+  }, []);
 
-  const getDifficultyColor = (difficulty: string) => {
+  const getDifficultyColor = useCallback((difficulty: string) => {
     switch (difficulty) {
       case 'Beginner': return 'bg-green-500/20 text-green-400 border-green-500/30';
       case 'Intermediate': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
       case 'Advanced': return 'bg-red-500/20 text-red-400 border-red-500/30';
       default: return 'bg-muted/20 text-muted-foreground border-muted/30';
     }
-  };
+  }, []);
+
+  // Memoize expensive operations
+  const lessonProgress = useMemo(() => {
+    if (showQuiz) return 90;
+    return ((currentPage + 1) / lesson.content.length) * 85;
+  }, [currentPage, lesson.content.length, showQuiz]);
 
   if (lesson.id === useEducationStore.getState().selectedLesson) {
     // Lesson Content View
@@ -92,7 +98,7 @@ const LessonCard: React.FC<LessonCardProps> = ({ lesson, courseId, isLocked = fa
               </span>
             </div>
             <Progress 
-              value={showQuiz ? 90 : ((currentPage + 1) / lesson.content.length) * 85} 
+              value={lessonProgress}
               className="h-2" 
             />
           </div>
@@ -237,6 +243,8 @@ const LessonCard: React.FC<LessonCardProps> = ({ lesson, courseId, isLocked = fa
       </CardContent>
     </Card>
   );
-};
+});
+
+LessonCard.displayName = 'LessonCard';
 
 export default LessonCard;
