@@ -63,31 +63,33 @@ const ControlPanel: React.FC = () => {
               Positions updated every 30 seconds using live TLE data
             </div>
             
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={resetView}
-                className="cosmic-border h-7 text-xs"
-              >
-                <RotateCcw className="h-3 w-3 mr-1" />
-                Reset
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={resetFilters}
-                className="cosmic-border h-7 text-xs"
-              >
-                <Filter className="h-3 w-3 mr-1" />
-                Clear
-              </Button>
+            <div className="space-y-1">
+              <div className="grid grid-cols-2 gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetView}
+                  className="cosmic-border h-6 text-xs px-2"
+                >
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  Reset
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="cosmic-border h-6 text-xs px-2"
+                >
+                  <Filter className="h-3 w-3 mr-1" />
+                  Clear
+                </Button>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={deselectSatellite}
                 disabled={!globeSettings.selectedSatelliteId}
-                className="cosmic-border h-7 text-xs disabled:opacity-50"
+                className="cosmic-border h-6 text-xs px-2 w-full disabled:opacity-50"
               >
                 <MousePointerClick className="h-3 w-3 mr-1" />
                 Deselect
