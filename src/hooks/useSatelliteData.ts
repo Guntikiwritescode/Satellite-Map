@@ -18,16 +18,31 @@ export const useSatelliteData = () => {
     queryFn: async () => {
       console.log('Starting satellite data fetch...');
       
-      // Test connectivity first
+      // Test connectivity first with more detailed error handling
       try {
-        console.log('Testing connectivity to Supabase...');
-        const testResponse = await fetch('https://dnjhvmwznqsunjpabacg.supabase.co/functions/v1/space-track-proxy', {
-          method: 'OPTIONS'
+        console.log('Testing connectivity to Supabase edge function...');
+        const testUrl = 'https://dnjhvmwznqsunjpabacg.supabase.co/functions/v1/space-track-proxy';
+        console.log('Testing URL:', testUrl);
+        
+        const testResponse = await fetch(testUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer REMOVED_SUPABASE_KEY`
+          },
+          body: JSON.stringify({ action: 'authenticate' })
         });
-        console.log('Connectivity test result:', testResponse.status);
+        console.log('Test response status:', testResponse.status);
+        console.log('Test response headers:', [...testResponse.headers.entries()]);
+        
+        if (!testResponse.ok) {
+          const errorText = await testResponse.text();
+          console.error('Test response error:', errorText);
+          throw new Error(`Edge function test failed: ${testResponse.status} - ${errorText}`);
+        }
       } catch (error) {
         console.error('Connectivity test failed:', error);
-        throw new Error('Cannot connect to satellite data service. The service may be temporarily unavailable.');
+        throw new Error(`Cannot connect to satellite data service: ${error.message}`);
       }
       
       try {
