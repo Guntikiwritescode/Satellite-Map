@@ -1,0 +1,458 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar styles - 80's terminal aesthetic */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--terminal-green)) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--terminal-green));
+  border-radius: 0;
+  border: 1px solid hsl(var(--neon-cyan));
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--neon-cyan));
+  box-shadow: 0 0 10px hsl(var(--neon-cyan));
+}
+
+/* DEFCON 80's Retro Terminal Design System - ALL HSL VALUES */
+
+@layer base {
+  :root {
+    /* Classic 80's Terminal Colors - ALL HSL */
+    --background: 0 0% 3%;          /* Deep black terminal background */
+    --foreground: 120 100% 70%;     /* Classic terminal green */
+
+    --card: 0 0% 5%;               /* Slightly lighter black */
+    --card-foreground: 120 100% 70%;
+
+    --popover: 0 0% 5%;
+    --popover-foreground: 120 100% 70%;
+
+    /* Neon cyan primary - DEFCON classic */
+    --primary: 180 100% 50%;        /* Bright neon cyan */
+    --primary-foreground: 0 0% 3%;
+
+    /* Hot pink secondary - 80's flair */
+    --secondary: 300 100% 60%;      /* Neon magenta */
+    --secondary-foreground: 0 0% 3%;
+
+    /* Muted green tones */
+    --muted: 120 30% 10%;
+    --muted-foreground: 120 50% 60%;
+
+    /* Electric orange accent */
+    --accent: 30 100% 50%;          /* Neon orange */
+    --accent-foreground: 0 0% 3%;
+
+    /* Danger red */
+    --destructive: 0 100% 50%;      /* Alert red */
+    --destructive-foreground: 0 0% 100%;
+
+    /* Terminal borders */
+    --border: 120 100% 25%;         /* Dim green border */
+    --input: 0 0% 8%;              /* Dark input background */
+    --ring: 180 100% 50%;          /* Cyan focus ring */
+
+    --radius: 0rem;                /* Sharp edges - no rounded corners */
+
+    /* 80's DEFCON Terminal Colors - ALL HSL */
+    --terminal-green: 120 100% 70%;  /* Classic green terminal text */
+    --neon-cyan: 180 100% 50%;       /* Bright cyan highlights */
+    --neon-magenta: 300 100% 60%;    /* Hot pink accents */
+    --neon-orange: 30 100% 50%;      /* Electric orange */
+    --neon-yellow: 60 100% 50%;      /* Bright yellow warnings */
+    --danger-red: 0 100% 50%;        /* Alert red */
+    --grid-green: 120 100% 40%;      /* Darker green for grids */
+    --scan-blue: 200 100% 60%;       /* Scanner blue */
+
+    /* Terminal scanline and CRT effects */
+    --scanline-opacity: 0.1;
+    --crt-curve: 0.02;
+
+    /* Gradients - 80's style */
+    --gradient-terminal: linear-gradient(180deg, hsl(0 0% 3%), hsl(0 0% 1%));
+    --gradient-neon: linear-gradient(90deg, hsl(180 100% 50%), hsl(300 100% 60%), hsl(30 100% 50%));
+    --gradient-scan: linear-gradient(0deg, transparent, hsl(120 100% 70% / 0.03), transparent);
+    
+    /* Shadows with neon glow */
+    --shadow-neon-cyan: 0 0 20px hsl(180 100% 50% / 0.8), 0 0 40px hsl(180 100% 50% / 0.4);
+    --shadow-neon-green: 0 0 15px hsl(120 100% 70% / 0.6), 0 0 30px hsl(120 100% 70% / 0.3);
+    --shadow-neon-magenta: 0 0 20px hsl(300 100% 60% / 0.8), 0 0 40px hsl(300 100% 60% / 0.4);
+    --shadow-terminal: inset 0 0 100px hsl(0 0% 0% / 0.8);
+
+    /* Animation timings */
+    --flicker-duration: 0.15s;
+    --scan-duration: 2s;
+    --glow-duration: 1.5s;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 120 100% 70%;
+    --sidebar-primary: 180 100% 50%;
+    --sidebar-primary-foreground: 0 0% 3%;
+    --sidebar-accent: 0 0% 8%;
+    --sidebar-accent-foreground: 120 100% 70%;
+    --sidebar-border: 120 100% 25%;
+    --sidebar-ring: 180 100% 50%;
+  }
+
+  .dark {
+    /* Dark mode uses same values - terminal aesthetic is always dark */
+    --background: 0 0% 3%;
+    --foreground: 120 100% 70%;
+    --card: 0 0% 5%;
+    --card-foreground: 120 100% 70%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 120 100% 70%;
+    --primary: 180 100% 50%;
+    --primary-foreground: 0 0% 3%;
+    --secondary: 300 100% 60%;
+    --secondary-foreground: 0 0% 3%;
+    --muted: 120 30% 10%;
+    --muted-foreground: 120 50% 60%;
+    --accent: 30 100% 50%;
+    --accent-foreground: 0 0% 3%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 120 100% 25%;
+    --input: 0 0% 8%;
+    --ring: 180 100% 50%;
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 120 100% 70%;
+    --sidebar-primary: 180 100% 50%;
+    --sidebar-primary-foreground: 0 0% 3%;
+    --sidebar-accent: 0 0% 8%;
+    --sidebar-accent-foreground: 120 100% 70%;
+    --sidebar-border: 120 100% 25%;
+    --sidebar-ring: 180 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    background: 
+      /* Scanlines effect */
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        hsl(120 100% 70% / var(--scanline-opacity)) 2px,
+        hsl(120 100% 70% / var(--scanline-opacity)) 4px
+      ),
+      /* Main terminal gradient */
+      var(--gradient-terminal);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* CRT Screen effect overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    background: 
+      /* Subtle vignette */
+      radial-gradient(ellipse at center, transparent 60%, hsl(0 0% 0% / 0.3) 100%);
+    mix-blend-mode: multiply;
+  }
+
+  /* Terminal glow effect */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 999;
+    background: 
+      radial-gradient(ellipse at center, hsl(120 100% 70% / 0.01) 0%, transparent 70%);
+    animation: terminal-glow var(--glow-duration) ease-in-out infinite alternate;
+  }
+
+  /* Heading fonts use futuristic Orbitron */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Orbitron', 'Share Tech Mono', monospace;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Custom terminal scrollbar */
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--terminal-green));
+    border: 1px solid hsl(var(--neon-cyan));
+    box-shadow: var(--shadow-neon-green);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--neon-cyan));
+    box-shadow: var(--shadow-neon-cyan);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: hsl(var(--background));
+  }
+}
+
+@layer components {
+  /* DEFCON Terminal Animations */
+  .animate-flicker {
+    animation: terminal-flicker var(--flicker-duration) infinite linear;
+  }
+
+  .animate-scan {
+    animation: terminal-scan var(--scan-duration) infinite linear;
+  }
+
+  .animate-glow {
+    animation: neon-glow var(--glow-duration) ease-in-out infinite alternate;
+  }
+
+  .animate-typing {
+    animation: typing 0.5s steps(20) infinite;
+  }
+
+  /* Terminal panel effects */
+  .terminal-panel {
+    background: hsl(var(--card));
+    border: 2px solid hsl(var(--terminal-green));
+    box-shadow: 
+      var(--shadow-terminal),
+      var(--shadow-neon-green);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .terminal-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, hsl(var(--neon-cyan)), transparent);
+    animation: scanner-sweep 3s infinite linear;
+  }
+
+  /* Neon border effect */
+  .neon-border {
+    position: relative;
+    border: 2px solid hsl(var(--neon-cyan));
+    box-shadow: var(--shadow-neon-cyan);
+  }
+
+  .neon-border::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 2px solid hsl(var(--neon-cyan) / 0.3);
+    pointer-events: none;
+    animation: neon-pulse 2s ease-in-out infinite;
+  }
+
+  /* Grid pattern background */
+  .grid-pattern {
+    background-image: 
+      linear-gradient(hsl(var(--grid-green) / 0.2) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--grid-green) / 0.2) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* Terminal text effects */
+  .terminal-text {
+    font-family: 'Share Tech Mono', monospace;
+    color: hsl(var(--terminal-green));
+    text-shadow: 0 0 10px hsl(var(--terminal-green) / 0.8);
+  }
+
+  .neon-text {
+    text-shadow: 
+      0 0 5px currentColor,
+      0 0 10px currentColor,
+      0 0 15px currentColor;
+  }
+
+  /* Button effects */
+  .terminal-button {
+    background: transparent;
+    border: 2px solid hsl(var(--terminal-green));
+    color: hsl(var(--terminal-green));
+    font-family: 'Orbitron', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .terminal-button:hover {
+    background: hsl(var(--terminal-green) / 0.1);
+    border-color: hsl(var(--neon-cyan));
+    color: hsl(var(--neon-cyan));
+    box-shadow: var(--shadow-neon-cyan);
+  }
+
+  .terminal-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, hsl(var(--neon-cyan) / 0.2), transparent);
+    transition: left 0.5s ease;
+  }
+
+  .terminal-button:hover::before {
+    left: 100%;
+  }
+
+  /* Status indicators */
+  .status-active {
+    color: hsl(var(--terminal-green));
+    text-shadow: var(--shadow-neon-green);
+  }
+
+  .status-warning {
+    color: hsl(var(--neon-yellow));
+    text-shadow: 0 0 10px hsl(var(--neon-yellow));
+  }
+
+  .status-danger {
+    color: hsl(var(--danger-red));
+    text-shadow: 0 0 10px hsl(var(--danger-red));
+  }
+
+  .status-info {
+    color: hsl(var(--neon-cyan));
+    text-shadow: var(--shadow-neon-cyan);
+  }
+}
+
+/* DEFCON Terminal Keyframes */
+@keyframes terminal-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+  75% { opacity: 0.9; }
+}
+
+@keyframes terminal-scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes neon-glow {
+  0% { 
+    text-shadow: 
+      0 0 5px currentColor,
+      0 0 10px currentColor,
+      0 0 15px currentColor;
+  }
+  100% { 
+    text-shadow: 
+      0 0 8px currentColor,
+      0 0 15px currentColor,
+      0 0 25px currentColor;
+  }
+}
+
+@keyframes terminal-glow {
+  0% { opacity: 0.3; }
+  100% { opacity: 0.1; }
+}
+
+@keyframes neon-pulse {
+  0%, 100% { 
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes scanner-sweep {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+@keyframes typing {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Data table enhancements */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+th, td {
+  border: 1px solid hsl(var(--terminal-green) / 0.3);
+  padding: 0.5rem;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+th {
+  background: hsl(var(--terminal-green) / 0.1);
+  color: hsl(var(--neon-cyan));
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: bold;
+}
+
+tr:hover td {
+  background: hsl(var(--terminal-green) / 0.05);
+  box-shadow: inset 0 0 20px hsl(var(--terminal-green) / 0.1);
+}
+
+/* Loading animations */
+.loading-dots::after {
+  content: '';
+  animation: loading-dots 1.5s infinite;
+}
+
+@keyframes loading-dots {
+  0%, 20% { content: ''; }
+  40% { content: '.'; }
+  60% { content: '..'; }
+  80%, 100% { content: '...'; }
+}
