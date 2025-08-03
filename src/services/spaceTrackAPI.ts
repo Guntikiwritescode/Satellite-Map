@@ -204,9 +204,9 @@ export class SpaceTrackAPI {
         return { latitude: 0, longitude: 0, altitude: 400 };
       }
       
-      // Validate TLE format for security
-      if (!validateTLE(tle1, tle2)) {
-        console.warn('Invalid TLE format detected');
+      // Basic TLE format check - ensure lines exist and have reasonable length
+      if (!tle1 || !tle2 || tle1.length < 60 || tle2.length < 60) {
+        console.warn('Invalid TLE format - insufficient length');
         return { latitude: 0, longitude: 0, altitude: 400 };
       }
       
