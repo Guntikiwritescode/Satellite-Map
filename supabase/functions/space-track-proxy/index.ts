@@ -2,11 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 // Dynamic CORS headers - support both dev and production domains
 const getAllowedOrigins = () => {
-  const devOrigin = 'https://db206876-4992-4720-8f1f-11cdcdfaaedd.lovableproject.com';
-  const publishedOrigin = 'https://db206876-4992-4720-8f1f-11cdcdfaaedd.lovable.app';
-  const previewOrigin = 'https://preview--sky-watch-globe.lovable.app';
-  const customDomain = 'https://alchemistsatmap.com';
-  return [devOrigin, publishedOrigin, previewOrigin, customDomain];
+  const envOrigins = Deno.env.get('ALLOWED_ORIGINS')?.split(',').map(o => o.trim()).filter(Boolean) || [];
+  // Default to wildcard if no origins are specified (development/debug).
+  return envOrigins.length > 0 ? envOrigins : ['*'];
 };
 
 const getCorsHeaders = (requestOrigin: string | null) => {
