@@ -1,11 +1,12 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { Search, ExternalLink, ArrowUpDown, ChevronRight, ChevronDown } from 'lucide-react';
+import { Search, ArrowUpDown, ChevronRight, ChevronDown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { Satellite, SatelliteType } from '../types/satellite.types';
+import { sanitizeInput } from '../utils/security';
 import SatelliteDetail from './SatelliteDetail';
 
 const SatelliteSpreadsheet: React.FC = () => {
@@ -155,8 +156,9 @@ const SatelliteSpreadsheet: React.FC = () => {
           <Input
             placeholder="Search satellites by name, agency, or country..."
             value={filters.searchQuery}
-            onChange={(e) => updateFilters({ searchQuery: e.target.value })}
+            onChange={(e) => updateFilters({ searchQuery: sanitizeInput(e.target.value) })}
             className="pl-10 bg-muted/50 border-border/50 focus:border-primary/50"
+            maxLength={100}
           />
         </div>
       </Card>
@@ -198,81 +200,86 @@ const SatelliteSpreadsheet: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {sortedSatellites.map((satellite) => (
-                <React.Fragment key={satellite.id}>
-                  <tr
-                    className={`border-b border-border/30 hover:bg-muted/30 cursor-pointer transition-colors ${
-                      globeSettings.selectedSatelliteId === satellite.id ? 'bg-primary/10' : ''
-                    }`}
-                    onClick={() => setSelectedSatellite(satellite.id)}
-                  >
-                    <td className="p-3">
-                      <div>
-                        <div className="font-medium text-foreground">{satellite.name}</div>
-                        <div className="text-xs text-muted-foreground line-clamp-2 mt-1 max-w-xs">
-                          {satellite.metadata?.purpose || 'Satellite'}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <Badge className={`text-xs ${getTypeColor(satellite.type)}`}>
-                        {satellite.type.replace('-', ' ')}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-muted-foreground">{satellite.metadata?.constellation || 'Unknown'}</td>
-                    <td className="p-3 text-muted-foreground">{satellite.metadata?.country || 'Unknown'}</td>
-                    <td className="p-3">
-                      <Badge className={`text-xs ${getStatusColor(satellite.status)}`}>
-                        {satellite.status}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-right font-mono text-primary">
-                      {formatAltitude(satellite.position.altitude)}
-                    </td>
-                    <td className="p-3 text-right font-mono text-stellar-cyan">
-                      {formatVelocity(satellite.velocity)}
-                    </td>
-                    <td className="p-3 text-right font-mono text-jupiter-amber">
-                      {formatPeriod(satellite.orbital.period)}
-                    </td>
-                    <td className="p-3 text-right font-mono text-nebula-purple">
-                      {satellite.orbital.inclination.toFixed(1)}°
-                    </td>
-                    <td className="p-3 text-center">
-                      <div className="text-xs font-mono text-muted-foreground">
-                        {satellite.position.latitude.toFixed(2)}°,<br />
-                        {satellite.position.longitude.toFixed(2)}°
-                      </div>
-                    </td>
-                    <td className="p-3 text-center">
-                      {/* No external links available */}
-                    </td>
-                    <td className="p-3 text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => toggleRowExpansion(satellite.id, e)}
-                        className="h-6 w-6 p-0 hover:bg-muted"
-                      >
-                        {expandedRows.has(satellite.id) ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </td>
-                  </tr>
-                  {expandedRows.has(satellite.id) && (
-                    <tr className="border-b border-border/30">
-                      <td colSpan={12} className="p-0">
-                        <div className="bg-muted/20 p-4 max-h-96 overflow-y-auto">
-                          <SatelliteDetail satellite={satellite} />
+              {sortedSatellites.map((satellite) => {
+                const isExpanded = expandedRows.has(satellite.id);
+                const isSelected = globeSettings.selectedSatelliteId === satellite.id;
+                
+                return (
+                  <React.Fragment key={satellite.id}>
+                    <tr
+                      className={`border-b border-border/30 hover:bg-muted/30 cursor-pointer transition-colors ${
+                        isSelected ? 'bg-primary/10' : ''
+                      }`}
+                      onClick={() => setSelectedSatellite(satellite.id)}
+                    >
+                      <td className="p-3">
+                        <div>
+                          <div className="font-medium text-foreground">{satellite.name}</div>
+                          <div className="text-xs text-muted-foreground line-clamp-2 mt-1 max-w-xs">
+                            {satellite.metadata?.purpose || 'Satellite'}
+                          </div>
                         </div>
                       </td>
+                      <td className="p-3">
+                        <Badge className={`text-xs ${getTypeColor(satellite.type)}`}>
+                          {satellite.type.replace('-', ' ')}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-muted-foreground">{satellite.metadata?.constellation || 'Unknown'}</td>
+                      <td className="p-3 text-muted-foreground">{satellite.metadata?.country || 'Unknown'}</td>
+                      <td className="p-3">
+                        <Badge className={`text-xs ${getStatusColor(satellite.status)}`}>
+                          {satellite.status}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-right font-mono text-primary">
+                        {formatAltitude(satellite.position.altitude)}
+                      </td>
+                      <td className="p-3 text-right font-mono text-neon-cyan">
+                        {formatVelocity(satellite.velocity)}
+                      </td>
+                      <td className="p-3 text-right font-mono text-neon-orange">
+                        {formatPeriod(satellite.orbital.period)}
+                      </td>
+                      <td className="p-3 text-right font-mono text-neon-magenta">
+                        {satellite.orbital.inclination.toFixed(1)}°
+                      </td>
+                      <td className="p-3 text-center">
+                        <div className="text-xs font-mono text-muted-foreground">
+                          {satellite.position.latitude.toFixed(2)}°,<br />
+                          {satellite.position.longitude.toFixed(2)}°
+                        </div>
+                      </td>
+                      <td className="p-3 text-center">
+                        {/* No external links available */}
+                      </td>
+                      <td className="p-3 text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => toggleRowExpansion(satellite.id, e)}
+                          className="h-6 w-6 p-0 hover:bg-muted"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
+                    {isExpanded && (
+                      <tr className="border-b border-border/30">
+                        <td colSpan={12} className="p-0">
+                          <div className="bg-muted/20 p-4 max-h-96 overflow-y-auto">
+                            <SatelliteDetail satellite={satellite} />
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
           

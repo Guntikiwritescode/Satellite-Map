@@ -6,14 +6,19 @@ import { Card } from '@/components/ui/card';
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
 interface State {
   hasError: boolean;
   error?: Error;
+  errorInfo?: ErrorInfo;
 }
 
 class ErrorBoundary extends Component<Props, State> {
+  private retryCount = 0;
+  private readonly maxRetries = 3;
+
   public state: State = {
     hasError: false
   };
@@ -23,11 +28,31 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Error boundary caught an error:', error, errorInfo);
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    
+    // Call optional error handler
+    this.props.onError?.(error, errorInfo);
+    
+    // Store error info for debugging
+    this.setState({ errorInfo });
+    
+    // Report to monitoring service in production
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Production error:', {
+        error: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack
+      });
+    }
   }
 
-  private handleReset = () => {
-    this.setState({ hasError: false, error: undefined });
+  private handleRetry = () => {
+    this.retryCount++;
+    this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+  };
+
+  private handleReload = () => {
+    window.location.reload();
   };
 
   public render() {
@@ -36,24 +61,64 @@ class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      const canRetry = this.retryCount < this.maxRetries;
+
       return (
-        <Card className="glass-panel p-8 m-4">
-          <div className="flex flex-col items-center text-center space-y-4">
-            <div className="p-3 bg-destructive/20 rounded-lg">
-              <AlertTriangle className="h-8 w-8 text-destructive" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-foreground mb-2">Something went wrong</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {this.state.error?.message || 'An unexpected error occurred'}
+        <div className="flex items-center justify-center min-h-[400px] p-8">
+          <Card className="terminal-panel max-w-lg w-full p-6 text-center">
+            <div className="mb-4">
+              <AlertTriangle className="h-16 w-16 text-danger-red mx-auto mb-4 animate-terminal-flicker" />
+              <h2 className="text-xl font-display text-danger-red mb-2">
+                [ SYSTEM ERROR ]
+              </h2>
+              <p className="text-terminal-green font-terminal text-sm mb-4">
+                {this.state.error?.message || 'An unexpected error occurred in the satellite tracking system.'}
               </p>
+              
+              {isDevelopment && this.state.error && (
+                <details className="text-left bg-card/50 p-3 rounded border border-border/30 mb-4">
+                  <summary className="text-xs font-terminal text-neon-cyan cursor-pointer">
+                    Debug Information
+                  </summary>
+                  <pre className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">
+                    {this.state.error.stack}
+                  </pre>
+                  {this.state.errorInfo && (
+                    <pre className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">
+                      {this.state.errorInfo.componentStack}
+                    </pre>
+                  )}
+                </details>
+              )}
             </div>
-            <Button onClick={this.handleReset} variant="outline" className="cosmic-border">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Try Again
-            </Button>
-          </div>
-        </Card>
+            
+            <div className="flex gap-3 justify-center">
+              {canRetry && (
+                <Button 
+                  onClick={this.handleRetry}
+                  className="terminal-button"
+                  variant="outline"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  RETRY OPERATION
+                </Button>
+              )}
+              <Button 
+                onClick={this.handleReload}
+                className="terminal-button"
+                variant="default"
+              >
+                RESTART SYSTEM
+              </Button>
+            </div>
+            
+            <p className="text-xs font-terminal text-muted-foreground mt-4">
+              ERROR CODE: {this.state.error?.name || 'UNKNOWN'} | 
+              RETRY COUNT: {this.retryCount}/{this.maxRetries}
+            </p>
+          </Card>
+        </div>
       );
     }
 
