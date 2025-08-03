@@ -61,10 +61,18 @@ serve(async (req) => {
     const username = Deno.env.get('SPACE_TRACK_USERNAME')
     const password = Deno.env.get('SPACE_TRACK_PASSWORD')
     
+    console.log('Checking credentials...', { 
+      usernameConfigured: !!username, 
+      passwordConfigured: !!password 
+    })
+    
     if (!username || !password) {
-      console.error('Space-Track credentials not configured')
+      console.error('Space-Track credentials not configured:', {
+        username: username ? 'SET' : 'MISSING',
+        password: password ? 'SET' : 'MISSING'
+      })
       return new Response(
-        JSON.stringify({ error: 'Service configuration error' }),
+        JSON.stringify({ error: 'Service configuration error - credentials missing' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -224,11 +232,13 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Space-Track proxy error occurred')
+    console.error('Space-Track proxy error occurred:', error.message)
+    console.error('Full error details:', error)
     
     return new Response(
       JSON.stringify({ 
-        error: 'Internal server error' 
+        error: 'Internal server error',
+        details: error.message 
       }),
       { 
         status: 500, 
