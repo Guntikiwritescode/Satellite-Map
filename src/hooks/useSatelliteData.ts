@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { spaceTrackAPI } from '../services/spaceTrackAPI';
-import { getPerformanceSettings } from '../utils/performance';
 
 export const useSatelliteData = () => {
   const { setSatellites, setError, setLoading } = useSatelliteStore();
@@ -18,31 +17,16 @@ export const useSatelliteData = () => {
     queryFn: async () => {
       console.log('Starting satellite data fetch...');
       
-      // Test connectivity first with more detailed error handling
+      // Test connectivity first
       try {
-        console.log('Testing connectivity to Supabase edge function...');
-        const testUrl = 'https://dnjhvmwznqsunjpabacg.supabase.co/functions/v1/space-track-proxy';
-        console.log('Testing URL:', testUrl);
-        
-        const testResponse = await fetch(testUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuamh2bXd6bnFzdW5qcGFiYWNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MTQ0MjksImV4cCI6MjA2OTM5MDQyOX0.dLdc08Hq6IpvjSb8cmVNwaTz8s2h439aMviVvNIxYNM`
-          },
-          body: JSON.stringify({ action: 'authenticate' })
+        console.log('Testing connectivity to Supabase...');
+        const testResponse = await fetch('https://dnjhvmwznqsunjpabacg.supabase.co/functions/v1/space-track-proxy', {
+          method: 'OPTIONS'
         });
-        console.log('Test response status:', testResponse.status);
-        console.log('Test response headers:', [...testResponse.headers.entries()]);
-        
-        if (!testResponse.ok) {
-          const errorText = await testResponse.text();
-          console.error('Test response error:', errorText);
-          throw new Error(`Edge function test failed: ${testResponse.status} - ${errorText}`);
-        }
+        console.log('Connectivity test result:', testResponse.status);
       } catch (error) {
         console.error('Connectivity test failed:', error);
-        throw new Error(`Cannot connect to satellite data service: ${error.message}`);
+        throw new Error('Cannot connect to satellite data service. The service may be temporarily unavailable.');
       }
       
       try {
@@ -61,10 +45,9 @@ export const useSatelliteData = () => {
         throw error;
       }
     },
-    refetchInterval: 15 * 60 * 1000, // 15 minutes - optimized for performance
-    staleTime: 5 * 60 * 1000, // 5 minutes cache time
-    retry: 2,
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000)
+    refetchInterval: 10 * 60 * 1000, // 10 minutes - reduced frequency for performance
+    staleTime: 0, // Force immediate refresh to see the change
+    retry: 3
   });
 
   // Update store with satellite data
@@ -94,8 +77,8 @@ export const useSatelliteData = () => {
 
     const updatePositions = async () => {
       try {
-        // Use adaptive batch size based on device performance
-        const { batchSize } = getPerformanceSettings();
+        // Process satellites in smaller batches to avoid blocking (reduced for performance)
+        const batchSize = 50; // Reduced from 100
         const updatedSatellites = [...satellites];
         
         for (let i = 0; i < satellites.length; i += batchSize) {
@@ -131,9 +114,8 @@ export const useSatelliteData = () => {
       }
     };
 
-    // Use adaptive update interval based on device performance
-    const { updateInterval } = getPerformanceSettings();
-    const interval = setInterval(updatePositions, updateInterval);
+    // Reduced frequency from 10 seconds to 15 seconds for weaker devices
+    const interval = setInterval(updatePositions, 15000);
     return () => clearInterval(interval);
   }, [satellites.length, setSatellites]); // Only depend on satellites.length, not the entire array
 

@@ -4,9 +4,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 const getAllowedOrigins = () => {
   const devOrigin = 'https://db206876-4992-4720-8f1f-11cdcdfaaedd.lovableproject.com';
   const publishedOrigin = 'https://db206876-4992-4720-8f1f-11cdcdfaaedd.lovable.app';
-  const previewOrigin = 'https://preview--sky-watch-globe.lovable.app';
   const customDomain = 'https://alchemistsatmap.com';
-  return [devOrigin, publishedOrigin, previewOrigin, customDomain];
+  return [devOrigin, publishedOrigin, customDomain];
 };
 
 const getCorsHeaders = (requestOrigin: string | null) => {
@@ -62,18 +61,10 @@ serve(async (req) => {
     const username = Deno.env.get('SPACE_TRACK_USERNAME')
     const password = Deno.env.get('SPACE_TRACK_PASSWORD')
     
-    console.log('Checking credentials...', { 
-      usernameConfigured: !!username, 
-      passwordConfigured: !!password 
-    })
-    
     if (!username || !password) {
-      console.error('Space-Track credentials not configured:', {
-        username: username ? 'SET' : 'MISSING',
-        password: password ? 'SET' : 'MISSING'
-      })
+      console.error('Space-Track credentials not configured')
       return new Response(
-        JSON.stringify({ error: 'Service configuration error - credentials missing' }),
+        JSON.stringify({ error: 'Service configuration error' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -233,13 +224,11 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Space-Track proxy error occurred:', error.message)
-    console.error('Full error details:', error)
+    console.error('Space-Track proxy error occurred')
     
     return new Response(
       JSON.stringify({ 
-        error: 'Internal server error',
-        details: error.message 
+        error: 'Internal server error' 
       }),
       { 
         status: 500, 
