@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { spaceTrackAPI } from '../services/spaceTrackAPI';
-import { getPerformanceSettings } from '../utils/performance';
 
 export const useSatelliteData = () => {
   const { setSatellites, setError, setLoading } = useSatelliteStore();
@@ -46,10 +45,9 @@ export const useSatelliteData = () => {
         throw error;
       }
     },
-    refetchInterval: 15 * 60 * 1000, // 15 minutes - optimized for performance
-    staleTime: 5 * 60 * 1000, // 5 minutes cache time
-    retry: 2,
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000)
+    refetchInterval: 10 * 60 * 1000, // 10 minutes - reduced frequency for performance
+    staleTime: 0, // Force immediate refresh to see the change
+    retry: 3
   });
 
   // Update store with satellite data
@@ -79,8 +77,8 @@ export const useSatelliteData = () => {
 
     const updatePositions = async () => {
       try {
-        // Use adaptive batch size based on device performance
-        const { batchSize } = getPerformanceSettings();
+        // Process satellites in smaller batches to avoid blocking (reduced for performance)
+        const batchSize = 50; // Reduced from 100
         const updatedSatellites = [...satellites];
         
         for (let i = 0; i < satellites.length; i += batchSize) {
@@ -116,9 +114,8 @@ export const useSatelliteData = () => {
       }
     };
 
-    // Use adaptive update interval based on device performance
-    const { updateInterval } = getPerformanceSettings();
-    const interval = setInterval(updatePositions, updateInterval);
+    // Reduced frequency from 10 seconds to 15 seconds for weaker devices
+    const interval = setInterval(updatePositions, 15000);
     return () => clearInterval(interval);
   }, [satellites.length, setSatellites]); // Only depend on satellites.length, not the entire array
 
