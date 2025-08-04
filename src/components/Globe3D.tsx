@@ -7,8 +7,12 @@ import { useSatelliteStore } from '../stores/satelliteStore';
 import { Satellite } from '../types/satellite.types';
 import ErrorBoundary from './ErrorBoundary';
 
+// Development logging helper
+const isDev = import.meta.env.DEV;
+const logWarn = (...args: unknown[]) => isDev && console.warn(...args);
+
 // Earth component with slow realistic rotation
-const Earth: React.FC = () => {
+const Earth: React.FC = React.memo(() => {
   const meshRef = useRef<THREE.Mesh>(null);
   const earthRadius = 5;
   
@@ -25,7 +29,9 @@ const Earth: React.FC = () => {
       <meshBasicMaterial map={earthTexture} />
     </mesh>
   );
-};
+});
+
+Earth.displayName = 'Earth';
 
 // Real-time satellite marker at exact reported coordinates
 interface SatelliteMarkerProps {
@@ -49,16 +55,13 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
     const earthRadius = 5;
     const lat = (latitude * Math.PI) / 180;
     const lon = (longitude * Math.PI) / 180;
+    const radius = earthRadius + (altitude * 5) / 6371; // Scale altitude for visualization
     
-    // Use EXACT altitude scaling: Earth radius = 6371km in real life, 5 units in scene
-    const radius = earthRadius + (altitude * 5) / 6371;
-    
-    // Convert spherical coordinates to Cartesian (standard GPS to 3D conversion)
-    const x = radius * Math.cos(lat) * Math.cos(lon);
-    const y = radius * Math.sin(lat);
-    const z = radius * Math.cos(lat) * Math.sin(lon);
-    
-    return [x, y, z] as [number, number, number];
+    return new THREE.Vector3(
+      radius * Math.cos(lat) * Math.cos(lon),
+      radius * Math.sin(lat),
+      radius * Math.cos(lat) * Math.sin(lon)
+    );
   }, [satellite.position]);
 
   // Satellite type colors
@@ -111,40 +114,43 @@ const SatelliteMarker: React.FC<SatelliteMarkerProps> = React.memo(({
   );
 });
 
+SatelliteMarker.displayName = 'SatelliteMarker';
+
 // Orbital path component using proper SGP4 propagation
 interface OrbitalPathProps {
   satellite: Satellite;
 }
 
 const OrbitalPath: React.FC<OrbitalPathProps> = ({ satellite: sat }) => {
+  // Orbital path calculation with memoized points for performance
   const pathPoints = useMemo(() => {
-    const points: THREE.Vector3[] = [];
-    const earthRadius = 5;
+    if (!sat?.tle?.line1 || !sat?.tle?.line2 || !sat?.orbital?.period) {
+      return [];
+    }
     
     try {
-      // Create the satellite record from TLE data
+      const period = sat.orbital.period;
+      const now = new Date();
+      
+      // Create satellite record from TLE
       const satrec = satellite.twoline2satrec(sat.tle.line1, sat.tle.line2);
       
       if (!satrec) {
-        console.warn('Failed to create satellite record');
-        return points;
+        logWarn('Failed to create satellite record');
+        return [];
       }
 
-      const now = new Date();
-      const period = sat.orbital.period; // orbital period in minutes
       const totalPoints = 60; // Reduced from 120 for better performance
       
       // Generate orbital path by propagating the satellite through one complete orbit
-      for (let i = 0; i <= totalPoints; i++) {
-        // Calculate time offset for this point (spread over one orbital period)
-        const timeOffsetMinutes = (i / totalPoints) * period;
-        const time = new Date(now.getTime() + timeOffsetMinutes * 60 * 1000);
+      const createDataPoint = (timeOffset: number) => {
+        const time = new Date(now.getTime() + timeOffset * period * 60 * 1000);
         
         // Use SGP4 to propagate satellite position at this time
         const positionAndVelocity = satellite.propagate(satrec, time);
         
         if (positionAndVelocity.position && typeof positionAndVelocity.position === 'object') {
-          const positionEci = positionAndVelocity.position as any;
+          const positionEci = positionAndVelocity.position as { x: number; y: number; z: number };
           
           // Convert ECI coordinates to geodetic (lat/lon/alt)
           const gmst = satellite.gstime(time);
@@ -159,22 +165,34 @@ const OrbitalPath: React.FC<OrbitalPathProps> = ({ satellite: sat }) => {
             // Convert to our 3D coordinate system (same as satellite markers)
             const lat = (latitude * Math.PI) / 180;
             const lon = (longitude * Math.PI) / 180;
-            const radius = earthRadius + (altitude * 5) / 6371;
+            const radius = 5 + (altitude * 5) / 6371;
             
             const x = radius * Math.cos(lat) * Math.cos(lon);
             const y = radius * Math.sin(lat);
             const z = radius * Math.cos(lat) * Math.sin(lon);
             
-            points.push(new THREE.Vector3(x, y, z));
+            return new THREE.Vector3(x, y, z);
           }
         }
-      }
+        return null;
+      };
+
+      const points = Array.from({ length: totalPoints + 1 }, (_, i) => {
+        try {
+          return createDataPoint(i / totalPoints);
+        } catch (error) {
+          logWarn('Failed to create satellite record');
+          return null;
+        }
+      })
+      .filter(Boolean) as THREE.Vector3[];
+      
+      return points;
     } catch (error) {
-      console.warn('Error calculating orbital path:', error);
+      logWarn('Error calculating orbital path:', error);
+      return [];
     }
-    
-    return points;
-  }, [sat]);
+  }, [sat?.tle?.line1, sat?.tle?.line2, sat?.orbital?.period]);
 
   if (pathPoints.length === 0) return null;
 
@@ -199,7 +217,7 @@ const OrbitalPath: React.FC<OrbitalPathProps> = ({ satellite: sat }) => {
 const CameraController: React.FC = () => {
   const { camera } = useThree();
   const { filteredSatellites, globeSettings } = useSatelliteStore();
-  const controlsRef = useRef<any>(null);
+  const controlsRef = useRef<{ target: { set: (x: number, y: number, z: number) => void } } | null>(null);
   
   useEffect(() => {
     if (!globeSettings.selectedSatelliteId) {
@@ -268,7 +286,7 @@ const CameraController: React.FC = () => {
       };
       animate();
     }
-  }, [globeSettings.selectedSatelliteId, camera]);
+  }, [globeSettings.selectedSatelliteId, camera, filteredSatellites]);
 
   return (
     <OrbitControls 
@@ -306,7 +324,7 @@ const Scene: React.FC = () => {
       .slice(0, 5000); // Reduced from 10,000
     
     return satellites;
-  }, [filteredSatellites, globeSettings.selectedSatelliteId]);
+  }, [filteredSatellites, globeSettings]);
 
   // Memoize selected satellite lookup
   const selectedSatellite = useMemo(() => {

@@ -48,8 +48,8 @@ const SatelliteSpreadsheet: React.FC = () => {
     if (!sortField) return filteredSatellites;
 
     return [...filteredSatellites].sort((a, b) => {
-      let aVal: any;
-      let bVal: any;
+      let aVal: string | number;
+      let bVal: string | number;
 
       // Handle nested properties
       if (sortField === 'altitude') {

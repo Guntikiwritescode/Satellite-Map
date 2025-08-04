@@ -13,7 +13,7 @@ import {
 const COMPONENT_CONTEXT = { component: 'useSatelliteData' };
 
 export const useSatelliteData = () => {
-  const { setSatellites, setError, setLoading } = useSatelliteStore();
+  const { setSatellites, setLoading, setError } = useSatelliteStore();
 
   // Test connectivity with better error handling
   const testConnectivity = useCallback(async (): Promise<void> => {

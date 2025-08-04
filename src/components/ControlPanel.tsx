@@ -1,306 +1,264 @@
-import React from 'react';
-import { RotateCcw, Eye, EyeOff, Orbit, MapPin, Clock, Zap, Filter, Activity, MousePointerClick } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import React, { useState, useCallback } from 'react';
+import { 
+  Globe, 
+  Table, 
+  BookOpen, 
+  Filter, 
+  Download, 
+  Settings, 
+  Play, 
+  Pause,
+  GraduationCap,
+  Volume2,
+  VolumeX
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { Card } from '@/components/ui/card';
+import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSatelliteStore } from '../stores/satelliteStore';
+import AudioPlayer from './AudioPlayer';
 
-const ControlPanel: React.FC = () => {
+interface ControlPanelProps {
+  onToggleFilters: () => void;
+}
+
+const ControlPanel: React.FC<ControlPanelProps> = React.memo(({ onToggleFilters }) => {
   const { 
+    viewMode, 
+    setViewMode, 
+    filteredSatellites, 
+    satellites, 
     globeSettings, 
-    updateGlobeSettings, 
-    getSelectedSatellite,
-    filteredSatellites,
-    filters,
-    updateFilters,
-    setSelectedSatellite,
-    maxDisplaySatellites,
-    setMaxDisplaySatellites,
-    satellites
+    updateGlobeSettings,
+    isLoading 
   } = useSatelliteStore();
+  
+  const [showAudioControls, setShowAudioControls] = useState(false);
 
-  const selectedSatellite = getSelectedSatellite();
+  const handleViewModeChange = useCallback((mode: typeof viewMode) => {
+    setViewMode(mode);
+  }, [setViewMode]);
 
-  const resetView = () => {
-    updateGlobeSettings({ 
-      selectedSatelliteId: null
-    });
-  };
+  const handleTimeSpeedChange = useCallback((value: number[]) => {
+    updateGlobeSettings({ timeSpeed: value[0] });
+  }, [updateGlobeSettings]);
 
-  const resetFilters = () => {
-    updateFilters({
-      types: [],
-      countries: [],
-      agencies: [],
-      status: [],
-      searchQuery: '',
-      showOnlyVisible: false
-    });
-  };
+  const togglePause = useCallback(() => {
+    updateGlobeSettings({ isPaused: !globeSettings.isPaused });
+  }, [globeSettings.isPaused, updateGlobeSettings]);
 
-  const deselectSatellite = () => {
-    setSelectedSatellite(null);
-  };
+  const viewModeButtons = [
+    { 
+      mode: 'globe' as const, 
+      icon: Globe, 
+      label: '3D Globe View',
+      description: 'Interactive 3D visualization of satellites'
+    },
+    { 
+      mode: 'spreadsheet' as const, 
+      icon: Table, 
+      label: 'Spreadsheet View',
+      description: 'Detailed tabular data view'
+    },
+    { 
+      mode: 'guide' as const, 
+      icon: BookOpen, 
+      label: 'User Guide',
+      description: 'Help and documentation'
+    },
+    { 
+      mode: 'education' as const, 
+      icon: GraduationCap, 
+      label: 'Education Center',
+      description: 'Learn about satellites and space'
+    }
+  ];
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex-1 min-h-0 max-h-[calc(100vh-160px)] overflow-y-auto space-y-3 pr-1 scrollbar-thin">
-        {/* Real-time Status */}
-        <Card className="glass-panel p-3">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium text-sm text-foreground flex items-center space-x-2">
-                <Activity className="h-3 w-3 text-green-400" />
-                <span>Live Tracking</span>
-              </h3>
-              <Badge variant="outline" className="cosmic-border text-green-400 border-green-400/30 text-xs">
-                Real-time
+    <TooltipProvider>
+      <Card className="w-full bg-card/95 backdrop-blur-sm border-0 border-b rounded-none">
+        <div className="p-4">
+          {/* Header Section */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-xl font-bold text-foreground">
+                ALCHEMIST Satellite Tracker
+              </h1>
+              <Badge variant="outline" className="text-xs">
+                {filteredSatellites.length.toLocaleString()} / {satellites.length.toLocaleString()} satellites
               </Badge>
             </div>
-            
-            <div className="text-xs text-muted-foreground">
-              Positions updated every 30 seconds using live TLE data
-            </div>
-            
-            <div className="space-y-1">
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={resetView}
-                  className="cosmic-border h-7 text-xs px-3 transition-all duration-200 hover:scale-105"
-                >
-                  <RotateCcw className="h-3 w-3 mr-1.5" />
-                  Reset
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={resetFilters}
-                  className="cosmic-border h-7 text-xs px-3 transition-all duration-200 hover:scale-105"
-                >
-                  <Filter className="h-3 w-3 mr-1.5" />
-                  Clear
-                </Button>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={deselectSatellite}
-                disabled={!globeSettings.selectedSatelliteId}
-                className="cosmic-border h-6 text-xs px-2 w-full disabled:opacity-50"
-              >
-                <MousePointerClick className="h-3 w-3 mr-1" />
-                Deselect
-              </Button>
+
+            <div className="flex items-center space-x-2">
+              {/* Audio Controls Toggle */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAudioControls(!showAudioControls)}
+                    aria-label={showAudioControls ? "Hide audio controls" : "Show audio controls"}
+                    aria-pressed={showAudioControls}
+                  >
+                    {showAudioControls ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{showAudioControls ? 'Hide' : 'Show'} Audio Controls</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Filter Toggle */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onToggleFilters}
+                    aria-label="Toggle filters panel"
+                  >
+                    <Filter className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Toggle Filters</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Settings Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Open settings"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Settings</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
-        </Card>
 
-        {/* Display Options */}
-        <Card className="glass-panel p-3">
-          <div className="space-y-3">
-            <h3 className="font-medium text-sm text-foreground flex items-center space-x-2">
-              <Eye className="h-3 w-3 text-primary" />
-              <span>Display</span>
-            </h3>
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-foreground">Coverage Areas</span>
-                <Switch
-                  checked={globeSettings.showFootprints}
-                  onCheckedChange={(checked) => updateGlobeSettings({ showFootprints: checked })}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-foreground">Major Cities</span>
-                <Switch
-                  checked={globeSettings.showCities}
-                  onCheckedChange={(checked) => updateGlobeSettings({ showCities: checked })}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-foreground">Day/Night Line</span>
-                <Switch
-                  checked={globeSettings.showTerminator}
-                  onCheckedChange={(checked) => updateGlobeSettings({ showTerminator: checked })}
-                />
-              </div>
+          {/* Audio Player */}
+          {showAudioControls && (
+            <div className="mb-4">
+              <AudioPlayer />
             </div>
-          </div>
-        </Card>
+          )}
 
-        {/* Statistics */}
-        <Card className="glass-panel p-3">
-          <div className="space-y-3">
-            <h3 className="font-medium text-sm text-foreground flex items-center space-x-2">
-              <Zap className="h-3 w-3 text-primary" />
-              <span>Statistics</span>
-            </h3>
-            
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-muted/20 rounded p-2 space-y-1">
-                <div className="text-muted-foreground">Displayed</div>
-                <div className="font-mono text-primary text-sm font-medium">
-                  {filteredSatellites.length.toLocaleString()}
-                </div>
-              </div>
-              
-              <div className="bg-muted/20 rounded p-2 space-y-1">
-                <div className="text-muted-foreground">Total</div>
-                <div className="font-mono text-muted-foreground text-sm font-medium">
-                  {satellites.length.toLocaleString()}
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-foreground">Satellite Limit</span>
-                <div className="bg-muted/30 rounded px-2 py-1 min-w-[4rem] text-center">
-                  <span className="text-xs font-mono text-primary">
-                    {maxDisplaySatellites.toLocaleString()}
+          <Separator className="mb-4" />
+
+          {/* Main Controls */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            {/* View Mode Selection */}
+            <nav role="tablist" aria-label="View modes" className="flex items-center space-x-1 bg-muted p-1 rounded-lg">
+              {viewModeButtons.map(({ mode, icon: Icon, label, description }) => (
+                <Tooltip key={mode}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={viewMode === mode ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => handleViewModeChange(mode)}
+                      role="tab"
+                      aria-selected={viewMode === mode}
+                      aria-controls={`${mode}-panel`}
+                      aria-label={label}
+                      className="flex items-center space-x-2"
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="hidden sm:inline">{label.split(' ')[0]}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="text-center">
+                      <p className="font-medium">{label}</p>
+                      <p className="text-xs text-muted-foreground">{description}</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </nav>
+
+            {/* Globe Controls - Only show in globe view */}
+            {viewMode === 'globe' && (
+              <div className="flex items-center space-x-4">
+                {/* Time Speed Control */}
+                <div className="flex items-center space-x-2">
+                  <label htmlFor="time-speed-slider" className="text-sm text-muted-foreground">
+                    Time Speed:
+                  </label>
+                  <div className="w-24">
+                    <Slider
+                      id="time-speed-slider"
+                      value={[globeSettings.timeSpeed]}
+                      onValueChange={handleTimeSpeedChange}
+                      min={0.1}
+                      max={5}
+                      step={0.1}
+                      className="w-full"
+                      aria-label="Adjust time speed"
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground min-w-8">
+                    {globeSettings.timeSpeed.toFixed(1)}x
                   </span>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setMaxDisplaySatellites(Math.max(maxDisplaySatellites - 500, 500))}
-                  disabled={maxDisplaySatellites <= 500}
-                  className="h-7 px-3 text-xs transition-all duration-200 hover:scale-105"
-                >
-                  -500
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setMaxDisplaySatellites(Math.min(maxDisplaySatellites + 500, satellites.length))}
-                  disabled={maxDisplaySatellites >= satellites.length}
-                  className="h-7 px-3 text-xs transition-all duration-200 hover:scale-105"
-                >
-                  +500
-                </Button>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-3 gap-2 text-xs">
-              <div className="bg-muted/20 rounded p-2 space-y-1">
-                <div className="text-muted-foreground">Active</div>
-                <div className="font-mono text-stellar-cyan text-sm font-medium">
-                  {filteredSatellites.filter(s => s.status === 'active').length.toLocaleString()}
-                </div>
-              </div>
-              
-              <div className="bg-muted/20 rounded p-2 space-y-1">
-                <div className="text-muted-foreground">LEO</div>
-                <div className="font-mono text-jupiter-amber text-sm font-medium">
-                  {filteredSatellites.filter(s => s.position.altitude < 2000).length.toLocaleString()}
-                </div>
-              </div>
-              
-              <div className="bg-muted/20 rounded p-2 space-y-1">
-                <div className="text-muted-foreground">GEO</div>
-                <div className="font-mono text-nebula-purple text-sm font-medium">
-                  {filteredSatellites.filter(s => s.position.altitude > 35000).length.toLocaleString()}
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
 
-        {/* Selected Satellite Details */}
-        {selectedSatellite && (
-          <Card className="glass-panel p-3 border-primary/30">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium text-sm text-foreground flex items-center space-x-2">
-                  <Orbit className="h-3 w-3 text-primary" />
-                  <span>Selected</span>
-                </h3>
+                {/* Play/Pause Button */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={togglePause}
+                      aria-label={globeSettings.isPaused ? "Resume time" : "Pause time"}
+                      aria-pressed={globeSettings.isPaused}
+                    >
+                      {globeSettings.isPaused ? (
+                        <Play className="h-4 w-4" />
+                      ) : (
+                        <Pause className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{globeSettings.isPaused ? 'Resume' : 'Pause'} Time</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            )}
+
+            {/* Export Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => updateGlobeSettings({ selectedSatelliteId: null })}
-                  className="h-6 w-6 p-0"
+                  disabled={isLoading}
+                  aria-label="Export satellite data"
                 >
-                  <EyeOff className="h-3 w-3" />
+                  <Download className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Export</span>
                 </Button>
-              </div>
-              
-              <div className="space-y-2">
-                <div>
-                  <div className="font-medium text-xs text-foreground line-clamp-2">
-                    {selectedSatellite.name}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {selectedSatellite.metadata?.constellation || 'Unknown'}
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="bg-muted/20 rounded p-2 space-y-1">
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="h-2 w-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Altitude</span>
-                    </div>
-                    <div className="font-mono text-primary text-xs font-medium">
-                      {selectedSatellite.position.altitude > 1000 
-                        ? `${(selectedSatellite.position.altitude / 1000).toFixed(1)}K km`
-                        : `${selectedSatellite.position.altitude.toFixed(0)} km`
-                      }
-                    </div>
-                  </div>
-                  
-                  <div className="bg-muted/20 rounded p-2 space-y-1">
-                    <div className="flex items-center space-x-1">
-                      <Zap className="h-2 w-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Velocity</span>
-                    </div>
-                    <div className="font-mono text-stellar-cyan text-xs font-medium">
-                      {selectedSatellite.velocity?.toFixed(2) || 'N/A'} km/s
-                    </div>
-                  </div>
-                  
-                  <div className="bg-muted/20 rounded p-2 space-y-1">
-                    <div className="flex items-center space-x-1">
-                      <Clock className="h-2 w-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Period</span>
-                    </div>
-                    <div className="font-mono text-jupiter-amber text-xs font-medium">
-                      {Math.floor(selectedSatellite.orbital.period / 60)}h {Math.floor(selectedSatellite.orbital.period % 60)}m
-                    </div>
-                  </div>
-                  
-                  <div className="bg-muted/20 rounded p-2 space-y-1">
-                    <div className="flex items-center space-x-1">
-                      <Orbit className="h-2 w-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Inclination</span>
-                    </div>
-                    <div className="font-mono text-nebula-purple text-xs font-medium">
-                      {selectedSatellite.orbital.inclination.toFixed(1)}°
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-muted/30 rounded p-2">
-                  <div className="text-xs text-muted-foreground mb-1">Position</div>
-                  <div className="font-mono text-primary text-xs">
-                    {selectedSatellite.position.latitude.toFixed(2)}°, {selectedSatellite.position.longitude.toFixed(2)}°
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        )}
-      </div>
-    </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Export Satellite Data</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
+      </Card>
+    </TooltipProvider>
   );
-};
+});
+
+ControlPanel.displayName = 'ControlPanel';
 
 export default ControlPanel;

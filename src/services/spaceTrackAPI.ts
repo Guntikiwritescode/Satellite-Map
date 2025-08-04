@@ -157,19 +157,58 @@ export class SpaceTrackAPI {
 
   async getAllActiveSatellites(): Promise<Satellite[]> {
     try {
+      logger.info('Fetching all active satellites', {
+        ...this.context,
+        action: 'getAllActiveSatellites'
+      });
+
+      // Get all active satellites regardless of orbit type - much more comprehensive
       const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/orderby/NORAD_CAT_ID asc/format/json`;
-      const data = await this.makeProxyRequest(endpoint);
+      const data: SpaceTrackGPData[] = await this.makeProxyRequest(endpoint);
       
-      if (!data || data.length === 0) {
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        logger.warn('No satellite data received', {
+          ...this.context,
+          action: 'getAllActiveSatellites'
+        });
         throw new Error(ERROR_MESSAGES.INVALID_DATA);
       }
 
-      return data
-        .map(sat => this.convertToSatellite(sat))
-        .filter((sat): sat is Satellite => sat !== null)
-        .map(sat => this.enhanceWithPosition(sat));
+      const satellites = data.map(sat => {
+        const convertedSat = this.convertToSatellite(sat);
+        try {
+          if (convertedSat.tle?.line1 && convertedSat.tle?.line2) {
+            const position = this.calculatePosition(convertedSat.tle.line1, convertedSat.tle.line2);
+            return { 
+              ...convertedSat, 
+              position: { 
+                ...position, 
+                timestamp: Date.now() 
+              } 
+            };
+          }
+          return convertedSat;
+        } catch (error) {
+          logger.debug('Position calculation failed for satellite', {
+            ...this.context,
+            action: 'getAllActiveSatellites'
+          }, { satelliteId: convertedSat.id, error });
+          return convertedSat;
+        }
+      }).filter(sat => this.validateSatellite(sat));
+
+      logger.info('Successfully processed satellites', {
+        ...this.context,
+        action: 'getAllActiveSatellites'
+      }, { 
+        total: data.length, 
+        valid: satellites.length, 
+        filtered: data.length - satellites.length 
+      });
+
+      return satellites;
     } catch (error) {
-      logger.error('Error fetching all satellites', {
+      logger.error('Error fetching satellites', {
         ...this.context,
         action: 'getAllActiveSatellites'
       }, error);
@@ -179,22 +218,31 @@ export class SpaceTrackAPI {
 
   async getLEOSatellites(limit: number = 200): Promise<Satellite[]> {
     try {
+      logger.info('Fetching LEO satellites', {
+        ...this.context,
+        action: 'getLEOSatellites'
+      }, { limit });
+
       // Validate input
-      if (!validateNumericRange(limit, 1, 1000)) {
+      if (!validateNumericRange(limit, 1, 10000)) {
         throw new Error('Invalid limit parameter');
       }
 
       const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/MEAN_MOTION/>11/orderby/NORAD_CAT_ID asc/limit/${limit}/format/json`;
-      const data = await this.makeProxyRequest(endpoint);
+      const data: SpaceTrackGPData[] = await this.makeProxyRequest(endpoint);
       
-      if (!data || data.length === 0) {
+      if (!data || !Array.isArray(data) || data.length === 0) {
         throw new Error(ERROR_MESSAGES.INVALID_DATA);
       }
 
-      return data
-        .map(sat => this.convertToSatellite(sat))
-        .filter((sat): sat is Satellite => sat !== null)
-        .map(sat => this.enhanceWithPosition(sat));
+      return data.map(sat => this.convertToSatellite(sat)).map(sat => {
+        try {
+          const position = this.calculatePosition(sat.tle.line1, sat.tle.line2);
+          return { ...sat, position: { ...position, timestamp: Date.now() } };
+        } catch {
+          return sat;
+        }
+      });
     } catch (error) {
       logger.error('Error fetching LEO satellites', {
         ...this.context,
@@ -204,152 +252,125 @@ export class SpaceTrackAPI {
     }
   }
 
-  private convertToSatellite(sat: SpaceTrackGPData): Satellite | null {
-    try {
-      // Validate required fields
-      if (!sat.NORAD_CAT_ID || !sat.OBJECT_NAME) {
-        logger.warn('Missing required satellite data', {
-          ...this.context,
-          action: 'convertToSatellite'
-        }, { id: sat.NORAD_CAT_ID });
-        return null;
-      }
-
-      return {
-        id: sat.NORAD_CAT_ID.toString(),
-        name: sanitizeInput(sat.OBJECT_NAME) || `NORAD ${sat.NORAD_CAT_ID}`,
-        type: this.determineSatelliteType(sat.OBJECT_NAME, sat.OBJECT_TYPE),
-        status: 'active',
-        position: {
-          latitude: 0,
-          longitude: 0,
-          altitude: this.safeParseFloat(sat.SEMIMAJOR_AXIS) 
-            ? (this.safeParseFloat(sat.SEMIMAJOR_AXIS) - SATELLITE_CONFIG.EARTH_RADIUS) 
-            : SATELLITE_CONFIG.DEFAULT_ALTITUDE,
-          timestamp: Date.now()
-        },
-        velocity: SATELLITE_CONFIG.DEFAULT_VELOCITY,
-        heading: 0,
-        orbital: {
-          period: Math.max(0, this.safeParseFloat(sat.PERIOD) || 90),
-          inclination: Math.max(0, Math.min(180, this.safeParseFloat(sat.INCLINATION) || 0)),
-          eccentricity: Math.max(0, Math.min(1, this.safeParseFloat(sat.ECCENTRICITY) || 0)),
-          perigee: Math.max(0, this.safeParseFloat(sat.PERIAPSIS) || SATELLITE_CONFIG.DEFAULT_ALTITUDE),
-          apogee: Math.max(0, this.safeParseFloat(sat.APOAPSIS) || 450),
-          epoch: sat.EPOCH || new Date().toISOString()
-        },
-        metadata: {
-          constellation: sat.CONSTELLATION || this.extractConstellation(sat.OBJECT_NAME),
-          country: sanitizeInput(sat.COUNTRY_CODE || 'Unknown'),
-          launchDate: sat.LAUNCH_DATE || new Date().toISOString(),
-          purpose: this.determinePurpose(sat.OBJECT_NAME, sat.OBJECT_TYPE)
-        },
-        tle: {
-          line1: sat.TLE_LINE1 || `1 ${sat.NORAD_CAT_ID}`,
-          line2: sat.TLE_LINE2 || `2 ${sat.NORAD_CAT_ID}`
-        }
-      };
-    } catch (error) {
-      logger.warn('Error converting satellite data', {
-        ...this.context,
-        action: 'convertToSatellite'
-      }, error);
-      return null;
-    }
+  private validateSatellite(satellite: Satellite): boolean {
+    return Boolean(
+      satellite &&
+      satellite.id &&
+      satellite.name &&
+      satellite.position &&
+      typeof satellite.position.latitude === 'number' &&
+      typeof satellite.position.longitude === 'number' &&
+      !isNaN(satellite.position.latitude) &&
+      !isNaN(satellite.position.longitude) &&
+      validateNumericRange(satellite.position.latitude, -90, 90) &&
+      validateNumericRange(satellite.position.longitude, -180, 180)
+    );
   }
 
-  private enhanceWithPosition(sat: Satellite): Satellite {
-    try {
-      if (validateTLE(sat.tle.line1, sat.tle.line2)) {
-        const position = this.calculatePosition(sat.tle.line1, sat.tle.line2);
-        return { 
-          ...sat, 
-          position: { 
-            ...position, 
-            timestamp: Date.now() 
-          } 
-        };
+  private convertToSatellite(sat: SpaceTrackGPData): Satellite {
+    return {
+      id: sanitizeInput(sat.NORAD_CAT_ID.toString()),
+      name: sanitizeInput(sat.OBJECT_NAME || `NORAD ${sat.NORAD_CAT_ID}`),
+      type: this.determineSatelliteType(sat.OBJECT_NAME, sat.OBJECT_TYPE),
+      status: 'active',
+      position: {
+        latitude: 0,
+        longitude: 0,
+        altitude: this.safeParseFloat(sat.SEMIMAJOR_AXIS) ? (this.safeParseFloat(sat.SEMIMAJOR_AXIS) - 6371) : 400,
+        timestamp: Date.now()
+      },
+      velocity: 7.8,
+      heading: 0,
+      orbital: {
+        period: this.safeParseFloat(sat.PERIOD) || 90,
+        inclination: this.safeParseFloat(sat.INCLINATION) || 0,
+        eccentricity: this.safeParseFloat(sat.ECCENTRICITY) || 0,
+        perigee: this.safeParseFloat(sat.PERIAPSIS) || 400,
+        apogee: this.safeParseFloat(sat.APOAPSIS) || 450,
+        epoch: sat.EPOCH || new Date().toISOString()
+      },
+      metadata: {
+        constellation: sanitizeInput(sat.CONSTELLATION || this.extractConstellation(sat.OBJECT_NAME)),
+        country: sanitizeInput(sat.COUNTRY_CODE || 'Unknown'),
+        launchDate: sat.LAUNCH_DATE || new Date().toISOString(),
+        purpose: this.determinePurpose(sat.OBJECT_NAME, sat.OBJECT_TYPE)
+      },
+      tle: {
+        line1: sat.TLE_LINE1 || `1 ${sat.NORAD_CAT_ID}`,
+        line2: sat.TLE_LINE2 || `2 ${sat.NORAD_CAT_ID}`
       }
-      return sat;
-    } catch (error) {
-      logger.warn('Error enhancing satellite with position', {
-        ...this.context,
-        action: 'enhanceWithPosition'
-      }, { satelliteId: sat.id, error });
-      return sat;
-    }
+    };
   }
 
-  calculatePosition(tle1: string, tle2: string): { latitude: number; longitude: number; altitude: number } {
+  calculatePosition(tle1: string, tle2: string) {
     try {
       if (!validateTLE(tle1, tle2)) {
-        return { 
-          latitude: 0, 
-          longitude: 0, 
-          altitude: SATELLITE_CONFIG.DEFAULT_ALTITUDE 
-        };
+        logger.debug('Invalid TLE data provided', {
+          ...this.context,
+          action: 'calculatePosition'
+        });
+        return { latitude: 0, longitude: 0, altitude: 400 };
       }
       
       const satrec = satellite.twoline2satrec(tle1, tle2);
       if (!satrec) {
-        return { 
-          latitude: 0, 
-          longitude: 0, 
-          altitude: SATELLITE_CONFIG.DEFAULT_ALTITUDE 
-        };
+        return { latitude: 0, longitude: 0, altitude: 400 };
       }
       
       const now = new Date();
       const positionAndVelocity = satellite.propagate(satrec, now);
       
-      if (!positionAndVelocity || 
-          typeof positionAndVelocity !== 'object' ||
-          !positionAndVelocity.position ||
-          typeof positionAndVelocity.position !== 'object' ||
-          !('x' in positionAndVelocity.position) ||
-          !('y' in positionAndVelocity.position) ||
-          !('z' in positionAndVelocity.position)) {
-        return { 
-          latitude: 0, 
-          longitude: 0, 
-          altitude: SATELLITE_CONFIG.DEFAULT_ALTITUDE 
+      // First check if positionAndVelocity is null or undefined
+      if (!positionAndVelocity) {
+        return { latitude: 0, longitude: 0, altitude: 400 };
+      }
+      
+      // More robust checking for positionAndVelocity
+      if (typeof positionAndVelocity !== 'object') {
+        return { latitude: 0, longitude: 0, altitude: 400 };
+      }
+      
+      // Check if position exists and is valid
+      if (positionAndVelocity.position && 
+          typeof positionAndVelocity.position === 'object' && 
+          positionAndVelocity.position !== null &&
+          'x' in positionAndVelocity.position &&
+          'y' in positionAndVelocity.position &&
+          'z' in positionAndVelocity.position) {
+        
+        const positionEci = positionAndVelocity.position;
+        const gmst = satellite.gstime(now);
+        const positionGd = satellite.eciToGeodetic(positionEci, gmst);
+        
+        const longitude = satellite.degreesLong(positionGd.longitude);
+        const latitude = satellite.degreesLat(positionGd.latitude);
+        const altitude = positionGd.height;
+        
+        // Validate calculated coordinates
+        if (!validateNumericRange(latitude, -90, 90) || 
+            !validateNumericRange(longitude, -180, 180) ||
+            isNaN(altitude)) {
+          return { latitude: 0, longitude: 0, altitude: 400 };
+        }
+        
+        return {
+          latitude,
+          longitude,
+          altitude: Math.max(altitude, 0) // Ensure altitude is not negative
         };
       }
       
-      const positionEci = positionAndVelocity.position;
-      const gmst = satellite.gstime(now);
-      const positionGd = satellite.eciToGeodetic(positionEci, gmst);
-      
-      const longitude = satellite.degreesLong(positionGd.longitude);
-      const latitude = satellite.degreesLat(positionGd.latitude);
-      const altitude = positionGd.height;
-      
-      // Validate calculated values
-      const validLatitude = validateNumericRange(latitude, -90, 90) ? latitude : 0;
-      const validLongitude = validateNumericRange(longitude, -180, 180) ? longitude : 0;
-      const validAltitude = validateNumericRange(altitude, 0, 50000) 
-        ? altitude 
-        : SATELLITE_CONFIG.DEFAULT_ALTITUDE;
-      
-      return {
-        latitude: validLatitude,
-        longitude: validLongitude,
-        altitude: validAltitude
-      };
+      return { latitude: 0, longitude: 0, altitude: 400 };
     } catch (error) {
-      logger.warn('Error calculating satellite position', {
+      logger.debug('Error calculating satellite position', {
         ...this.context,
         action: 'calculatePosition'
       }, error);
-      return { 
-        latitude: 0, 
-        longitude: 0, 
-        altitude: SATELLITE_CONFIG.DEFAULT_ALTITUDE 
-      };
+      return { latitude: 0, longitude: 0, altitude: 400 };
     }
   }
 
-  private determineSatelliteType(name: string, objectType: string): string {
+  private determineSatelliteType(name: string, objectType: string) {
     const lowerName = name.toLowerCase();
     const lowerType = objectType.toLowerCase();
     
@@ -395,7 +416,7 @@ export class SpaceTrackAPI {
   }
 
   private safeParseFloat(value: number | string | undefined): number {
-    if (typeof value === 'number') return isNaN(value) ? 0 : value;
+    if (typeof value === 'number') return value;
     if (typeof value === 'string') {
       const parsed = parseFloat(value);
       return isNaN(parsed) ? 0 : parsed;

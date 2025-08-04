@@ -34,20 +34,20 @@ const LessonCard: React.FC<LessonCardProps> = React.memo(({ lesson, courseId, is
     setShowExplanation(false);
   }, [setSelectedLesson, lesson.id]);
 
+  const handleCompleteLesson = useCallback(() => {
+    markLessonComplete(courseId, lesson.id);
+    setSelectedLesson(null);
+  }, [markLessonComplete, courseId, lesson.id, setSelectedLesson]);
+
   const handleNextPage = useCallback(() => {
     if (currentPage < lesson.content.length - 1) {
-      setCurrentPage(currentPage + 1);
+      setCurrentPage(prev => prev + 1);
     } else if (lesson.quiz && !showQuiz) {
       setShowQuiz(true);
     } else {
       handleCompleteLesson();
     }
-  }, [currentPage, lesson.content.length, lesson.quiz, showQuiz]);
-
-  const handleCompleteLesson = useCallback(() => {
-    markLessonComplete(courseId, lesson.id);
-    setSelectedLesson(null);
-  }, [markLessonComplete, courseId, lesson.id, setSelectedLesson]);
+  }, [currentPage, lesson.content.length, lesson.quiz, showQuiz, handleCompleteLesson]);
 
   const handleQuizAnswer = useCallback((answerIndex: number) => {
     setQuizAnswer(answerIndex);

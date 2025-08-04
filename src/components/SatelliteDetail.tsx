@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   ExternalLink, ChevronDown, ChevronUp, Satellite as SatelliteIcon,
   Globe, Clock, Zap, MapPin, Calendar, Building, Flag,
-  Navigation, Radio, Eye, Telescope, Shield, Activity
+  Navigation, Radio, Eye, Telescope, Shield, Activity, X, Info
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,12 +12,37 @@ import { Satellite, SatelliteType } from '../types/satellite.types';
 import { useSatelliteStore } from '../stores/satelliteStore';
 
 interface SatelliteDetailProps {
-  satellite: Satellite;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
+const SatelliteDetail: React.FC<SatelliteDetailProps> = React.memo(({ isOpen, onClose }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { setSelectedSatellite } = useSatelliteStore();
+  const { getSelectedSatellite, setSelectedSatellite } = useSatelliteStore();
+  
+  // Memoize the selected satellite to prevent unnecessary recalculations
+  const satellite = useMemo(() => getSelectedSatellite(), [getSelectedSatellite]);
+
+  // Memoize formatted values to prevent recalculation on every render
+  const formattedData = useMemo(() => {
+    if (!satellite) return null;
+    
+    return {
+      altitude: satellite.position?.altitude 
+        ? satellite.position.altitude > 1000 
+          ? `${(satellite.position.altitude / 1000).toFixed(1)}K km`
+          : `${satellite.position.altitude.toFixed(0)} km`
+        : 'N/A',
+      velocity: satellite.velocity ? `${satellite.velocity.toFixed(2)} km/s` : 'N/A',
+      latitude: satellite.position?.latitude?.toFixed(4) || 'N/A',
+      longitude: satellite.position?.longitude?.toFixed(4) || 'N/A',
+      period: satellite.orbital?.period ? `${satellite.orbital.period.toFixed(1)} min` : 'N/A',
+      inclination: satellite.orbital?.inclination ? `${satellite.orbital.inclination.toFixed(1)}°` : 'N/A',
+      eccentricity: satellite.orbital?.eccentricity ? satellite.orbital.eccentricity.toFixed(4) : 'N/A',
+      perigee: satellite.orbital?.perigee ? `${satellite.orbital.perigee.toFixed(0)} km` : 'N/A',
+      apogee: satellite.orbital?.apogee ? `${satellite.orbital.apogee.toFixed(0)} km` : 'N/A'
+    };
+  }, [satellite]);
 
   const getSatelliteIcon = (type: SatelliteType) => {
     switch (type) {
@@ -242,16 +267,16 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
     return { type: 'Geostationary Earth Orbit (GEO)', color: 'text-purple-400' };
   };
 
-  const satelliteInfo = getSatelliteInfo(satellite.name, satellite.type);
-  const orbitalType = getOrbitalType(satellite.position.altitude);
+  const satelliteInfo = getSatelliteInfo(satellite?.name || '', satellite?.type || '');
+  const orbitalType = getOrbitalType(satellite?.position?.altitude || 0);
 
   return (
     <Card className="w-full bg-background/95 backdrop-blur-sm border border-border max-h-[80vh] flex flex-col">
       <CardHeader className="pb-3 flex-shrink-0">
         <CardTitle className="flex items-center justify-between text-base">
           <div className="flex items-center space-x-2">
-            {getSatelliteIcon(satellite.type)}
-            <span className="truncate">{satellite.name}</span>
+            {getSatelliteIcon(satellite?.type || 'satellite')}
+            <span className="truncate">{satellite?.name || 'Satellite'}</span>
           </div>
           <div className="flex items-center space-x-2">
             <Button
@@ -265,10 +290,10 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setSelectedSatellite(null)}
+              onClick={onClose}
               className="h-8 w-8 p-0"
             >
-              ×
+              <X className="h-4 w-4" />
             </Button>
           </div>
         </CardTitle>
@@ -280,36 +305,36 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
             <div className="flex items-center space-x-2">
               <Building className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">Agency:</span>
-              <span className="font-medium">{satellite.metadata?.constellation || 'Unknown'}</span>
+              <span className="font-medium">{satellite?.metadata?.constellation || 'Unknown'}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Flag className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">Country:</span>
-              <span className="font-medium">{satellite.metadata?.country || 'Unknown'}</span>
+              <span className="font-medium">{satellite?.metadata?.country || 'Unknown'}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Globe className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">Altitude:</span>
-              <span className="font-medium">{formatAltitude(satellite.position.altitude)}</span>
+              <span className="font-medium">{formattedData?.altitude}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Clock className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">Period:</span>
-              <span className="font-medium">{formatPeriod(satellite.orbital.period)}</span>
+              <span className="font-medium">{formattedData?.period}</span>
             </div>
           </div>
 
           {/* Status and Type */}
           <div className="flex items-center space-x-2">
             <Badge variant="outline" className="text-xs">
-              {satellite.type.replace('-', ' ')}
+              {satellite?.type?.replace('-', ' ')}
             </Badge>
             <Badge variant="outline" className={`text-xs ${orbitalType.color}`}>
               {orbitalType.type}
             </Badge>
             <Badge variant="outline" className="text-xs">
               <Activity className="h-3 w-3 mr-1" />
-              {satellite.status}
+              {satellite?.status}
             </Badge>
           </div>
 
@@ -333,7 +358,7 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Type:</span>
-                    <span className="font-medium text-right">{satellite.type.replace('-', ' ')}</span>
+                    <span className="font-medium text-right">{satellite?.type?.replace('-', ' ')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Year:</span>
@@ -367,25 +392,25 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
                 <div className="grid grid-cols-1 gap-2 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Altitude:</span>
-                    <span className="font-mono">{satellite.position.altitude.toLocaleString()} km</span>
+                    <span className="font-mono">{formattedData?.altitude}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Orbital Period:</span>
-                    <span className="font-mono">{satellite.orbital.period.toFixed(1)} minutes</span>
+                    <span className="font-mono">{formattedData?.period}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Inclination:</span>
-                    <span className="font-mono">{satellite.orbital.inclination.toFixed(1)}°</span>
+                    <span className="font-mono">{formattedData?.inclination}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Eccentricity:</span>
-                    <span className="font-mono">{satellite.orbital.eccentricity.toFixed(4)}</span>
+                    <span className="font-mono">{formattedData?.eccentricity}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Velocity:</span>
-                    <span className="font-mono">{satellite.velocity?.toFixed(2) || 'N/A'} km/s</span>
+                    <span className="font-mono">{formattedData?.velocity}</span>
                   </div>
-                  {satellite.footprint && (
+                  {satellite?.footprint && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Coverage Radius:</span>
                       <span className="font-mono">{satellite.footprint.toFixed(0)} km</span>
@@ -404,15 +429,15 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
                 <div className="grid grid-cols-1 gap-2 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Latitude:</span>
-                    <span className="font-mono">{satellite.position.latitude.toFixed(4)}°</span>
+                    <span className="font-mono">{formattedData?.latitude}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Longitude:</span>
-                    <span className="font-mono">{satellite.position.longitude.toFixed(4)}°</span>
+                    <span className="font-mono">{formattedData?.longitude}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Last Update:</span>
-                    <span className="text-xs">{formatLastUpdate(satellite.position.timestamp)}</span>
+                    <span className="text-xs">{formatLastUpdate(satellite?.position?.timestamp || 0)}</span>
                   </div>
                 </div>
               </div>
@@ -427,11 +452,11 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
                 <div className="grid grid-cols-1 gap-2 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Launch Date:</span>
-                    <span className="font-mono">{satellite.metadata?.launchDate ? new Date(satellite.metadata.launchDate).toLocaleDateString() : 'Unknown'}</span>
+                    <span className="font-mono">{satellite?.metadata?.launchDate ? new Date(satellite.metadata.launchDate).toLocaleDateString() : 'Unknown'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">NORAD ID:</span>
-                    <span className="font-mono">{satellite.id}</span>
+                    <span className="font-mono">{satellite?.id}</span>
                   </div>
                 </div>
               </div>
@@ -441,6 +466,8 @@ const SatelliteDetail: React.FC<SatelliteDetailProps> = ({ satellite }) => {
       </CardContent>
     </Card>
   );
-};
+});
+
+SatelliteDetail.displayName = 'SatelliteDetail';
 
 export default SatelliteDetail;

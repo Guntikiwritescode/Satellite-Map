@@ -1,52 +1,33 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Volume2, VolumeX, Play, Pause, SkipForward } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Play, Pause, SkipForward, SkipBack, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface Track {
-  id: string;
-  title: string;
+  name: string;
   file: string;
+  duration: number;
 }
 
-const tracks: Track[] = [
-  {
-    id: '1',
-    title: 'GLIMMER',
-    file: '/audio/glimmer.mp3'
-  },
-  {
-    id: '2', 
-    title: 'NEON WIND',
-    file: '/audio/neon-wind.mp3'
-  }
-];
-
-const AudioPlayer = () => {
+const AudioPlayer: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState([30]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [volume, setVolume] = useState(0.7);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const currentTrack = tracks[currentTrackIndex];
+  const tracks: Track[] = [
+    { name: 'Cosmic Glimmer', file: '/audio/glimmer.mp3', duration: 180 },
+    { name: 'Neon Wind', file: '/audio/neon-wind.mp3', duration: 240 }
+  ];
 
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume[0] / 100;
+    const audio = audioRef.current;
+    if (audio) {
+      audio.volume = volume;
     }
   }, [volume]);
 
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.addEventListener('ended', handleTrackEnd);
-      return () => {
-        audioRef.current?.removeEventListener('ended', handleTrackEnd);
-      };
-    }
-  }, [currentTrackIndex]);
-
-  const handleTrackEnd = () => {
+  const handleTrackEnd = useCallback(() => {
     const nextIndex = (currentTrackIndex + 1) % tracks.length;
     setCurrentTrackIndex(nextIndex);
     // Auto-play next track if currently playing
@@ -55,122 +36,86 @@ const AudioPlayer = () => {
         audioRef.current?.play();
       }, 100);
     }
-  };
+  }, [currentTrackIndex, isPlaying]);
 
-  const togglePlay = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.addEventListener('ended', handleTrackEnd);
+      return () => {
+        audio.removeEventListener('ended', handleTrackEnd);
+      };
     }
-  };
+    return undefined;
+  }, [handleTrackEnd]);
 
-  const toggleMute = () => {
-    if (audioRef.current) {
-      audioRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+  const handlePlayPause = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      audio.play();
     }
+    setIsPlaying(!isPlaying);
   };
 
-  const nextTrack = () => {
+  const handleNext = () => {
     const nextIndex = (currentTrackIndex + 1) % tracks.length;
     setCurrentTrackIndex(nextIndex);
-    if (isPlaying) {
-      setTimeout(() => {
-        audioRef.current?.play();
-      }, 100);
-    }
+    
+    setTimeout(() => {
+      if (isPlaying && audioRef.current) {
+        audioRef.current.play();
+      }
+    }, 100);
   };
 
-  const handleVolumeChange = (newVolume: number[]) => {
-    setVolume(newVolume);
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume[0] / 100;
-    }
+  const handlePrevious = () => {
+    const prevIndex = currentTrackIndex === 0 ? tracks.length - 1 : currentTrackIndex - 1;
+    setCurrentTrackIndex(prevIndex);
+    
+    setTimeout(() => {
+      if (isPlaying && audioRef.current) {
+        audioRef.current.play();
+      }
+    }, 100);
   };
+
+  const currentTrack = tracks[currentTrackIndex];
 
   return (
-    <div className="glass-panel p-2">
-      <audio
-        ref={audioRef}
-        src={currentTrack.file}
-        loop={false}
-        preload="metadata"
-      />
-      
-      {/* Track Info */}
-      <div className="mb-2">
-        <div className="text-xs text-primary font-medium">
-          Audio
+    <Card className="w-full max-w-sm glass-panel">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-sm">
+            <div className="font-medium text-foreground">{currentTrack.name}</div>
+            <div className="text-muted-foreground">Ambient Space Audio</div>
+          </div>
+          <Volume2 className="h-4 w-4 text-muted-foreground" />
         </div>
-        <div className="text-xs text-foreground truncate">
-          {currentTrack.title}
-        </div>
-      </div>
-
-      {/* Controls */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center space-x-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={togglePlay}
-            className="h-6 w-6 p-0"
-          >
-            {isPlaying ? (
-              <Pause className="h-3 w-3" />
-            ) : (
-              <Play className="h-3 w-3" />
-            )}
+        
+        <div className="flex items-center justify-center space-x-2">
+          <Button variant="ghost" size="icon" onClick={handlePrevious}>
+            <SkipBack className="h-4 w-4" />
           </Button>
-          
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={nextTrack}
-            className="h-6 w-6 p-0"
-          >
-            <SkipForward className="h-3 w-3" />
+          <Button onClick={handlePlayPause} className="rounded-full">
+            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          </Button>
+          <Button variant="ghost" size="icon" onClick={handleNext}>
+            <SkipForward className="h-4 w-4" />
           </Button>
         </div>
-
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={toggleMute}
-          className="h-6 w-6 p-0"
-        >
-          {isMuted ? (
-            <VolumeX className="h-3 w-3 text-destructive" />
-          ) : (
-            <Volume2 className="h-3 w-3" />
-          )}
-        </Button>
-      </div>
-
-      {/* Volume Control */}
-      <div className="flex items-center space-x-2 mb-1">
-        <VolumeX className="h-2 w-2 text-muted-foreground" />
-        <div className="flex-1 bg-muted/30 rounded-full h-1">
-          <div 
-            className="h-full bg-primary rounded-full transition-all duration-200"
-            style={{ width: `${volume[0]}%` }}
-          />
-        </div>
-        <Volume2 className="h-2 w-2 text-muted-foreground" />
-        <span className="text-xs font-mono text-muted-foreground min-w-[2rem] text-right">
-          {volume[0]}%
-        </span>
-      </div>
-
-      {/* Track Counter */}
-      <div className="text-xs text-muted-foreground text-center">
-        {currentTrackIndex + 1} / {tracks.length}
-      </div>
-    </div>
+        
+        <audio
+          ref={audioRef}
+          src={currentTrack.file}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+        />
+      </CardContent>
+    </Card>
   );
 };
 
