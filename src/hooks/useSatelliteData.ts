@@ -1,12 +1,101 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { spaceTrackAPI } from '../services/spaceTrackAPI';
+import { logger } from '../lib/logger';
+import { 
+  PERFORMANCE_CONFIG, 
+  API_CONFIG, 
+  ERROR_MESSAGES, 
+  FEATURE_FLAGS 
+} from '../lib/constants';
+
+const COMPONENT_CONTEXT = { component: 'useSatelliteData' };
 
 export const useSatelliteData = () => {
   const { setSatellites, setError, setLoading } = useSatelliteStore();
 
-  // Fetch satellite data
+  // Test connectivity with better error handling
+  const testConnectivity = useCallback(async (): Promise<void> => {
+    try {
+      logger.debug('Testing API connectivity', {
+        ...COMPONENT_CONTEXT,
+        action: 'testConnectivity'
+      });
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch('/api/space-track-proxy', {
+        method: 'OPTIONS',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`Connectivity test failed: ${response.status}`);
+      }
+      
+      logger.debug('API connectivity test passed', COMPONENT_CONTEXT);
+    } catch (error) {
+      logger.error('API connectivity test failed', COMPONENT_CONTEXT, error);
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Connection timeout. The service may be temporarily unavailable.');
+      }
+      
+      throw new Error('Cannot connect to satellite data service. The service may be temporarily unavailable.');
+    }
+  }, []);
+
+  // Optimized satellite fetching function
+  const fetchSatelliteData = useCallback(async () => {
+    logger.info('Starting satellite data fetch', {
+      ...COMPONENT_CONTEXT,
+      action: 'fetchSatelliteData'
+    });
+    
+    // Test connectivity first
+    await testConnectivity();
+    
+    try {
+      const result = await spaceTrackAPI.getAllActiveSatellites();
+      
+      if (!result || result.length === 0) {
+        throw new Error(ERROR_MESSAGES.INVALID_DATA);
+      }
+      
+      logger.info('Successfully fetched satellite data', {
+        ...COMPONENT_CONTEXT,
+        action: 'fetchSatelliteData'
+      }, { count: result.length });
+      
+      return result;
+    } catch (error) {
+      logger.error('Satellite fetch error', {
+        ...COMPONENT_CONTEXT,
+        action: 'fetchSatelliteData'
+      }, error);
+      
+      // Provide user-friendly error messages
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          throw new Error(ERROR_MESSAGES.NETWORK_ERROR);
+        }
+        if (error.message.includes('timeout')) {
+          throw new Error(ERROR_MESSAGES.TIMEOUT_ERROR);
+        }
+        if (error.message.includes('Failed to fetch')) {
+          throw new Error(ERROR_MESSAGES.API_ERROR);
+        }
+      }
+      
+      throw error;
+    }
+  }, [testConnectivity]);
+
+  // Fetch satellite data with proper error handling and caching
   const { 
     data: satellites = [], 
     error: satelliteError, 
@@ -14,48 +103,36 @@ export const useSatelliteData = () => {
     refetch: refetchSatellites 
   } = useQuery({
     queryKey: ['satellites', 'unlimited'],
-    queryFn: async () => {
-      console.log('Starting satellite data fetch...');
-      
-      // Test connectivity first
-      try {
-        console.log('Testing connectivity to API...');
-        const testResponse = await fetch('/api/space-track-proxy', {
-          method: 'OPTIONS'
-        });
-        console.log('Connectivity test result:', testResponse.status);
-      } catch (error) {
-        console.error('Connectivity test failed:', error);
-        throw new Error('Cannot connect to satellite data service. The service may be temporarily unavailable.');
-      }
-      
-      try {
-        const result = await spaceTrackAPI.getAllActiveSatellites();
-        console.log(`Successfully fetched ${result.length} satellites`);
-        return result;
-      } catch (error) {
-        console.error('Satellite fetch error:', error);
-        // More specific error handling
-        if (error instanceof TypeError && error.message.includes('fetch')) {
-          throw new Error('Network connection failed. The satellite data service is not responding.');
-        }
-        if (error.message.includes('Failed to fetch')) {
-          throw new Error('Unable to connect to satellite data service. Please try refreshing the page.');
-        }
-        throw error;
-      }
-    },
-    refetchInterval: 10 * 60 * 1000, // 10 minutes - reduced frequency for performance
-    staleTime: 0, // Force immediate refresh to see the change
-    retry: 3
+    queryFn: fetchSatelliteData,
+    refetchInterval: PERFORMANCE_CONFIG.DATA_REFRESH_INTERVAL,
+    staleTime: PERFORMANCE_CONFIG.DATA_REFRESH_INTERVAL / 2,
+    retry: API_CONFIG.MAX_RETRIES,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    enabled: true,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
   });
+
+  // Memoize satellite processing to avoid unnecessary recalculations
+  const processedSatellites = useMemo(() => {
+    if (!satellites.length) return [];
+    
+    // Validate and filter satellites
+    return satellites.filter(sat => {
+      return sat && 
+             sat.id && 
+             sat.name && 
+             typeof sat.position?.latitude === 'number' &&
+             typeof sat.position?.longitude === 'number';
+    });
+  }, [satellites]);
 
   // Update store with satellite data
   useEffect(() => {
-    if (satellites.length > 0) {
-      setSatellites(satellites);
+    if (processedSatellites.length > 0) {
+      setSatellites(processedSatellites);
     }
-  }, [satellites, setSatellites]);
+  }, [processedSatellites, setSatellites]);
 
   // Update store with loading state
   useEffect(() => {
@@ -65,76 +142,138 @@ export const useSatelliteData = () => {
   // Update store with error state
   useEffect(() => {
     if (satelliteError) {
-      setError(`Failed to load satellite data: ${satelliteError.message}`);
+      const errorMessage = satelliteError instanceof Error 
+        ? satelliteError.message 
+        : ERROR_MESSAGES.UNKNOWN_ERROR;
+      
+      logger.error('Satellite data error', COMPONENT_CONTEXT, satelliteError);
+      setError(`Failed to load satellite data: ${errorMessage}`);
     } else {
       setError(null);
     }
   }, [satelliteError, setError]);
 
-  // Optimized real-time position updates with error handling and reduced frequency
+  // Optimized real-time position updates with better performance
   useEffect(() => {
-    if (satellites.length === 0) return;
+    if (!FEATURE_FLAGS.ENABLE_REAL_TIME_UPDATES || processedSatellites.length === 0) {
+      return;
+    }
+
+    let isActive = true;
+    let timeoutId: NodeJS.Timeout;
 
     const updatePositions = async () => {
+      if (!isActive) return;
+      
       try {
-        // Process satellites in smaller batches to avoid blocking (reduced for performance)
-        const batchSize = 50; // Reduced from 100
-        const updatedSatellites = [...satellites];
+        // Process satellites in smaller batches to avoid blocking
+        const batchSize = API_CONFIG.BATCH_SIZE;
+        const updatedSatellites = [...processedSatellites];
         
-        for (let i = 0; i < satellites.length; i += batchSize) {
-          const batch = satellites.slice(i, i + batchSize);
+        for (let i = 0; i < processedSatellites.length && isActive; i += batchSize) {
+          const batch = processedSatellites.slice(i, i + batchSize);
           
           batch.forEach((sat, index) => {
+            if (!isActive) return;
+            
             try {
               // Only update if TLE data is valid
-              if (sat.tle?.line1 && sat.tle?.line2 && sat.tle.line1.length > 10 && sat.tle.line2.length > 10) {
+              if (sat.tle?.line1?.length > 10 && sat.tle?.line2?.length > 10) {
                 const position = spaceTrackAPI.calculatePosition(sat.tle.line1, sat.tle.line2);
                 const actualIndex = i + index;
-                updatedSatellites[actualIndex] = {
-                  ...sat,
-                  position: {
-                    ...position,
-                    timestamp: Date.now()
-                  }
-                };
+                
+                if (actualIndex < updatedSatellites.length) {
+                  updatedSatellites[actualIndex] = {
+                    ...sat,
+                    position: {
+                      ...position,
+                      timestamp: Date.now()
+                    }
+                  };
+                }
               }
             } catch (error) {
-              // Silently fail for individual satellites to avoid console spam
-              // Keep original position data
+              // Silently handle individual satellite errors to avoid console spam
+              logger.debug('Error updating individual satellite position', {
+                ...COMPONENT_CONTEXT,
+                action: 'updatePositions'
+              }, { satelliteId: sat.id, error });
             }
           });
           
           // Yield control to prevent blocking
-          await new Promise(resolve => setTimeout(resolve, 0));
+          if (isActive) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+          }
         }
         
-        setSatellites(updatedSatellites);
+        if (isActive) {
+          setSatellites(updatedSatellites);
+        }
       } catch (error) {
-        console.error('Error updating satellite positions:', error);
+        logger.error('Error updating satellite positions', {
+          ...COMPONENT_CONTEXT,
+          action: 'updatePositions'
+        }, error);
+      } finally {
+        if (isActive) {
+          timeoutId = setTimeout(updatePositions, PERFORMANCE_CONFIG.POSITION_UPDATE_INTERVAL);
+        }
       }
     };
 
-    // Reduced frequency from 10 seconds to 15 seconds for weaker devices
-    const interval = setInterval(updatePositions, 15000);
-    return () => clearInterval(interval);
-  }, [satellites.length, setSatellites]); // Only depend on satellites.length, not the entire array
+    // Start position updates
+    timeoutId = setTimeout(updatePositions, PERFORMANCE_CONFIG.POSITION_UPDATE_INTERVAL);
 
-  // Get user location
+    return () => {
+      isActive = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [processedSatellites.length, setSatellites]);
+
+  // Get user location with improved error handling
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          // User location logic can be added here if needed
-        },
-        (error) => {
-          console.warn('Could not get user location:', error);
-        }
-      );
+    if (!navigator.geolocation) {
+      logger.debug('Geolocation not supported', COMPONENT_CONTEXT);
+      return;
     }
+
+    const options: PositionOptions = {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 300000 // 5 minutes
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        logger.debug('User location obtained', {
+          ...COMPONENT_CONTEXT,
+          action: 'getUserLocation'
+        }, {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+        // User location logic can be added here if needed
+      },
+      (error) => {
+        // Only log significant errors
+        if (error.code === error.PERMISSION_DENIED) {
+          logger.debug('Geolocation permission denied', COMPONENT_CONTEXT);
+        } else {
+          logger.warn('Could not get user location', {
+            ...COMPONENT_CONTEXT,
+            action: 'getUserLocation'
+          }, error);
+        }
+      },
+      options
+    );
   }, []);
 
   return {
-    satellites,
+    satellites: processedSatellites,
     isLoading: satelliteLoading,
     error: satelliteError,
     refetch: refetchSatellites

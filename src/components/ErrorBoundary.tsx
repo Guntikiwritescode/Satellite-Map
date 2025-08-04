@@ -2,6 +2,8 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { logger } from '@/lib/logger';
+import { ERROR_MESSAGES } from '@/lib/constants';
 
 interface Props {
   children: ReactNode;
@@ -11,6 +13,7 @@ interface Props {
 interface State {
   hasError: boolean;
   error?: Error;
+  errorBoundary?: string;
 }
 
 class ErrorBoundary extends Component<Props, State> {
@@ -23,11 +26,47 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Error boundary caught an error:', error, errorInfo);
+    // Use our logger instead of console.error
+    logger.error('Error boundary caught an error', {
+      component: 'ErrorBoundary',
+      action: 'componentDidCatch'
+    }, {
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      },
+      errorInfo: {
+        componentStack: errorInfo.componentStack
+      }
+    });
+
+    // Set a user-friendly error message
+    this.setState({
+      errorBoundary: this.getUserFriendlyErrorMessage(error)
+    });
+  }
+
+  private getUserFriendlyErrorMessage(error: Error): string {
+    // Don't expose sensitive error details to users
+    if (error.message.includes('ChunkLoadError') || error.message.includes('Loading chunk')) {
+      return 'A resource failed to load. Please refresh the page.';
+    }
+    
+    if (error.message.includes('Network')) {
+      return ERROR_MESSAGES.NETWORK_ERROR;
+    }
+    
+    if (error.message.includes('Permission') || error.message.includes('Unauthorized')) {
+      return ERROR_MESSAGES.PERMISSION_DENIED;
+    }
+    
+    // Default to generic error message to avoid exposing implementation details
+    return ERROR_MESSAGES.UNKNOWN_ERROR;
   }
 
   private handleReset = () => {
-    this.setState({ hasError: false, error: undefined });
+    this.setState({ hasError: false, error: undefined, errorBoundary: undefined });
   };
 
   public render() {
@@ -35,6 +74,9 @@ class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) {
         return this.props.fallback;
       }
+
+      // Use the sanitized error message instead of raw error details
+      const displayMessage = this.state.errorBoundary || ERROR_MESSAGES.UNKNOWN_ERROR;
 
       return (
         <Card className="glass-panel p-8 m-4">
@@ -45,7 +87,10 @@ class ErrorBoundary extends Component<Props, State> {
             <div>
               <h3 className="font-semibold text-foreground mb-2">Something went wrong</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                {this.state.error?.message || 'An unexpected error occurred'}
+                {displayMessage}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                If this problem persists, please try refreshing the page or contact support.
               </p>
             </div>
             <Button onClick={this.handleReset} variant="outline" className="cosmic-border">
