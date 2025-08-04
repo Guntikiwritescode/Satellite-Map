@@ -1,183 +1,120 @@
-# Supabase CLI
+# ALCHEMIST - Satellite Tracking Terminal
 
-[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
-](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
+🛰️ A modern, real-time satellite tracking application built with React, TypeScript, and Three.js.
 
-[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
+## Features
 
-This repository contains all the functionality for Supabase CLI.
+- **Real-time satellite tracking** - Track thousands of active satellites using live orbital data
+- **Interactive 3D globe** - Beautiful Three.js visualization with Earth texture
+- **Satellite filtering** - Filter by type, constellation, country, and more
+- **Educational content** - Learn about satellites, orbits, and space technology
+- **Space Station tracker** - Dedicated ISS tracking with pass predictions
+- **Mobile responsive** - Works great on desktop, tablet, and mobile devices
 
-- [x] Running Supabase locally
-- [x] Managing database migrations
-- [x] Creating and deploying Supabase Functions
-- [x] Generating types directly from your database schema
-- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
+## Tech Stack
 
-## Getting started
+- **Frontend**: React 18, TypeScript, Vite
+- **3D Graphics**: Three.js, React Three Fiber, React Three Drei
+- **UI Components**: Radix UI, Tailwind CSS, shadcn/ui
+- **State Management**: Zustand
+- **Data Fetching**: TanStack Query
+- **API**: Vercel Serverless Functions
+- **Satellite Math**: satellite.js for orbital calculations
+- **Deployment**: Vercel
 
-### Install the CLI
+## Data Sources
 
-Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
+- **Space-Track.org**: Official US government satellite catalog
+- **Real-time orbital elements (TLE)**: Two-line element sets for accurate positioning
+- **Satellite metadata**: Launch dates, countries, constellations, purposes
 
-```bash
-npm i supabase --save-dev
-```
+## Installation
 
-To install the beta release channel:
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/alchemist-satellite-tracker.git
+   cd alchemist-satellite-tracker
+   ```
 
-```bash
-npm i supabase@beta --save-dev
-```
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
+3. **Start development server**
+   ```bash
+   npm run dev
+   ```
 
-```
-NODE_OPTIONS=--no-experimental-fetch yarn add supabase
-```
+4. **Build for production**
+   ```bash
+   npm run build
+   ```
 
-> **Note**
-For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
+## Development
 
-<details>
-  <summary><b>macOS</b></summary>
-
-  Available via [Homebrew](https://brew.sh). To install:
-
-  ```sh
-  brew install supabase/tap/supabase
-  ```
-
-  To install the beta release channel:
-  
-  ```sh
-  brew install supabase/tap/supabase-beta
-  brew link --overwrite supabase-beta
-  ```
-  
-  To upgrade:
-
-  ```sh
-  brew upgrade supabase
-  ```
-</details>
-
-<details>
-  <summary><b>Windows</b></summary>
-
-  Available via [Scoop](https://scoop.sh). To install:
-
-  ```powershell
-  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-  scoop install supabase
-  ```
-
-  To upgrade:
-
-  ```powershell
-  scoop update supabase
-  ```
-</details>
-
-<details>
-  <summary><b>Linux</b></summary>
-
-  Available via [Homebrew](https://brew.sh) and Linux packages.
-
-  #### via Homebrew
-
-  To install:
-
-  ```sh
-  brew install supabase/tap/supabase
-  ```
-
-  To upgrade:
-
-  ```sh
-  brew upgrade supabase
-  ```
-
-  #### via Linux packages
-
-  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
-
-  ```sh
-  sudo apk add --allow-untrusted <...>.apk
-  ```
-
-  ```sh
-  sudo dpkg -i <...>.deb
-  ```
-
-  ```sh
-  sudo rpm -i <...>.rpm
-  ```
-
-  ```sh
-  sudo pacman -U <...>.pkg.tar.zst
-  ```
-</details>
-
-<details>
-  <summary><b>Other Platforms</b></summary>
-
-  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
-
-  ```sh
-  go install github.com/supabase/cli@latest
-  ```
-
-  Add a symlink to the binary in `$PATH` for easier access:
-
-  ```sh
-  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
-  ```
-
-  This works on other non-standard Linux distros.
-</details>
-
-<details>
-  <summary><b>Community Maintained Packages</b></summary>
-
-  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
-  To install in your working directory:
-
-  ```bash
-  pkgx install supabase
-  ```
-
-  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
-</details>
-
-### Run the CLI
+The project uses Vite for fast development and hot module replacement.
 
 ```bash
-supabase bootstrap
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run lint         # Run ESLint
 ```
 
-Or using npx:
+## Deployment
 
-```bash
-npx supabase bootstrap
-```
+### Vercel (Recommended)
 
-The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
+1. **Connect your repository to Vercel**
+2. **Import the project**
+3. **Deploy** - Vercel will automatically detect the Vite configuration
 
-## Docs
+The API route for Space-Track.org proxy is automatically deployed as a Vercel serverless function.
 
-Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
+### Manual Deployment
 
-## Breaking changes
+1. **Build the project**
+   ```bash
+   npm run build
+   ```
 
-We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
+2. **Deploy the `dist` folder** to your hosting provider
 
-However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
+## Configuration
 
-## Developing
+The application is configured to work out of the box with Space-Track.org data. The API credentials are embedded in the Vercel API route for seamless operation.
 
-To run from source:
+## Usage
 
-```sh
-# Go >= 1.22
-go run . help
-```
+1. **View satellites** - The globe loads with active satellites automatically
+2. **Filter satellites** - Use the control panel to filter by various criteria
+3. **Click satellites** - Get detailed information about any satellite
+4. **Track ISS** - Use the dedicated space station tracking feature
+5. **Learn** - Explore the educational content about satellites and space
+
+## API
+
+The application uses a Vercel API route (`/api/space-track-proxy`) to securely access Space-Track.org data while handling CORS and authentication.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- **Space-Track.org** for providing satellite orbital data
+- **Three.js** for 3D graphics capabilities
+- **satellite.js** for orbital mechanics calculations
+- **NASA** for Earth texture imagery
+
+---
+
+**Live Demo**: [ALCHEMIST Satellite Tracker](https://satellite-map-rust.vercel.app)

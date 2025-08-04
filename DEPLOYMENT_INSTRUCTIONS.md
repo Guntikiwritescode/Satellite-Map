@@ -1,178 +1,196 @@
 # ALCHEMIST Satellite Tracker - Deployment Instructions
 
-Your satellite tracking application has been successfully separated from Lovable and is ready for independent deployment. Follow these step-by-step instructions to deploy your application.
+🛰️ **Complete guide for deploying your satellite tracking application**
 
-## 🚨 URGENT: Fix CORS Issue for Vercel Deployment
+## Quick Deploy (Recommended)
 
-**If you're seeing CORS errors in the browser console**, your Supabase edge function needs to be updated to allow your Vercel domain:
+### Vercel Deployment
 
-### Quick Fix Steps:
+**Prerequisites**: Git repository connected to GitHub, GitLab, or Bitbucket
 
-1. **Go to [Supabase Dashboard](https://supabase.com/dashboard)**
-2. **Navigate to your project:** `dnjhvmwznqsunjpabacg`
-3. **Go to Settings → Environment Variables**
-4. **Update the `ALLOWED_DOMAIN` variable:**
-   - **Current value:** `https://db206876-4992-4720-8f1f-11cdcdfaaedd.lovableproject.com`
-   - **New value:** `https://satellite-l0wy4j6yc-abhis-projects-a01fea32.vercel.app`
-   - (Or use your actual Vercel URL if different)
-
-5. **Redeploy the edge function:**
-   - Go to **Edge Functions → space-track-proxy**
-   - Click **Deploy** to restart with new environment variables
-
-6. **Test the fix:**
-   - Refresh your Vercel app
-   - Check browser console for errors
-   - Satellites should now load successfully
-
-### Alternative: Allow Multiple Domains
-
-If you want to support both domains (for development and production), set `ALLOWED_DOMAIN` to:
-```
-https://satellite-l0wy4j6yc-abhis-projects-a01fea32.vercel.app,https://db206876-4992-4720-8f1f-11cdcdfaaedd.lovableproject.com,http://localhost:5173
-```
-
-## 🚀 Quick Deployment to Vercel (Recommended)
-
-### Step 1: Deploy to Vercel
-
-1. **Go to [vercel.com](https://vercel.com)** and sign in with your GitHub account
-2. **Click "Add New Project"** or "Import Project"
-3. **Import your GitHub repository** that contains this code
-4. **Configure the project:**
-   - Project Name: `alchemist-satellite-tracker` (or your preferred name)
-   - Framework: Vercel should auto-detect "Vite"
-   - Root Directory: Leave as `/` (root)
+1. **Go to [Vercel Dashboard](https://vercel.com/dashboard)**
+2. **Click "New Project"**
+3. **Import your Git repository**
+4. **Configure project:**
+   - Framework Preset: **Vite**
    - Build Command: `npm run build`
    - Output Directory: `dist`
-   - Install Command: `npm install --legacy-peer-deps`
-
+   - Install Command: `npm install`
 5. **Click "Deploy"**
 
-Your application will be deployed and you'll receive a URL like `https://alchemist-satellite-tracker.vercel.app`
+**✅ Your app will be live in ~2 minutes!**
 
-### Step 2: Configure Space-Track API Credentials
-
-The satellite data comes from Space-Track.org, so you need to set up the API credentials:
-
-1. **Go to the [Supabase Dashboard](https://supabase.com/dashboard)**
-2. **Select your project:** `dnjhvmwznqsunjpabacg` 
-3. **Go to Settings → Environment Variables**
-4. **Add these environment variables:**
-   ```
-   SPACE_TRACK_USERNAME=nihanth20@gmail.com
-   SPACE_TRACK_PASSWORD=CS2wTBBW.*LjZeY
-   ALLOWED_DOMAIN=https://your-vercel-url.vercel.app
-   ```
-   (Replace `your-vercel-url` with your actual Vercel deployment URL)
-
-5. **Redeploy the Supabase function:**
-   - Go to Functions → space-track-proxy
-   - Click "Deploy" to restart with new environment variables
-
-### Step 3: Update CORS Configuration
-
-Update the Supabase function to allow your Vercel domain:
-
-1. **In Supabase Dashboard → Edge Functions → space-track-proxy**
-2. **The function has already been updated to support your domain automatically**
-3. **Or manually edit if needed** - the function checks `ALLOWED_DOMAIN` environment variable
-
-## 🔧 Alternative Deployment Options
-
-### Deploy to Netlify
-
-1. **Go to [netlify.com](https://netlify.com)** and sign in
-2. **Drag and drop the `dist` folder** after running `npm run build`
-3. **Or connect your GitHub repository** for automatic deployments
-4. **Set build command:** `npm run build`
-5. **Set publish directory:** `dist`
-6. **Set install command:** `npm install --legacy-peer-deps`
-
-### Deploy to GitHub Pages
-
-1. **Install gh-pages:**
-   ```bash
-   npm install --save-dev gh-pages
-   ```
-
-2. **Add to package.json scripts:**
-   ```json
-   "deploy": "gh-pages -d dist"
-   ```
-
-3. **Build and deploy:**
-   ```bash
-   npm run build
-   npm run deploy
-   ```
-
-## 📊 Features Included
-
-Your deployed application includes:
-
-✅ **Real-time Satellite Tracking** - Track over 23,000 satellites  
-✅ **3D Globe Visualization** - Interactive Earth with satellite positions  
-✅ **Multiple View Modes** - Tactical view, data grid, UI guide, education  
-✅ **Terminal Aesthetic** - Cyberpunk-inspired design  
-✅ **Educational Content** - Learn about satellites and space technology  
-✅ **Audio Experience** - Space-themed ambient audio  
-✅ **Responsive Design** - Works on desktop and mobile  
-
-## 🔍 Troubleshooting
-
-### If satellites don't load:
-1. **Check Supabase environment variables** are set correctly
-2. **Verify Space-Track.org credentials** work by logging in manually
-3. **Check browser console** for any CORS or API errors
-4. **Ensure ALLOWED_DOMAIN** matches your deployment URL exactly
-
-### If build fails:
-1. **Try:** `npm install --legacy-peer-deps`
-2. **Check Node.js version** (requires Node 18+)
-3. **Clear node_modules:** `rm -rf node_modules && npm install --legacy-peer-deps`
-
-### If 3D globe doesn't render:
-1. **Check if WebGL is enabled** in your browser
-2. **Try a different browser** or device
-3. **Check browser console** for Three.js errors
-
-## 🌐 Custom Domain (Optional)
-
-To use a custom domain:
-
-1. **In Vercel Dashboard:**
-   - Go to your project Settings → Domains
-   - Add your custom domain
-   - Follow DNS configuration instructions
-
-2. **Update Supabase:**
-   - Update `ALLOWED_DOMAIN` environment variable to your custom domain
-   - Redeploy the space-track-proxy function
-
-## 📱 Mobile Optimization
-
-The application is fully responsive and optimized for:
-- 📱 Mobile phones (iOS/Android)
-- 📱 Tablets (iPad, Android tablets)
-- 💻 Desktop browsers (Chrome, Firefox, Safari, Edge)
-- 🖥️ Large displays and ultra-wide monitors
-
-## 🔒 Security Features
-
-✅ **CORS Protection** - API endpoints secured against unauthorized domains  
-✅ **Rate Limiting** - Respectful API usage to Space-Track.org  
-✅ **Input Validation** - All API endpoints validate inputs  
-✅ **No User Tracking** - Privacy-respecting application  
-
-## 📞 Support
-
-If you encounter any issues:
-1. **Check the browser console** for error messages
-2. **Verify all environment variables** are set correctly
-3. **Try refreshing the page** or clearing browser cache
-4. **Check if Space-Track.org is accessible** from your location
+The Vercel API route (`/api/space-track-proxy`) automatically handles Space-Track.org data fetching with built-in authentication.
 
 ---
 
-🛰️ **Congratulations!** Your ALCHEMIST Satellite Tracking Terminal is now live and independent of Lovable!
+## Alternative Deployment Options
+
+### Netlify
+
+1. **Connect repository to [Netlify](https://netlify.com)**
+2. **Build settings:**
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+3. **Add Netlify Function for API proxy:**
+   - Create `netlify/functions/space-track-proxy.js`
+   - Copy the Vercel API route code and adapt for Netlify
+4. **Deploy**
+
+### GitHub Pages
+
+1. **Enable GitHub Pages in repository settings**
+2. **Create `.github/workflows/deploy.yml`:**
+   ```yaml
+   name: Deploy to GitHub Pages
+   on:
+     push:
+       branches: [ main ]
+   jobs:
+     build-and-deploy:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v2
+         - uses: actions/setup-node@v2
+         - run: npm install
+         - run: npm run build
+         - uses: peaceiris/actions-gh-pages@v3
+           with:
+             github_token: ${{ secrets.GITHUB_TOKEN }}
+             publish_dir: ./dist
+   ```
+
+**Note**: For GitHub Pages, you'll need a separate backend service for the API proxy.
+
+---
+
+## Configuration
+
+### Environment Variables (Optional)
+
+The application works out-of-the-box without additional configuration. For custom setups:
+
+```bash
+# Optional: Custom API endpoint
+VITE_API_ENDPOINT=/api/space-track-proxy
+
+# Optional: Custom app title
+VITE_APP_TITLE="ALCHEMIST Satellite Tracker"
+```
+
+### Custom Domain
+
+#### Vercel Custom Domain
+
+1. **Go to Project Settings → Domains**
+2. **Add your domain**
+3. **Configure DNS records as shown**
+4. **SSL certificate is automatically generated**
+
+---
+
+## Troubleshooting
+
+### Build Issues
+
+**Problem**: Build fails with dependency errors
+```bash
+# Solution: Clear cache and reinstall
+rm -rf node_modules package-lock.json
+npm install
+npm run build
+```
+
+**Problem**: TypeScript errors
+```bash
+# Solution: Type check
+npm run lint
+```
+
+### API Issues
+
+**Problem**: Satellite data not loading
+1. **Check browser console** for error messages
+2. **Verify API route** is deployed correctly
+3. **Test API endpoint** directly: `yourapp.vercel.app/api/space-track-proxy`
+
+**Problem**: CORS errors
+- **Vercel**: API routes automatically handle CORS
+- **Other platforms**: Ensure your API proxy includes proper CORS headers
+
+### Performance Issues
+
+**Problem**: App loads slowly
+```bash
+# Solution: Optimize build
+npm run build
+# Check bundle size
+npm run preview
+```
+
+**Problem**: Too many satellites causing lag
+- The app automatically limits to active satellites
+- Consider reducing refresh intervals in the code
+
+---
+
+## Custom Modifications
+
+### Change Satellite Data Source
+
+To use a different data source, modify `src/services/spaceTrackAPI.ts`:
+
+1. **Update API endpoints**
+2. **Modify data parsing logic**
+3. **Update type definitions**
+
+### Add New Features
+
+1. **Component structure**: `src/components/`
+2. **State management**: `src/stores/`
+3. **Type definitions**: `src/types/`
+
+### Styling Customization
+
+1. **Tailwind config**: `tailwind.config.ts`
+2. **Component styles**: `src/components/ui/`
+3. **Global styles**: `src/index.css`
+
+---
+
+## Production Checklist
+
+- [ ] **Build succeeds** without errors
+- [ ] **API endpoint** works correctly
+- [ ] **Satellite data** loads within 30 seconds
+- [ ] **3D globe** renders properly
+- [ ] **Mobile responsive** design works
+- [ ] **Performance** is acceptable (< 3s initial load)
+- [ ] **Error handling** displays user-friendly messages
+
+---
+
+## Support
+
+### Common Issues
+
+1. **Satellites not appearing**: Check API connectivity and browser console
+2. **3D globe not rendering**: Verify WebGL support in browser
+3. **Slow performance**: Check device specifications and reduce satellite count
+4. **Mobile issues**: Test on actual devices, not just browser dev tools
+
+### Getting Help
+
+1. **Check browser console** for detailed error messages
+2. **Review deployment logs** in your hosting platform
+3. **Test API endpoints** directly for data issues
+4. **Verify build output** is properly generated
+
+---
+
+**🎯 Expected result**: A fully functional satellite tracking application with real-time 3D visualization, accessible worldwide via your custom domain.
+
+**📊 Performance targets**: 
+- Initial load: < 3 seconds
+- Satellite data fetch: < 30 seconds  
+- Frame rate: 30+ FPS on modern devices
