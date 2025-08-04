@@ -1,11 +1,11 @@
 import { Satellite } from '../types/satellite.types';
 import * as satellite from 'satellite.js';
-
-// Development logging helper
-const isDev = import.meta.env.DEV;
-const log = (...args: unknown[]) => isDev && console.log(...args);
-const logError = (...args: unknown[]) => console.error(...args);
-const logWarn = (...args: unknown[]) => isDev && console.warn(...args);
+import { logger } from '../lib/logger';
+import { 
+  API_CONFIG, 
+  SATELLITE_CONFIG, 
+  ERROR_MESSAGES 
+} from '../lib/constants';
 
 interface SpaceTrackGPData {
   NORAD_CAT_ID: number;
@@ -26,23 +26,38 @@ interface SpaceTrackGPData {
   CONSTELLATION?: string;
 }
 
-interface SpaceTrackResponse {
-  error?: string;
-  [key: string]: unknown;
-}
+// Input validation utilities
+const validateTLE = (line1: string, line2: string): boolean => {
+  return Boolean(
+    line1 && 
+    line2 && 
+    line1.length > SATELLITE_CONFIG.MIN_TLE_LENGTH && 
+    line2.length > SATELLITE_CONFIG.MIN_TLE_LENGTH &&
+    line1.trim().length > 0 &&
+    line2.trim().length > 0
+  );
+};
+
+const sanitizeInput = (input: string): string => {
+  return input.replace(/[<>'"&]/g, '').trim();
+};
+
+const validateNumericRange = (value: number, min: number, max: number): boolean => {
+  return !isNaN(value) && value >= min && value <= max;
+};
 
 export class SpaceTrackAPI {
-  private proxyUrl = '/api/space-track-proxy';
+  private readonly proxyUrl = '/api/space-track-proxy';
   private lastRequest = 0;
   private requestQueue: Promise<unknown> = Promise.resolve();
-  private readonly RATE_LIMIT_DELAY = 2000;
+  private readonly context = { component: 'SpaceTrackAPI' };
 
   private async rateLimit(): Promise<void> {
     const now = Date.now();
     const timeSinceLastRequest = now - this.lastRequest;
     
-    if (timeSinceLastRequest < this.RATE_LIMIT_DELAY) {
-      const delay = this.RATE_LIMIT_DELAY - timeSinceLastRequest;
+    if (timeSinceLastRequest < API_CONFIG.RATE_LIMIT_DELAY) {
+      const delay = API_CONFIG.RATE_LIMIT_DELAY - timeSinceLastRequest;
       await new Promise(resolve => setTimeout(resolve, delay));
     }
     
@@ -58,40 +73,82 @@ export class SpaceTrackAPI {
 
   private async makeProxyRequest(endpoint: string): Promise<SpaceTrackGPData[]> {
     return this.queueRequest(async () => {
-      log('Making proxy request to:', this.proxyUrl);
-      log('Request payload:', { action: 'fetch', endpoint });
+      // Input validation
+      if (!endpoint || typeof endpoint !== 'string') {
+        throw new Error('Invalid endpoint provided');
+      }
+
+      const sanitizedEndpoint = sanitizeInput(endpoint);
+      
+      logger.debug('Making proxy request', {
+        ...this.context,
+        action: 'makeProxyRequest'
+      });
       
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.REQUEST_TIMEOUT);
+
         const response = await fetch(this.proxyUrl, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          body: JSON.stringify({ action: 'fetch', endpoint })
+          body: JSON.stringify({ action: 'fetch', endpoint: sanitizedEndpoint }),
+          signal: controller.signal
         });
 
-        log('Response status:', response.status);
-        log('Response headers:', response.headers);
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
           const errorText = await response.text();
-          logError('Proxy request failed:', response.status, errorText);
-          throw new Error(`Proxy request failed: ${response.status} - ${errorText}`);
+          logger.error('Proxy request failed', {
+            ...this.context,
+            action: 'makeProxyRequest'
+          }, { status: response.status, error: errorText });
+          
+          if (response.status === 429) {
+            throw new Error('Rate limit exceeded. Please try again later.');
+          }
+          if (response.status >= 500) {
+            throw new Error(ERROR_MESSAGES.API_ERROR);
+          }
+          throw new Error(`Request failed: ${response.status}`);
         }
 
-        const data: SpaceTrackResponse = await response.json();
-        log('Response data received:', Array.isArray(data) ? `${data.length} items` : 'Non-array data');
+        const data = await response.json();
         
         if (data.error) {
-          throw new Error(`Space-Track API error: ${data.error}`);
+          logger.error('Space-Track API error', {
+            ...this.context,
+            action: 'makeProxyRequest'
+          }, data.error);
+          throw new Error(`API error: ${data.error}`);
         }
         
-        return data as SpaceTrackGPData[];
+        if (!Array.isArray(data)) {
+          logger.warn('Unexpected data format received', {
+            ...this.context,
+            action: 'makeProxyRequest'
+          });
+          throw new Error(ERROR_MESSAGES.INVALID_DATA);
+        }
+
+        logger.info('Successfully fetched satellite data', {
+          ...this.context,
+          action: 'makeProxyRequest'
+        }, { count: data.length });
+        
+        return data;
       } catch (error) {
-        logError('Fetch error details:', error);
-        if (error instanceof TypeError && error.message === 'Failed to fetch') {
-          throw new Error('Unable to connect to satellite data service. Please check if the service is running.');
+        if (error instanceof Error) {
+          if (error.name === 'AbortError') {
+            throw new Error(ERROR_MESSAGES.TIMEOUT_ERROR);
+          }
+          if (error.message === 'Failed to fetch') {
+            throw new Error(ERROR_MESSAGES.NETWORK_ERROR);
+          }
         }
         throw error;
       }
@@ -100,18 +157,26 @@ export class SpaceTrackAPI {
 
   async getAllActiveSatellites(): Promise<Satellite[]> {
     try {
+      logger.info('Fetching all active satellites', {
+        ...this.context,
+        action: 'getAllActiveSatellites'
+      });
+
       // Get all active satellites regardless of orbit type - much more comprehensive
       const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/orderby/NORAD_CAT_ID asc/format/json`;
       const data: SpaceTrackGPData[] = await this.makeProxyRequest(endpoint);
       
       if (!data || !Array.isArray(data) || data.length === 0) {
-        throw new Error('No satellite data received');
+        logger.warn('No satellite data received', {
+          ...this.context,
+          action: 'getAllActiveSatellites'
+        });
+        throw new Error(ERROR_MESSAGES.INVALID_DATA);
       }
 
-      return data.map(sat => {
+      const satellites = data.map(sat => {
         const convertedSat = this.convertToSatellite(sat);
         try {
-          // Add more defensive programming here
           if (convertedSat.tle?.line1 && convertedSat.tle?.line2) {
             const position = this.calculatePosition(convertedSat.tle.line1, convertedSat.tle.line2);
             return { 
@@ -121,48 +186,91 @@ export class SpaceTrackAPI {
                 timestamp: Date.now() 
               } 
             };
-          } else {
-            logWarn(`Invalid TLE data for satellite ${convertedSat.id}`);
-            return convertedSat;
           }
+          return convertedSat;
         } catch (error) {
-          logWarn(`Error calculating position for satellite ${convertedSat.id}:`, error);
+          logger.debug('Position calculation failed for satellite', {
+            ...this.context,
+            action: 'getAllActiveSatellites'
+          }, { satelliteId: convertedSat.id, error });
           return convertedSat;
         }
-      }).filter(sat => sat !== null); // Remove any null satellites
+      }).filter(sat => this.validateSatellite(sat));
+
+      logger.info('Successfully processed satellites', {
+        ...this.context,
+        action: 'getAllActiveSatellites'
+      }, { 
+        total: data.length, 
+        valid: satellites.length, 
+        filtered: data.length - satellites.length 
+      });
+
+      return satellites;
     } catch (error) {
-      logError('Error fetching satellites:', error);
+      logger.error('Error fetching satellites', {
+        ...this.context,
+        action: 'getAllActiveSatellites'
+      }, error);
       throw error;
     }
   }
 
   async getLEOSatellites(limit: number = 200): Promise<Satellite[]> {
     try {
+      logger.info('Fetching LEO satellites', {
+        ...this.context,
+        action: 'getLEOSatellites'
+      }, { limit });
+
+      // Validate input
+      if (!validateNumericRange(limit, 1, 10000)) {
+        throw new Error('Invalid limit parameter');
+      }
+
       const endpoint = `/basicspacedata/query/class/gp/decay_date/null-val/epoch/>now-30/MEAN_MOTION/>11/orderby/NORAD_CAT_ID asc/limit/${limit}/format/json`;
       const data: SpaceTrackGPData[] = await this.makeProxyRequest(endpoint);
       
       if (!data || !Array.isArray(data) || data.length === 0) {
-        throw new Error('No satellite data received');
+        throw new Error(ERROR_MESSAGES.INVALID_DATA);
       }
 
       return data.map(sat => this.convertToSatellite(sat)).map(sat => {
         try {
           const position = this.calculatePosition(sat.tle.line1, sat.tle.line2);
           return { ...sat, position: { ...position, timestamp: Date.now() } };
-        } catch (error) {
+        } catch {
           return sat;
         }
       });
     } catch (error) {
-      logError('Error fetching satellites:', error);
+      logger.error('Error fetching LEO satellites', {
+        ...this.context,
+        action: 'getLEOSatellites'
+      }, error);
       throw error;
     }
   }
 
+  private validateSatellite(satellite: Satellite): boolean {
+    return Boolean(
+      satellite &&
+      satellite.id &&
+      satellite.name &&
+      satellite.position &&
+      typeof satellite.position.latitude === 'number' &&
+      typeof satellite.position.longitude === 'number' &&
+      !isNaN(satellite.position.latitude) &&
+      !isNaN(satellite.position.longitude) &&
+      validateNumericRange(satellite.position.latitude, -90, 90) &&
+      validateNumericRange(satellite.position.longitude, -180, 180)
+    );
+  }
+
   private convertToSatellite(sat: SpaceTrackGPData): Satellite {
     return {
-      id: sat.NORAD_CAT_ID.toString(),
-      name: sat.OBJECT_NAME || `NORAD ${sat.NORAD_CAT_ID}`,
+      id: sanitizeInput(sat.NORAD_CAT_ID.toString()),
+      name: sanitizeInput(sat.OBJECT_NAME || `NORAD ${sat.NORAD_CAT_ID}`),
       type: this.determineSatelliteType(sat.OBJECT_NAME, sat.OBJECT_TYPE),
       status: 'active',
       position: {
@@ -182,8 +290,8 @@ export class SpaceTrackAPI {
         epoch: sat.EPOCH || new Date().toISOString()
       },
       metadata: {
-        constellation: sat.CONSTELLATION || this.extractConstellation(sat.OBJECT_NAME),
-        country: sat.COUNTRY_CODE || 'Unknown',
+        constellation: sanitizeInput(sat.CONSTELLATION || this.extractConstellation(sat.OBJECT_NAME)),
+        country: sanitizeInput(sat.COUNTRY_CODE || 'Unknown'),
         launchDate: sat.LAUNCH_DATE || new Date().toISOString(),
         purpose: this.determinePurpose(sat.OBJECT_NAME, sat.OBJECT_TYPE)
       },
@@ -196,7 +304,11 @@ export class SpaceTrackAPI {
 
   calculatePosition(tle1: string, tle2: string) {
     try {
-      if (!tle1 || !tle2) {
+      if (!validateTLE(tle1, tle2)) {
+        logger.debug('Invalid TLE data provided', {
+          ...this.context,
+          action: 'calculatePosition'
+        });
         return { latitude: 0, longitude: 0, altitude: 400 };
       }
       
@@ -234,16 +346,26 @@ export class SpaceTrackAPI {
         const latitude = satellite.degreesLat(positionGd.latitude);
         const altitude = positionGd.height;
         
+        // Validate calculated coordinates
+        if (!validateNumericRange(latitude, -90, 90) || 
+            !validateNumericRange(longitude, -180, 180) ||
+            isNaN(altitude)) {
+          return { latitude: 0, longitude: 0, altitude: 400 };
+        }
+        
         return {
-          latitude: isNaN(latitude) ? 0 : latitude,
-          longitude: isNaN(longitude) ? 0 : longitude,
-          altitude: isNaN(altitude) ? 400 : altitude
+          latitude,
+          longitude,
+          altitude: Math.max(altitude, 0) // Ensure altitude is not negative
         };
       }
       
       return { latitude: 0, longitude: 0, altitude: 400 };
     } catch (error) {
-      logWarn('Error calculating satellite position:', error);
+      logger.debug('Error calculating satellite position', {
+        ...this.context,
+        action: 'calculatePosition'
+      }, error);
       return { latitude: 0, longitude: 0, altitude: 400 };
     }
   }
@@ -295,7 +417,10 @@ export class SpaceTrackAPI {
 
   private safeParseFloat(value: number | string | undefined): number {
     if (typeof value === 'number') return value;
-    if (typeof value === 'string') return parseFloat(value);
+    if (typeof value === 'string') {
+      const parsed = parseFloat(value);
+      return isNaN(parsed) ? 0 : parsed;
+    }
     return 0;
   }
 }

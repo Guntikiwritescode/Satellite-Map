@@ -1,11 +1,10 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { Satellite, SatelliteFilters, Launch, UserLocation, Globe3DSettings, SatelliteType, SatelliteStatus } from '../types/satellite.types';
+import { Satellite, SatelliteFilters, Launch, UserLocation, Globe3DSettings } from '../types/satellite.types';
+import { logger } from '../lib/logger';
+import { PERFORMANCE_CONFIG, ERROR_MESSAGES } from '../lib/constants';
 
-// Development logging helper
-const isDev = import.meta.env.DEV;
-const log = (...args: unknown[]) => isDev && console.log(...args);
-const logError = (...args: unknown[]) => console.error(...args);
+const COMPONENT_CONTEXT = { component: 'SatelliteStore' };
 
 interface SatelliteStore {
   // Data
@@ -66,6 +65,78 @@ const defaultGlobeSettings: Globe3DSettings = {
   selectedSatelliteId: null,
 };
 
+// Optimized filter function with better performance
+const createFilteredSatellites = (
+  satellites: Satellite[], 
+  filters: SatelliteFilters, 
+  maxDisplay: number
+): Satellite[] => {
+  try {
+    // Early return for empty data
+    if (!satellites.length) return [];
+    
+    // Performance optimization: Use a single pass filter with early exits
+    const filtered = satellites.filter(satellite => {
+      // Type filter - early exit
+      if (filters.types.length > 0 && !filters.types.includes(satellite.type)) {
+        return false;
+      }
+      
+      // Country filter - early exit
+      const country = satellite.metadata?.country || 'Unknown';
+      if (filters.countries.length > 0 && !filters.countries.includes(country)) {
+        return false;
+      }
+      
+      // Agency filter - early exit
+      const agency = satellite.metadata?.constellation || 'Individual';
+      if (filters.agencies.length > 0 && !filters.agencies.includes(agency)) {
+        return false;
+      }
+      
+      // Status filter - early exit
+      if (filters.status.length > 0 && !filters.status.includes(satellite.status)) {
+        return false;
+      }
+      
+      // Altitude range filter - early exit
+      const altitude = satellite.position?.altitude || 0;
+      const [minAlt, maxAlt] = filters.altitudeRange;
+      if (altitude < minAlt || altitude > maxAlt) {
+        return false;
+      }
+      
+      // Search query filter - early exit with optimized string operations
+      if (filters.searchQuery.trim()) {
+        const query = filters.searchQuery.toLowerCase();
+        const searchableText = [
+          satellite.name.toLowerCase(),
+          (satellite.metadata?.constellation || '').toLowerCase(),
+          (satellite.metadata?.country || '').toLowerCase(),
+          satellite.type.toLowerCase()
+        ].join(' ');
+        
+        if (!searchableText.includes(query)) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+    
+    // Optimized sorting - only sort if needed and use efficient comparison
+    if (filtered.length > 1) {
+      filtered.sort((a, b) => (a.position?.altitude || 0) - (b.position?.altitude || 0));
+    }
+    
+    // Apply limit efficiently
+    return filtered.length > maxDisplay ? filtered.slice(0, maxDisplay) : filtered;
+  } catch (error) {
+    logger.error('Error in createFilteredSatellites', COMPONENT_CONTEXT, error);
+    return [];
+  }
+};
+
 export const useSatelliteStore = create<SatelliteStore>()(
   subscribeWithSelector((set, get) => ({
     // Initial state
@@ -78,75 +149,153 @@ export const useSatelliteStore = create<SatelliteStore>()(
     error: null,
     lastUpdate: 0,
     viewMode: 'globe',
-    maxDisplaySatellites: 500, // Reduced from 1000 for better performance
+    maxDisplaySatellites: PERFORMANCE_CONFIG.MAX_DISPLAYED_SATELLITES,
     
     // Computed - since Zustand getters don't work well, we'll use a selector
     filteredSatellites: [],
     
     // Actions
     setSatellites: (satellites) => {
-      const filtered = get().applyFilters(satellites, get().filters);
-      set({ 
-        satellites, 
-        filteredSatellites: filtered,
-        lastUpdate: Date.now(),
-        error: null 
-      });
+      try {
+        const state = get();
+        const filtered = createFilteredSatellites(satellites, state.filters, state.maxDisplaySatellites);
+        
+        logger.info('Satellites updated', {
+          ...COMPONENT_CONTEXT,
+          action: 'setSatellites'
+        }, { 
+          total: satellites.length, 
+          filtered: filtered.length 
+        });
+        
+        set({ 
+          satellites, 
+          filteredSatellites: filtered,
+          lastUpdate: Date.now(),
+          error: null 
+        });
+      } catch (error) {
+        logger.error('Error setting satellites', {
+          ...COMPONENT_CONTEXT,
+          action: 'setSatellites'
+        }, error);
+        set({ error: ERROR_MESSAGES.UNKNOWN_ERROR });
+      }
     },
     
-    updateSatellitePositions: (positionUpdates) => set((state) => {
-      const updatedSatellites = state.satellites.map(satellite => {
-        const update = positionUpdates.find(u => u.id === satellite.id);
-        return update ? { ...satellite, position: update.position } : satellite;
-      });
-      
-      const filtered = state.applyFilters(updatedSatellites, state.filters);
-      return {
-        satellites: updatedSatellites,
-        filteredSatellites: filtered,
-        lastUpdate: Date.now()
-      };
-    }),
+    updateSatellitePositions: (positionUpdates) => {
+      try {
+        set((state) => {
+          const updatedSatellites = state.satellites.map(satellite => {
+            const update = positionUpdates.find(u => u.id === satellite.id);
+            return update ? { ...satellite, position: update.position } : satellite;
+          });
+          
+          const filtered = createFilteredSatellites(updatedSatellites, state.filters, state.maxDisplaySatellites);
+          
+          return {
+            satellites: updatedSatellites,
+            filteredSatellites: filtered,
+            lastUpdate: Date.now()
+          };
+        });
+      } catch (error) {
+        logger.error('Error updating satellite positions', {
+          ...COMPONENT_CONTEXT,
+          action: 'updateSatellitePositions'
+        }, error);
+        set({ error: ERROR_MESSAGES.UNKNOWN_ERROR });
+      }
+    },
     
-    updateSatellitePosition: (id, position) => set((state) => {
-      const updatedSatellites = state.satellites.map(sat =>
-        sat.id === id ? { ...sat, position } : sat
-      );
-      const filtered = state.applyFilters(updatedSatellites, state.filters);
-      return {
-        satellites: updatedSatellites,
-        filteredSatellites: filtered,
-        lastUpdate: Date.now()
-      };
-    }),
+    updateSatellitePosition: (id, position) => {
+      try {
+        set((state) => {
+          const updatedSatellites = state.satellites.map(sat =>
+            sat.id === id ? { ...sat, position } : sat
+          );
+          const filtered = createFilteredSatellites(updatedSatellites, state.filters, state.maxDisplaySatellites);
+          
+          return {
+            satellites: updatedSatellites,
+            filteredSatellites: filtered,
+            lastUpdate: Date.now()
+          };
+        });
+      } catch (error) {
+        logger.error('Error updating single satellite position', {
+          ...COMPONENT_CONTEXT,
+          action: 'updateSatellitePosition'
+        }, error);
+        set({ error: ERROR_MESSAGES.UNKNOWN_ERROR });
+      }
+    },
     
     setLaunches: (launches) => set({ launches }),
     
     setUserLocation: (userLocation) => set({ userLocation }),
     
     updateFilters: (newFilters) => {
-      const state = get();
-      const updatedFilters = { ...state.filters, ...newFilters };
-      const filtered = state.applyFilters(state.satellites, updatedFilters);
-      set({ 
-        filters: updatedFilters,
-        filteredSatellites: filtered
-      });
+      try {
+        const state = get();
+        const updatedFilters = { ...state.filters, ...newFilters };
+        const filtered = createFilteredSatellites(state.satellites, updatedFilters, state.maxDisplaySatellites);
+        
+        logger.debug('Filters updated', {
+          ...COMPONENT_CONTEXT,
+          action: 'updateFilters'
+        }, { 
+          filtersChanged: Object.keys(newFilters),
+          resultCount: filtered.length 
+        });
+        
+        set({ 
+          filters: updatedFilters,
+          filteredSatellites: filtered
+        });
+      } catch (error) {
+        logger.error('Error updating filters', {
+          ...COMPONENT_CONTEXT,
+          action: 'updateFilters'
+        }, error);
+        set({ error: ERROR_MESSAGES.UNKNOWN_ERROR });
+      }
     },
     
-    updateGlobeSettings: (newSettings) => set((state) => ({
-      globeSettings: { ...state.globeSettings, ...newSettings }
-    })),
+    updateGlobeSettings: (newSettings) => {
+      try {
+        set((state) => ({
+          globeSettings: { ...state.globeSettings, ...newSettings }
+        }));
+      } catch (error) {
+        logger.error('Error updating globe settings', {
+          ...COMPONENT_CONTEXT,
+          action: 'updateGlobeSettings'
+        }, error);
+        set({ error: ERROR_MESSAGES.UNKNOWN_ERROR });
+      }
+    },
     
     setSelectedSatellite: (id) => {
       try {
-        log('Selecting satellite:', id);
+        logger.debug('Selecting satellite', {
+          ...COMPONENT_CONTEXT,
+          action: 'setSelectedSatellite'
+        }, { satelliteId: id });
+        
         set((state) => ({
           globeSettings: { ...state.globeSettings, selectedSatelliteId: id }
         }));
       } catch (error) {
-        logError('Error setting selected satellite:', error);
-        set({ error: `Failed to select satellite: ${error instanceof Error ? error.message : 'Unknown error'}` });
+        logger.error('Error setting selected satellite', {
+          ...COMPONENT_CONTEXT,
+          action: 'setSelectedSatellite'
+        }, error);
+        
+        const errorMessage = error instanceof Error 
+          ? `Failed to select satellite: ${error.message}` 
+          : ERROR_MESSAGES.UNKNOWN_ERROR;
+        set({ error: errorMessage });
       }
     },
     
@@ -157,12 +306,20 @@ export const useSatelliteStore = create<SatelliteStore>()(
     setViewMode: (viewMode) => set({ viewMode }),
     
     setMaxDisplaySatellites: (maxDisplaySatellites) => {
-      const state = get();
-      const filtered = state.applyFilters(state.satellites, state.filters);
-      set({ 
-        maxDisplaySatellites,
-        filteredSatellites: filtered
-      });
+      try {
+        const state = get();
+        const filtered = createFilteredSatellites(state.satellites, state.filters, maxDisplaySatellites);
+        set({ 
+          maxDisplaySatellites,
+          filteredSatellites: filtered
+        });
+      } catch (error) {
+        logger.error('Error setting max display satellites', {
+          ...COMPONENT_CONTEXT,
+          action: 'setMaxDisplaySatellites'
+        }, error);
+        set({ error: ERROR_MESSAGES.UNKNOWN_ERROR });
+      }
     },
     
     // Utility functions
@@ -177,77 +334,32 @@ export const useSatelliteStore = create<SatelliteStore>()(
     },
     
     resetFilters: () => {
-      const state = get();
-      const filtered = state.applyFilters(state.satellites, defaultFilters);
-      set({ 
-        filters: defaultFilters,
-        filteredSatellites: filtered
-      });
+      try {
+        const state = get();
+        const filtered = createFilteredSatellites(state.satellites, defaultFilters, state.maxDisplaySatellites);
+        set({ 
+          filters: defaultFilters,
+          filteredSatellites: filtered
+        });
+      } catch (error) {
+        logger.error('Error resetting filters', {
+          ...COMPONENT_CONTEXT,
+          action: 'resetFilters'
+        }, error);
+        set({ error: ERROR_MESSAGES.UNKNOWN_ERROR });
+      }
     },
     
     applyFilters: (satellites, filters) => {
-      // Early return for empty data
-      if (satellites.length === 0) {
+      try {
+        return createFilteredSatellites(satellites, filters, get().maxDisplaySatellites);
+      } catch (error) {
+        logger.error('Error applying filters', {
+          ...COMPONENT_CONTEXT,
+          action: 'applyFilters'
+        }, error);
         return [];
       }
-      
-      // Performance optimization: Use a single pass filter with early exits
-      const filtered = satellites.filter(satellite => {
-        // Type filter - early exit
-        if (filters.types.length > 0 && !filters.types.includes(satellite.type)) {
-          return false;
-        }
-        
-        // Country filter - early exit
-        const country = satellite.metadata?.country || 'Unknown';
-        if (filters.countries.length > 0 && !filters.countries.includes(country)) {
-          return false;
-        }
-        
-        // Agency filter - early exit
-        const agency = satellite.metadata?.constellation || 'Individual';
-        if (filters.agencies.length > 0 && !filters.agencies.includes(agency)) {
-          return false;
-        }
-        
-        // Status filter - early exit
-        if (filters.status.length > 0 && !filters.status.includes(satellite.status)) {
-          return false;
-        }
-        
-        // Altitude range filter - early exit
-        const altitude = satellite.position?.altitude || 0;
-        const [minAlt, maxAlt] = filters.altitudeRange;
-        if (altitude < minAlt || altitude > maxAlt) {
-          return false;
-        }
-        
-        // Search query filter - early exit with optimized string operations
-        if (filters.searchQuery.trim()) {
-          const query = filters.searchQuery.toLowerCase();
-          const searchableText = [
-            satellite.name.toLowerCase(),
-            (satellite.metadata?.constellation || '').toLowerCase(),
-            (satellite.metadata?.country || '').toLowerCase(),
-            satellite.type.toLowerCase()
-          ].join(' ');
-          
-          if (!searchableText.includes(query)) {
-            return false;
-          }
-        }
-        
-        return true;
-      });
-      
-      // Optimized sorting - only sort if needed and use efficient comparison
-      if (filtered.length > 1) {
-        filtered.sort((a, b) => (a.position?.altitude || 0) - (b.position?.altitude || 0));
-      }
-      
-      // Apply limit efficiently
-      const maxDisplay = get().maxDisplaySatellites;
-      return filtered.length > maxDisplay ? filtered.slice(0, maxDisplay) : filtered;
     },
   }))
 );

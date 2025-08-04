@@ -2,6 +2,8 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { logger } from '@/lib/logger';
+import { ERROR_MESSAGES } from '@/lib/constants';
 
 interface Props {
   children: ReactNode;
@@ -31,13 +33,20 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Error boundary caught an error:', error, errorInfo);
-    
-    // In production, you might want to send this to an error reporting service
-    if (import.meta.env.PROD) {
-      // Could send to error tracking service like Sentry
-      // sendErrorToService(error, errorInfo);
-    }
+    // Use our logger instead of console.error
+    logger.error('Error boundary caught an error', {
+      component: 'ErrorBoundary',
+      action: 'componentDidCatch'
+    }, {
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      },
+      errorInfo: {
+        componentStack: errorInfo.componentStack
+      }
+    });
   }
 
   private handleRetry = () => {
@@ -45,10 +54,19 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   private getErrorType = (errorMessage: string): { title: string; description: string; suggestion: string } => {
-    if (errorMessage.includes('fetch') || errorMessage.includes('network')) {
+    // Enhanced error classification with security-focused messages
+    if (errorMessage.includes('ChunkLoadError') || errorMessage.includes('Loading chunk')) {
+      return {
+        title: 'Loading Error',
+        description: 'A resource failed to load.',
+        suggestion: 'Please refresh the page and try again.'
+      };
+    }
+
+    if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('Network')) {
       return {
         title: 'Network Error',
-        description: 'Unable to connect to satellite data services.',
+        description: ERROR_MESSAGES.NETWORK_ERROR,
         suggestion: 'Check your internet connection and try again.'
       };
     }
@@ -68,10 +86,18 @@ class ErrorBoundary extends Component<Props, State> {
         suggestion: 'Try refreshing the page or use a different browser.'
       };
     }
+
+    if (errorMessage.includes('Permission') || errorMessage.includes('Unauthorized')) {
+      return {
+        title: 'Permission Error',
+        description: ERROR_MESSAGES.PERMISSION_DENIED,
+        suggestion: 'Please check your permissions and try again.'
+      };
+    }
     
     return {
       title: 'Application Error',
-      description: 'Something unexpected happened.',
+      description: ERROR_MESSAGES.UNKNOWN_ERROR,
       suggestion: 'Please try refreshing the page or contact support if the problem persists.'
     };
   };

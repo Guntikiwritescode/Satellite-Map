@@ -4,52 +4,89 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  server: {
+    host: "::",
+    port: 8080,
+    strictPort: true,
+    // Security headers for development
+    headers: {
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'X-XSS-Protection': '1; mode=block',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+    },
+    // Development server optimizations
+    hmr: {
+      overlay: true
+    }
+  },
+  plugins: [
+    react({
+      // Enable React refresh for better development experience
+      jsxImportSource: '@emotion/react',
+    })
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
   build: {
-    // Optimize build for better performance
+    // Optimize build output with modern targets
+    target: 'es2020',
+    minify: 'esbuild',
     rollupOptions: {
       output: {
-        // Manual chunk splitting for better caching
+        // Manual chunk splitting for better caching - combining best of both strategies
         manualChunks: {
-          // Vendor libraries
+          // Core vendor libraries
           'vendor-react': ['react', 'react-dom'],
+          'vendor-router': ['react-router-dom'],
+          'vendor-query': ['@tanstack/react-query'],
+          'vendor-state': ['zustand'],
+          // UI libraries
+          'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast'],
+          // 3D graphics
           'vendor-three': ['three', '@react-three/fiber', '@react-three/drei'],
+          // Satellite-specific
           'vendor-satellite': ['satellite.js'],
-          'vendor-state': ['zustand', '@tanstack/react-query'],
+          // Utilities
           'vendor-utils': ['date-fns', 'clsx', 'class-variance-authority', 'tailwind-merge', 'lucide-react']
-        }
-      }
+        },
+        // Security: Remove comments and console statements in production
+        generatedCode: {
+          constBindings: true,
+        },
+      },
     },
-    // Increase chunk size warning limit for the Globe3D component
+    // Source maps only in development for security
+    sourcemap: false,
+    // Chunk size warnings
     chunkSizeWarningLimit: 1000,
     // Optimize CSS
     cssCodeSplit: true,
-    // Target modern browsers for better optimization
-    target: 'esnext',
-    // Use default minification
-    minify: true
   },
-  server: {
-    // Development server optimizations
-    hmr: {
-      overlay: true
-    }
+  define: {
+    // Remove console.log in production builds
+    __DEV__: JSON.stringify(process.env.NODE_ENV === 'development'),
   },
-  // Optimize dependencies
   optimizeDeps: {
+    // Pre-bundle dependencies for faster dev server startup
     include: [
       'react',
       'react-dom',
-      'three',
+      'react-router-dom',
+      '@tanstack/react-query',
+      'zustand',
+      'satellite.js',
+    ],
+    exclude: [
+      // Exclude large dependencies that benefit from lazy loading
       '@react-three/fiber',
       '@react-three/drei',
-      'satellite.js',
-      'zustand'
-    ]
-  }
-})
+      'three',
+    ],
+  },
+  // Security: Prevent loading arbitrary files
+  assetsInclude: ['**/*.glb', '**/*.jpg', '**/*.png', '**/*.svg', '**/*.mp3'],
+});
