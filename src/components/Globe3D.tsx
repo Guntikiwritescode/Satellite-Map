@@ -290,18 +290,20 @@ const Scene: React.FC = () => {
   const visibleSatellites = useMemo(() => {
     const { selectedSatelliteId } = globeSettings;
     
-    // Filter valid satellites and limit to 5,000 for better performance on weak devices
-    let satellites = filteredSatellites
-      .filter(sat => sat?.position?.latitude && sat?.position?.longitude && sat?.position?.altitude)
-      .slice(0, 5000); // Reduced from 10,000
-    
-    // Ensure selected satellite is always visible
+    // If a satellite is selected, only show that satellite
     if (selectedSatelliteId) {
       const selectedSat = filteredSatellites.find(sat => sat.id === selectedSatelliteId);
-      if (selectedSat && !satellites.find(sat => sat.id === selectedSatelliteId)) {
-        satellites = [selectedSat, ...satellites.slice(0, 4999)];
+      if (selectedSat && selectedSat?.position?.latitude && selectedSat?.position?.longitude && selectedSat?.position?.altitude) {
+        return [selectedSat];
       }
+      // If selected satellite is not found or invalid, return empty array
+      return [];
     }
+    
+    // If no satellite is selected, show all filtered satellites (limited for performance)
+    const satellites = filteredSatellites
+      .filter(sat => sat?.position?.latitude && sat?.position?.longitude && sat?.position?.altitude)
+      .slice(0, 5000); // Reduced from 10,000
     
     return satellites;
   }, [filteredSatellites, globeSettings.selectedSatelliteId]);
