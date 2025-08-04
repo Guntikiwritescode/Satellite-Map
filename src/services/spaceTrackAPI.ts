@@ -21,7 +21,7 @@ interface SpaceTrackGPData {
 }
 
 export class SpaceTrackAPI {
-  private proxyUrl = 'https://dnjhvmwznqsunjpabacg.supabase.co/functions/v1/space-track-proxy';
+  private proxyUrl = '/api/space-track-proxy';
   private lastRequest = 0;
   private requestQueue: Promise<any> = Promise.resolve();
   private readonly RATE_LIMIT_DELAY = 2000;
