@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <style>
+      .satellite-body { fill: #2563eb; }
+      .satellite-panel { fill: #1d4ed8; }
+      .satellite-detail { fill: #3b82f6; }
+      .satellite-antenna { fill: #6b7280; stroke: #374151; stroke-width: 0.5; }
+      .signal { fill: none; stroke: #10b981; stroke-width: 1; opacity: 0.7; }
+    </style>
+  </defs>
+  
+  <!-- Main satellite body -->
+  <rect x="12" y="14" width="8" height="6" rx="1" class="satellite-body"/>
+  
+  <!-- Solar panels -->
+  <rect x="6" y="15" width="5" height="4" rx="0.5" class="satellite-panel"/>
+  <rect x="21" y="15" width="5" height="4" rx="0.5" class="satellite-panel"/>
+  
+  <!-- Panel details -->
+  <rect x="7" y="16" width="1" height="2" class="satellite-detail"/>
+  <rect x="9" y="16" width="1" height="2" class="satellite-detail"/>
+  <rect x="22" y="16" width="1" height="2" class="satellite-detail"/>
+  <rect x="24" y="16" width="1" height="2" class="satellite-detail"/>
+  
+  <!-- Antenna -->
+  <circle cx="16" cy="12" r="1.5" class="satellite-antenna"/>
+  <line x1="16" y1="10.5" x2="16" y2="8" class="satellite-antenna"/>
+  <circle cx="16" cy="8" r="0.5" class="satellite-antenna"/>
+  
+  <!-- Communication signals -->
+  <path d="M 16 22 Q 12 26 8 30" class="signal"/>
+  <path d="M 16 22 Q 20 26 24 30" class="signal"/>
+  <path d="M 16 22 Q 14 24 12 26" class="signal"/>
+  <path d="M 16 22 Q 18 24 20 26" class="signal"/>
+</svg>
