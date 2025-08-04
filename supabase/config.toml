@@ -104,6 +104,3 @@ enable_confirmations = false
 # # or any other third-party OIDC providers.
 # url = ""
 
-[edge_functions]
-# Whether to verify JWT tokens for Edge Functions.
-verify_jwt = false

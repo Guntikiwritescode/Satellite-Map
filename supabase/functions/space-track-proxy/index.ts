@@ -1,10 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*', // Allow all origins for now
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
 }
+
+// Space-Track.org credentials
+const SPACE_TRACK_EMAIL = 'nihanth20@gmail.com'
+const SPACE_TRACK_PASSWORD = 'CS2wTBBW.*LjZeY'
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -28,31 +32,32 @@ serve(async (req) => {
       )
     }
     
-    // Construct the full Space-Track.org URL
-    const baseUrl = 'https://www.space-track.org/ajaxauth/login'
-    const fullUrl = `https://www.space-track.org${endpoint}`
+    console.log('Authenticating with Space-Track.org...')
     
-    console.log('Fetching from Space-Track.org:', fullUrl)
-    
-    // Forward the request to Space-Track.org
-    const response = await fetch(fullUrl, {
-      method: 'GET',
+    // First, authenticate with Space-Track.org
+    const authUrl = 'https://www.space-track.org/ajaxauth/login'
+    const authResponse = await fetch(authUrl, {
+      method: 'POST',
       headers: {
-        'User-Agent': 'Satellite-Map-App/1.0 (contact@example.com)', // Space-Track requires contact info
-        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Satellite-Map-App/1.0 (nihanth20@gmail.com)',
       },
+      body: new URLSearchParams({
+        identity: SPACE_TRACK_EMAIL,
+        password: SPACE_TRACK_PASSWORD,
+      }),
     })
 
-    if (!response.ok) {
-      console.error('Space-Track API error:', response.status, response.statusText)
+    if (!authResponse.ok) {
+      console.error('Space-Track authentication failed:', authResponse.status, authResponse.statusText)
       return new Response(
         JSON.stringify({ 
-          error: 'Space-Track API request failed', 
-          status: response.status,
-          statusText: response.statusText 
+          error: 'Space-Track authentication failed', 
+          status: authResponse.status,
+          statusText: authResponse.statusText 
         }),
         {
-          status: response.status,
+          status: 401,
           headers: {
             ...corsHeaders,
             'Content-Type': 'application/json',
@@ -61,7 +66,42 @@ serve(async (req) => {
       )
     }
 
-    const data = await response.text()
+    // Extract cookies from auth response
+    const setCookieHeaders = authResponse.headers.getSetCookie?.() || []
+    const cookies = setCookieHeaders.map(cookie => cookie.split(';')[0]).join('; ')
+
+    console.log('Authentication successful, fetching data from:', endpoint)
+    
+    // Now make the actual data request
+    const dataUrl = `https://www.space-track.org${endpoint}`
+    const dataResponse = await fetch(dataUrl, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Satellite-Map-App/1.0 (nihanth20@gmail.com)',
+        'Accept': 'application/json',
+        'Cookie': cookies,
+      },
+    })
+
+    if (!dataResponse.ok) {
+      console.error('Space-Track data request failed:', dataResponse.status, dataResponse.statusText)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Space-Track data request failed', 
+          status: dataResponse.status,
+          statusText: dataResponse.statusText 
+        }),
+        {
+          status: dataResponse.status,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+    }
+
+    const data = await dataResponse.text()
     
     // Parse JSON if possible, otherwise return raw text
     let parsedData
@@ -70,6 +110,8 @@ serve(async (req) => {
     } catch {
       parsedData = data
     }
+    
+    console.log('Successfully fetched data from Space-Track.org')
     
     return new Response(JSON.stringify(parsedData), {
       status: 200,

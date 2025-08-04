@@ -11,7 +11,7 @@ import https from 'https';
 import { URL } from 'url';
 
 const SUPABASE_FUNCTION_URL = 'https://dnjhvmwznqsunjpabacg.supabase.co/functions/v1/space-track-proxy';
-const VERCEL_URL = 'https://satellite-l0wy4j6yc-abhis-projects-a01fea32.vercel.app';
+const VERCEL_URL = 'https://satellite-map-rust.vercel.app';
 
 console.log('🛰️  ALCHEMIST Satellite Tracker - CORS Fix Helper\n');
 
