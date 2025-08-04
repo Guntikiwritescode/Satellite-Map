@@ -23,7 +23,6 @@ export default defineConfig({
   plugins: [
     react({
       // Enable React refresh for better development experience
-      jsxImportSource: '@emotion/react',
     })
   ],
   resolve: {
