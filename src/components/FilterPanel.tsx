@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronDown, Filter, X, Search, Globe, Navigation, Satellite } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { SatelliteType } from '../types/satellite.types';
-import { spaceTrackAPI } from '../services/spaceTrackAPI';
+import { Slider } from '@/components/ui/slider';
 
 const FilterPanel: React.FC = React.memo(() => {
   const { filters, updateFilters, satellites } = useSatelliteStore();
@@ -43,13 +42,31 @@ const FilterPanel: React.FC = React.memo(() => {
       statuses: Array.from(statusesSet).sort()
     };
   }, [satellites]); // Include satellites to ensure options update when satellite data changes
-  
+
+  // Memoized options for better performance
+  const typeOptions = useMemo(() => {
+    const types = Array.from(new Set(satellites.map(sat => sat.type)));
+    return types.sort();
+  }, [satellites]);
+
+  const countryOptions = useMemo(() => {
+    const countries = Array.from(new Set(satellites.map(sat => sat.metadata?.country || 'Unknown')));
+    return countries.sort();
+  }, [satellites]);
+
+  const agencyOptions = useMemo(() => {
+    const agencies = Array.from(new Set(satellites.map(sat => sat.metadata?.constellation || 'Individual')));
+    return agencies.sort();
+  }, [satellites]);
+
   const activeFilterCount = [
-    ...filters.types,
-    ...filters.countries,
-    ...filters.agencies,
-    ...filters.status
-  ].length + (filters.searchQuery ? 1 : 0);
+    filters.types.length,
+    filters.countries.length,
+    filters.agencies.length,
+    filters.status.length,
+    filters.searchQuery ? 1 : 0,
+    filters.altitudeRange[0] > 0 || filters.altitudeRange[1] < 50000 ? 1 : 0
+  ].reduce((sum, count) => sum + count, 0);
 
   const handleTypeChange = (type: string, checked: boolean) => {
     const newTypes = checked 
@@ -94,97 +111,65 @@ const FilterPanel: React.FC = React.memo(() => {
     });
   };
 
+  if (!isOpen) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setIsOpen(true)}
+        className="h-8"
+      >
+        <Filter className="h-3 w-3 mr-1" />
+        Filters
+        {activeFilterCount > 0 && (
+          <Badge variant="secondary" className="ml-1 h-4 px-1">
+            {activeFilterCount}
+          </Badge>
+        )}
+      </Button>
+    );
+  }
+
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="cosmic-border">
-          <Filter className="h-4 w-4 mr-2" />
-          Filters
-          {activeFilterCount > 0 && (
-            <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
-              {activeFilterCount}
-            </Badge>
-          )}
-          <ChevronDown className="h-4 w-4 ml-2" />
-        </Button>
-      </PopoverTrigger>
-      
-      <PopoverContent className="w-80 bg-background border border-border shadow-lg z-50" align="end">
-        <div className="space-y-4">
+    <div className="fixed inset-0 z-50 bg-background/50 backdrop-blur-sm">
+      <div className="fixed right-0 top-0 h-full w-80 bg-card border-l shadow-lg">
+        <div className="p-4 border-b">
           <div className="flex items-center justify-between">
-            <h4 className="font-semibold text-foreground">Filter Satellites</h4>
-            {activeFilterCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearAllFilters}>
-                <X className="h-4 w-4 mr-1" />
-                Clear All
-              </Button>
-            )}
+            <h2 className="text-lg font-semibold">Filters</h2>
+            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-
+        </div>
+        
+        <div className="p-4 space-y-6 overflow-y-auto h-[calc(100%-80px)]">
           {/* Search */}
-          <div className="space-y-2">
-            <h5 className="text-sm font-medium text-foreground">Search</h5>
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search satellites..."
-                value={filters.searchQuery || ''}
-                onChange={(e) => updateFilters({ searchQuery: e.target.value })}
-                className="pl-10"
-              />
-            </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block">Search</label>
+            <Input
+              placeholder="Search satellites..."
+              value={filters.searchQuery}
+              onChange={(e) => updateFilters({ searchQuery: e.target.value })}
+            />
           </div>
-
-          <Separator />
-
-          {/* Altitude Range */}
-          <div className="space-y-2">
-            <h5 className="text-sm font-medium text-foreground">Orbital Altitude</h5>
-            <Select onValueChange={handleAltitudeFilter}>
-              <SelectTrigger className="bg-background">
-                <SelectValue placeholder="All altitudes" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border border-border shadow-lg z-50">
-                <SelectItem value="all">All Altitudes</SelectItem>
-                <SelectItem value="leo">
-                  <div className="flex items-center space-x-2">
-                    <Globe className="h-4 w-4" />
-                    <span>Low Earth Orbit (0-2,000km)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="meo">
-                  <div className="flex items-center space-x-2">
-                    <Navigation className="h-4 w-4" />
-                    <span>Medium Earth Orbit (2,000-35,786km)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="geo">
-                  <div className="flex items-center space-x-2">
-                    <Satellite className="h-4 w-4" />
-                    <span>Geostationary Orbit (35,786km+)</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Separator />
 
           {/* Satellite Types */}
-          <div className="space-y-2">
-            <h5 className="text-sm font-medium text-foreground">Satellite Types</h5>
-            <div className="space-y-2">
-              {filterOptions.types.map((type) => (
+          <div>
+            <label className="text-sm font-medium mb-2 block">Satellite Types</label>
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {typeOptions.map((type) => (
                 <div key={type} className="flex items-center space-x-2">
                   <Checkbox
-                    id={`type-${type}`}
-                    checked={filters.types.includes(type as SatelliteType)}
-                    onCheckedChange={(checked) => handleTypeChange(type, !!checked)}
+                    id={type}
+                    checked={filters.types.includes(type)}
+                    onCheckedChange={(checked) => {
+                      const newTypes = checked
+                        ? [...filters.types, type]
+                        : filters.types.filter(t => t !== type);
+                      updateFilters({ types: newTypes });
+                    }}
                   />
-                  <label 
-                    htmlFor={`type-${type}`}
-                    className="text-sm text-muted-foreground capitalize cursor-pointer"
-                  >
+                  <label htmlFor={type} className="text-sm capitalize">
                     {type.replace('-', ' ')}
                   </label>
                 </div>
@@ -193,20 +178,22 @@ const FilterPanel: React.FC = React.memo(() => {
           </div>
 
           {/* Countries */}
-          <div className="space-y-2">
-            <h5 className="text-sm font-medium text-foreground">Countries</h5>
-            <div className="space-y-2">
-              {filterOptions.countries.map((country) => (
+          <div>
+            <label className="text-sm font-medium mb-2 block">Countries</label>
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {countryOptions.slice(0, 10).map((country) => (
                 <div key={country} className="flex items-center space-x-2">
                   <Checkbox
-                    id={`country-${country}`}
+                    id={country}
                     checked={filters.countries.includes(country)}
-                    onCheckedChange={(checked) => handleCountryChange(country, !!checked)}
+                    onCheckedChange={(checked) => {
+                      const newCountries = checked
+                        ? [...filters.countries, country]
+                        : filters.countries.filter(c => c !== country);
+                      updateFilters({ countries: newCountries });
+                    }}
                   />
-                  <label 
-                    htmlFor={`country-${country}`}
-                    className="text-sm text-muted-foreground cursor-pointer"
-                  >
+                  <label htmlFor={country} className="text-sm">
                     {country}
                   </label>
                 </div>
@@ -214,30 +201,23 @@ const FilterPanel: React.FC = React.memo(() => {
             </div>
           </div>
 
-          {/* Agencies */}
-          <div className="space-y-2">
-            <h5 className="text-sm font-medium text-foreground">Agencies</h5>
-            <div className="space-y-2">
-              {filterOptions.agencies.map((agency) => (
-                <div key={agency} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`agency-${agency}`}
-                    checked={filters.agencies.includes(agency)}
-                    onCheckedChange={(checked) => handleAgencyChange(agency, !!checked)}
-                  />
-                  <label 
-                    htmlFor={`agency-${agency}`}
-                    className="text-sm text-muted-foreground cursor-pointer"
-                  >
-                    {agency}
-                  </label>
-                </div>
-              ))}
-            </div>
+          {/* Altitude Range */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              Altitude Range: {filters.altitudeRange[0]} - {filters.altitudeRange[1]} km
+            </label>
+            <Slider
+              value={filters.altitudeRange}
+              onValueChange={(value) => updateFilters({ altitudeRange: value as [number, number] })}
+              max={50000}
+              min={0}
+              step={100}
+              className="w-full"
+            />
           </div>
         </div>
-      </PopoverContent>
-    </Popover>
+      </div>
+    </div>
   );
 });
 
