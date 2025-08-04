@@ -1,185 +1,183 @@
-# ALCHEMIST - Satellite Tracking Terminal
+# Supabase CLI
 
-A military-grade satellite tracking system providing real-time orbital surveillance of over 23,000 satellites currently in Earth's orbit. Built with modern web technologies and featuring a cyberpunk-inspired terminal interface.
+[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
+](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
 
-## 🛰️ Features
+[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
 
-- **Real-time Satellite Tracking**: Track over 23,000 active satellites with live orbital data
-- **Interactive 3D Globe**: Immersive 3D visualization powered by Three.js
-- **Multiple View Modes**: 
-  - Tactical View: 3D globe with satellite positions
-  - Data Grid: Comprehensive spreadsheet view
-  - UI Guide: Interactive component documentation
-  - Education: Learning modules about satellite technology
-- **Terminal Aesthetic**: Cyberpunk-inspired UI with neon effects and terminal styling
-- **Advanced Filtering**: Filter satellites by type, constellation, country, and more
-- **Educational Content**: Learn about satellite technology and orbital mechanics
-- **Audio Experience**: Ambient space-themed audio tracks
+This repository contains all the functionality for Supabase CLI.
 
-## 🚀 Tech Stack
+- [x] Running Supabase locally
+- [x] Managing database migrations
+- [x] Creating and deploying Supabase Functions
+- [x] Generating types directly from your database schema
+- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
 
-- **Frontend**: React 18 + TypeScript + Vite
-- **Styling**: Tailwind CSS with custom terminal themes
-- **3D Graphics**: React Three Fiber + Three.js
-- **UI Components**: Radix UI + Shadcn/UI
-- **State Management**: Zustand
-- **API Integration**: Space-Track.org API via Supabase functions
-- **Backend**: Supabase (Database, Functions, Authentication)
-- **Orbital Calculations**: satellite.js library
+## Getting started
 
-## 📡 Data Sources
+### Install the CLI
 
-- **Space-Track.org**: Official US Space Force catalog of space objects
-- **Real-time TLE Data**: Two-Line Element sets for orbital calculations
-- **Comprehensive Database**: Satellites, debris, rocket bodies, and more
-
-## 🛠️ Installation & Development
-
-### Prerequisites
-- Node.js 18+ 
-- npm or yarn
-- Supabase CLI (for local development)
-
-### Local Development
-
-1. **Clone the repository**
-```bash
-git clone <repository-url>
-cd alchemist-satellite-tracker
-```
-
-2. **Install dependencies**
-```bash
-npm install
-```
-
-3. **Set up environment variables**
-Create a `.env.local` file with:
-```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-4. **Start development server**
-```bash
-npm run dev
-```
-
-The application will be available at `http://localhost:8080`
-
-### Production Build
+Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
 
 ```bash
-npm run build
-npm run preview
+npm i supabase --save-dev
 ```
 
-## 🌐 Deployment
+To install the beta release channel:
 
-The application is designed to be deployed on modern hosting platforms:
-
-### Vercel (Recommended)
-1. Connect your GitHub repository to Vercel
-2. Set environment variables in Vercel dashboard
-3. Deploy automatically on push to main branch
-
-### Netlify
-1. Build command: `npm run build`
-2. Publish directory: `dist`
-3. Set environment variables in Netlify dashboard
-
-### Other Platforms
-The application builds to static files and can be deployed on any static hosting service.
-
-## 🔧 Configuration
-
-### Supabase Setup
-
-1. **Create a new Supabase project**
-2. **Deploy the Space-Track proxy function**:
 ```bash
-supabase functions deploy space-track-proxy
+npm i supabase@beta --save-dev
 ```
 
-3. **Set environment variables** in Supabase dashboard:
+When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
+
 ```
-SPACE_TRACK_USERNAME=your_spacetrack_username
-SPACE_TRACK_PASSWORD=your_spacetrack_password
-ALLOWED_DOMAIN=your_production_domain
+NODE_OPTIONS=--no-experimental-fetch yarn add supabase
 ```
 
-### Space-Track.org Account
+> **Note**
+For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
 
-1. Register for a free account at [space-track.org](https://www.space-track.org)
-2. Verify your email and complete registration
-3. Add credentials to Supabase environment variables
+<details>
+  <summary><b>macOS</b></summary>
 
-## 🎮 Usage
+  Available via [Homebrew](https://brew.sh). To install:
 
-### Navigation
-- **Tactical View**: Primary satellite tracking interface with 3D globe
-- **Data Grid**: Spreadsheet view for detailed satellite data analysis
-- **UI Guide**: Interactive documentation of all UI components
-- **Education**: Learning modules about satellites and space technology
+  ```sh
+  brew install supabase/tap/supabase
+  ```
 
-### Controls
-- **Mouse**: Rotate and zoom the 3D globe
-- **Search**: Find specific satellites by name or NORAD ID
-- **Filters**: Filter by satellite type, constellation, or country
-- **Selection**: Click satellites for detailed information
+  To install the beta release channel:
+  
+  ```sh
+  brew install supabase/tap/supabase-beta
+  brew link --overwrite supabase-beta
+  ```
+  
+  To upgrade:
 
-### Features
-- **Real-time Updates**: Satellite positions update continuously
-- **Orbital Predictions**: View future satellite passes
-- **Educational Content**: Learn about different satellite types and missions
-- **Audio Atmosphere**: Toggle ambient space-themed audio
+  ```sh
+  brew upgrade supabase
+  ```
+</details>
 
-## 📚 Educational Content
+<details>
+  <summary><b>Windows</b></summary>
 
-The application includes comprehensive educational modules covering:
-- Satellite fundamentals and orbital mechanics
-- Different types of satellites and their purposes
-- Space agencies and their missions
-- Historical timeline of space exploration
-- Interactive learning experiences
+  Available via [Scoop](https://scoop.sh). To install:
 
-## 🔒 Security & Privacy
+  ```powershell
+  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+  scoop install supabase
+  ```
 
-- **No user tracking**: Application respects user privacy
-- **Secure API access**: Space-Track credentials stored securely in Supabase
-- **CORS protection**: API endpoints protected against unauthorized access
-- **Rate limiting**: Respectful API usage to prevent abuse
+  To upgrade:
 
-## 🤝 Contributing
+  ```powershell
+  scoop update supabase
+  ```
+</details>
 
-Contributions are welcome! Please feel free to submit issues and pull requests.
+<details>
+  <summary><b>Linux</b></summary>
 
-### Development Guidelines
-- Follow TypeScript best practices
-- Maintain the terminal/cyberpunk aesthetic
-- Ensure responsive design across devices
-- Add tests for new features
-- Update documentation as needed
+  Available via [Homebrew](https://brew.sh) and Linux packages.
 
-## 📄 License
+  #### via Homebrew
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+  To install:
 
-## 🙏 Acknowledgments
+  ```sh
+  brew install supabase/tap/supabase
+  ```
 
-- **Space-Track.org**: For providing comprehensive satellite tracking data
-- **US Space Force**: For maintaining the official catalog of space objects
-- **satellite.js**: For orbital mechanics calculations
-- **React Three Fiber**: For 3D visualization capabilities
-- **Supabase**: For backend infrastructure and API proxying
+  To upgrade:
 
-## 📞 Support
+  ```sh
+  brew upgrade supabase
+  ```
 
-For questions, issues, or feature requests:
-- Open an issue on GitHub
-- Check the documentation in the UI Guide
-- Review the educational content for usage tips
+  #### via Linux packages
 
----
+  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
 
-**ALCHEMIST** - Advanced satellite tracking for the modern age 🛰️
+  ```sh
+  sudo apk add --allow-untrusted <...>.apk
+  ```
+
+  ```sh
+  sudo dpkg -i <...>.deb
+  ```
+
+  ```sh
+  sudo rpm -i <...>.rpm
+  ```
+
+  ```sh
+  sudo pacman -U <...>.pkg.tar.zst
+  ```
+</details>
+
+<details>
+  <summary><b>Other Platforms</b></summary>
+
+  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
+
+  ```sh
+  go install github.com/supabase/cli@latest
+  ```
+
+  Add a symlink to the binary in `$PATH` for easier access:
+
+  ```sh
+  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
+  ```
+
+  This works on other non-standard Linux distros.
+</details>
+
+<details>
+  <summary><b>Community Maintained Packages</b></summary>
+
+  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
+  To install in your working directory:
+
+  ```bash
+  pkgx install supabase
+  ```
+
+  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
+</details>
+
+### Run the CLI
+
+```bash
+supabase bootstrap
+```
+
+Or using npx:
+
+```bash
+npx supabase bootstrap
+```
+
+The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
+
+## Docs
+
+Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
+
+## Breaking changes
+
+We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
+
+However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
+
+## Developing
+
+To run from source:
+
+```sh
+# Go >= 1.22
+go run . help
+```
