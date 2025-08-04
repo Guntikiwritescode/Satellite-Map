@@ -12,7 +12,7 @@ import { useSatelliteStore } from '../stores/satelliteStore';
 import { SatelliteType } from '../types/satellite.types';
 import { spaceTrackAPI } from '../services/spaceTrackAPI';
 
-const FilterPanel: React.FC = () => {
+const FilterPanel: React.FC = React.memo(() => {
   const { filters, updateFilters, satellites } = useSatelliteStore();
   const [isOpen, setIsOpen] = useState(false);
   
@@ -42,7 +42,7 @@ const FilterPanel: React.FC = () => {
       agencies: Array.from(agenciesSet).sort(),
       statuses: Array.from(statusesSet).sort()
     };
-  }, [satellites.length]); // Only recalculate when satellite count changes, not content
+  }, [satellites]); // Include satellites to ensure options update when satellite data changes
   
   const activeFilterCount = [
     ...filters.types,
@@ -239,6 +239,8 @@ const FilterPanel: React.FC = () => {
       </PopoverContent>
     </Popover>
   );
-};
+});
+
+FilterPanel.displayName = 'FilterPanel';
 
 export default FilterPanel;

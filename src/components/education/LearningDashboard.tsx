@@ -35,7 +35,7 @@ const LearningDashboard = React.memo(() => {
     if (totalProgress >= 50) return { level: 'Proficient', icon: Target, color: 'text-blue-500' };
     if (totalProgress >= 25) return { level: 'Learning', icon: TrendingUp, color: 'text-green-500' };
     return { level: 'Beginner', icon: BookOpen, color: 'text-gray-500' };
-  }, [stats.totalProgress]);
+  }, [stats]);
   const Achievement = achievement.icon;
 
   return (

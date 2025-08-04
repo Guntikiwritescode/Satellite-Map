@@ -1,6 +1,12 @@
 import { Satellite } from '../types/satellite.types';
 import * as satellite from 'satellite.js';
 
+// Development logging helper
+const isDev = import.meta.env.DEV;
+const log = (...args: unknown[]) => isDev && console.log(...args);
+const logError = (...args: unknown[]) => console.error(...args);
+const logWarn = (...args: unknown[]) => isDev && console.warn(...args);
+
 interface SpaceTrackGPData {
   NORAD_CAT_ID: number;
   OBJECT_NAME: string;
@@ -20,10 +26,15 @@ interface SpaceTrackGPData {
   CONSTELLATION?: string;
 }
 
+interface SpaceTrackResponse {
+  error?: string;
+  [key: string]: unknown;
+}
+
 export class SpaceTrackAPI {
   private proxyUrl = '/api/space-track-proxy';
   private lastRequest = 0;
-  private requestQueue: Promise<any> = Promise.resolve();
+  private requestQueue: Promise<unknown> = Promise.resolve();
   private readonly RATE_LIMIT_DELAY = 2000;
 
   private async rateLimit(): Promise<void> {
@@ -45,10 +56,10 @@ export class SpaceTrackAPI {
     });
   }
 
-  private async makeProxyRequest(endpoint: string): Promise<any> {
+  private async makeProxyRequest(endpoint: string): Promise<SpaceTrackGPData[]> {
     return this.queueRequest(async () => {
-      console.log('Making proxy request to:', this.proxyUrl);
-      console.log('Request payload:', { action: 'fetch', endpoint });
+      log('Making proxy request to:', this.proxyUrl);
+      log('Request payload:', { action: 'fetch', endpoint });
       
       try {
         const response = await fetch(this.proxyUrl, {
@@ -60,25 +71,25 @@ export class SpaceTrackAPI {
           body: JSON.stringify({ action: 'fetch', endpoint })
         });
 
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
+        log('Response status:', response.status);
+        log('Response headers:', response.headers);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Proxy request failed:', response.status, errorText);
+          logError('Proxy request failed:', response.status, errorText);
           throw new Error(`Proxy request failed: ${response.status} - ${errorText}`);
         }
 
-        const data = await response.json();
-        console.log('Response data received:', Array.isArray(data) ? `${data.length} items` : 'Non-array data');
+        const data: SpaceTrackResponse = await response.json();
+        log('Response data received:', Array.isArray(data) ? `${data.length} items` : 'Non-array data');
         
         if (data.error) {
           throw new Error(`Space-Track API error: ${data.error}`);
         }
         
-        return data;
+        return data as SpaceTrackGPData[];
       } catch (error) {
-        console.error('Fetch error details:', error);
+        logError('Fetch error details:', error);
         if (error instanceof TypeError && error.message === 'Failed to fetch') {
           throw new Error('Unable to connect to satellite data service. Please check if the service is running.');
         }
@@ -111,16 +122,16 @@ export class SpaceTrackAPI {
               } 
             };
           } else {
-            console.warn(`Invalid TLE data for satellite ${convertedSat.id}`);
+            logWarn(`Invalid TLE data for satellite ${convertedSat.id}`);
             return convertedSat;
           }
         } catch (error) {
-          console.warn(`Error calculating position for satellite ${convertedSat.id}:`, error);
+          logWarn(`Error calculating position for satellite ${convertedSat.id}:`, error);
           return convertedSat;
         }
       }).filter(sat => sat !== null); // Remove any null satellites
     } catch (error) {
-      console.error('Error fetching satellites:', error);
+      logError('Error fetching satellites:', error);
       throw error;
     }
   }
@@ -143,7 +154,7 @@ export class SpaceTrackAPI {
         }
       });
     } catch (error) {
-      console.error('Error fetching satellites:', error);
+      logError('Error fetching satellites:', error);
       throw error;
     }
   }
@@ -232,7 +243,7 @@ export class SpaceTrackAPI {
       
       return { latitude: 0, longitude: 0, altitude: 400 };
     } catch (error) {
-      console.warn('Error calculating satellite position:', error);
+      logWarn('Error calculating satellite position:', error);
       return { latitude: 0, longitude: 0, altitude: 400 };
     }
   }

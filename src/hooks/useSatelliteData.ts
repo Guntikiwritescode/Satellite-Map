@@ -1,123 +1,83 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSatelliteStore } from '../stores/satelliteStore';
 import { spaceTrackAPI } from '../services/spaceTrackAPI';
 
-export const useSatelliteData = () => {
-  const { setSatellites, setError, setLoading } = useSatelliteStore();
+// Development logging helper
+const isDev = import.meta.env.DEV;
+const log = (...args: unknown[]) => isDev && console.log(...args);
+const logError = (...args: unknown[]) => console.error(...args);
+const logWarn = (...args: unknown[]) => isDev && console.warn(...args);
 
-  // Fetch satellite data
-  const { 
-    data: satellites = [], 
-    error: satelliteError, 
-    isLoading: satelliteLoading,
-    refetch: refetchSatellites 
-  } = useQuery({
-    queryKey: ['satellites', 'unlimited'],
-    queryFn: async () => {
-      console.log('Starting satellite data fetch...');
+export const useSatelliteData = () => {
+  const { setSatellites, setLoading, setError, satellites, setSatellites: updateSatellites } = useSatelliteStore();
+
+  const fetchSatellites = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      log('Starting satellite data fetch...');
       
       // Test connectivity first
       try {
-        console.log('Testing connectivity to API...');
-        const testResponse = await fetch('/api/space-track-proxy', {
-          method: 'OPTIONS'
+        log('Testing connectivity to API...');
+        const testResponse = await fetch('/api/space-track-proxy', { 
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'test' })
         });
-        console.log('Connectivity test result:', testResponse.status);
+        log('Connectivity test result:', testResponse.status);
       } catch (error) {
-        console.error('Connectivity test failed:', error);
-        throw new Error('Cannot connect to satellite data service. The service may be temporarily unavailable.');
+        logError('Connectivity test failed:', error);
+        throw new Error('Unable to connect to satellite API');
       }
-      
-      try {
-        const result = await spaceTrackAPI.getAllActiveSatellites();
-        console.log(`Successfully fetched ${result.length} satellites`);
-        return result;
-      } catch (error) {
-        console.error('Satellite fetch error:', error);
-        // More specific error handling
-        if (error instanceof TypeError && error.message.includes('fetch')) {
-          throw new Error('Network connection failed. The satellite data service is not responding.');
-        }
-        if (error.message.includes('Failed to fetch')) {
-          throw new Error('Unable to connect to satellite data service. Please try refreshing the page.');
-        }
-        throw error;
-      }
-    },
-    refetchInterval: 10 * 60 * 1000, // 10 minutes - reduced frequency for performance
-    staleTime: 0, // Force immediate refresh to see the change
-    retry: 3
-  });
 
-  // Update store with satellite data
-  useEffect(() => {
-    if (satellites.length > 0) {
-      setSatellites(satellites);
+      const result = await spaceTrackAPI.getAllActiveSatellites();
+      log(`Successfully fetched ${result.length} satellites`);
+      setSatellites(result);
+    } catch (error) {
+      logError('Satellite fetch error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch satellite data');
+    } finally {
+      setLoading(false);
     }
-  }, [satellites, setSatellites]);
+  }, [setSatellites, setLoading, setError]);
 
-  // Update store with loading state
-  useEffect(() => {
-    setLoading(satelliteLoading);
-  }, [satelliteLoading, setLoading]);
-
-  // Update store with error state
-  useEffect(() => {
-    if (satelliteError) {
-      setError(`Failed to load satellite data: ${satelliteError.message}`);
-    } else {
-      setError(null);
-    }
-  }, [satelliteError, setError]);
+  // Stabilize updateSatellites function to prevent useEffect dependency issues
+  const stableUpdateSatellites = useCallback((updatedSatellites: Satellite[]) => {
+    updateSatellites(updatedSatellites);
+  }, [updateSatellites]);
 
   // Optimized real-time position updates with error handling and reduced frequency
   useEffect(() => {
-    if (satellites.length === 0) return;
-
-    const updatePositions = async () => {
+    const updatePositions = () => {
+      if (satellites.length === 0) return;
+      
       try {
-        // Process satellites in smaller batches to avoid blocking (reduced for performance)
-        const batchSize = 50; // Reduced from 100
-        const updatedSatellites = [...satellites];
+        const positionUpdates = satellites.map(sat => {
+          if (sat.tle?.line1 && sat.tle?.line2) {
+            const position = spaceTrackAPI.calculatePosition(sat.tle.line1, sat.tle.line2);
+            return { id: sat.id, position: { ...position, timestamp: Date.now() } };
+          }
+          return { id: sat.id, position: sat.position };
+        });
+
+        const updatedSatellites = satellites.map((sat, index) => ({
+          ...sat,
+          position: positionUpdates[index].position
+        }));
         
-        for (let i = 0; i < satellites.length; i += batchSize) {
-          const batch = satellites.slice(i, i + batchSize);
-          
-          batch.forEach((sat, index) => {
-            try {
-              // Only update if TLE data is valid
-              if (sat.tle?.line1 && sat.tle?.line2 && sat.tle.line1.length > 10 && sat.tle.line2.length > 10) {
-                const position = spaceTrackAPI.calculatePosition(sat.tle.line1, sat.tle.line2);
-                const actualIndex = i + index;
-                updatedSatellites[actualIndex] = {
-                  ...sat,
-                  position: {
-                    ...position,
-                    timestamp: Date.now()
-                  }
-                };
-              }
-            } catch (error) {
-              // Silently fail for individual satellites to avoid console spam
-              // Keep original position data
-            }
-          });
-          
-          // Yield control to prevent blocking
-          await new Promise(resolve => setTimeout(resolve, 0));
-        }
-        
-        setSatellites(updatedSatellites);
+        stableUpdateSatellites(updatedSatellites);
       } catch (error) {
-        console.error('Error updating satellite positions:', error);
+        logError('Error updating satellite positions:', error);
       }
     };
 
     // Reduced frequency from 10 seconds to 15 seconds for weaker devices
     const interval = setInterval(updatePositions, 15000);
     return () => clearInterval(interval);
-  }, [satellites.length, setSatellites]); // Only depend on satellites.length, not the entire array
+  }, [satellites, stableUpdateSatellites]);
 
   // Get user location
   useEffect(() => {
@@ -127,16 +87,11 @@ export const useSatelliteData = () => {
           // User location logic can be added here if needed
         },
         (error) => {
-          console.warn('Could not get user location:', error);
+          logWarn('Could not get user location:', error);
         }
       );
     }
   }, []);
 
-  return {
-    satellites,
-    isLoading: satelliteLoading,
-    error: satelliteError,
-    refetch: refetchSatellites
-  };
+  return { fetchSatellites };
 };

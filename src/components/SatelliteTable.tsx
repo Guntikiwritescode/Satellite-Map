@@ -35,8 +35,8 @@ const SatelliteTable: React.FC = React.memo(() => {
     setSelectedSatellite(satellite.id);
   };
 
-  const formatNumber = (value: any, decimals: number = 1): string => {
-    const num = typeof value === 'number' ? value : parseFloat(value);
+  const formatNumber = (value: string | number | undefined, decimals: number = 1): string => {
+    const num = typeof value === 'number' ? value : parseFloat(String(value));
     return isNaN(num) ? 'N/A' : num.toFixed(decimals);
   };
 

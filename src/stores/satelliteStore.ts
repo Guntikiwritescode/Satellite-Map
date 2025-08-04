@@ -2,6 +2,11 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { Satellite, SatelliteFilters, Launch, UserLocation, Globe3DSettings, SatelliteType, SatelliteStatus } from '../types/satellite.types';
 
+// Development logging helper
+const isDev = import.meta.env.DEV;
+const log = (...args: unknown[]) => isDev && console.log(...args);
+const logError = (...args: unknown[]) => console.error(...args);
+
 interface SatelliteStore {
   // Data
   satellites: Satellite[];
@@ -135,13 +140,13 @@ export const useSatelliteStore = create<SatelliteStore>()(
     
     setSelectedSatellite: (id) => {
       try {
-        console.log('Selecting satellite:', id);
+        log('Selecting satellite:', id);
         set((state) => ({
           globeSettings: { ...state.globeSettings, selectedSatelliteId: id }
         }));
       } catch (error) {
-        console.error('Error setting selected satellite:', error);
-        set({ error: `Failed to select satellite: ${error.message}` });
+        logError('Error setting selected satellite:', error);
+        set({ error: `Failed to select satellite: ${error instanceof Error ? error.message : 'Unknown error'}` });
       }
     },
     
@@ -186,7 +191,7 @@ export const useSatelliteStore = create<SatelliteStore>()(
         return [];
       }
       
-      // Use a single pass filter with early exits for better performance
+      // Performance optimization: Use a single pass filter with early exits
       const filtered = satellites.filter(satellite => {
         // Type filter - early exit
         if (filters.types.length > 0 && !filters.types.includes(satellite.type)) {
@@ -217,16 +222,17 @@ export const useSatelliteStore = create<SatelliteStore>()(
           return false;
         }
         
-        // Search query filter - early exit
+        // Search query filter - early exit with optimized string operations
         if (filters.searchQuery.trim()) {
           const query = filters.searchQuery.toLowerCase();
-          const name = satellite.name.toLowerCase();
-          const constellation = (satellite.metadata?.constellation || '').toLowerCase();
-          const satelliteCountry = (satellite.metadata?.country || '').toLowerCase();
-          const type = satellite.type.toLowerCase();
+          const searchableText = [
+            satellite.name.toLowerCase(),
+            (satellite.metadata?.constellation || '').toLowerCase(),
+            (satellite.metadata?.country || '').toLowerCase(),
+            satellite.type.toLowerCase()
+          ].join(' ');
           
-          if (!name.includes(query) && !constellation.includes(query) && 
-              !satelliteCountry.includes(query) && !type.includes(query)) {
+          if (!searchableText.includes(query)) {
             return false;
           }
         }
@@ -234,7 +240,7 @@ export const useSatelliteStore = create<SatelliteStore>()(
         return true;
       });
       
-      // Optimized sorting - only sort if needed
+      // Optimized sorting - only sort if needed and use efficient comparison
       if (filtered.length > 1) {
         filtered.sort((a, b) => (a.position?.altitude || 0) - (b.position?.altitude || 0));
       }

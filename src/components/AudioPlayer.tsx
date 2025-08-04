@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Volume2, VolumeX, Play, Pause, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -37,16 +37,7 @@ const AudioPlayer = () => {
     }
   }, [volume]);
 
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.addEventListener('ended', handleTrackEnd);
-      return () => {
-        audioRef.current?.removeEventListener('ended', handleTrackEnd);
-      };
-    }
-  }, [currentTrackIndex]);
-
-  const handleTrackEnd = () => {
+  const handleTrackEnd = useCallback(() => {
     const nextIndex = (currentTrackIndex + 1) % tracks.length;
     setCurrentTrackIndex(nextIndex);
     // Auto-play next track if currently playing
@@ -55,7 +46,17 @@ const AudioPlayer = () => {
         audioRef.current?.play();
       }, 100);
     }
-  };
+  }, [currentTrackIndex, isPlaying]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.addEventListener('ended', handleTrackEnd);
+      return () => {
+        audio.removeEventListener('ended', handleTrackEnd);
+      };
+    }
+  }, [handleTrackEnd]);
 
   const togglePlay = () => {
     if (audioRef.current) {
