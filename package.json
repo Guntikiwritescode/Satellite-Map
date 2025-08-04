@@ -8,7 +8,9 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "supabase:deploy": "supabase functions deploy space-track-proxy",
+    "supabase:logs": "supabase functions logs space-track-proxy"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
