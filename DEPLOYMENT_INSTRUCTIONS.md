@@ -2,6 +2,36 @@
 
 Your satellite tracking application has been successfully separated from Lovable and is ready for independent deployment. Follow these step-by-step instructions to deploy your application.
 
+## 🚨 URGENT: Fix CORS Issue for Vercel Deployment
+
+**If you're seeing CORS errors in the browser console**, your Supabase edge function needs to be updated to allow your Vercel domain:
+
+### Quick Fix Steps:
+
+1. **Go to [Supabase Dashboard](https://supabase.com/dashboard)**
+2. **Navigate to your project:** `dnjhvmwznqsunjpabacg`
+3. **Go to Settings → Environment Variables**
+4. **Update the `ALLOWED_DOMAIN` variable:**
+   - **Current value:** `https://db206876-4992-4720-8f1f-11cdcdfaaedd.lovableproject.com`
+   - **New value:** `https://satellite-l0wy4j6yc-abhis-projects-a01fea32.vercel.app`
+   - (Or use your actual Vercel URL if different)
+
+5. **Redeploy the edge function:**
+   - Go to **Edge Functions → space-track-proxy**
+   - Click **Deploy** to restart with new environment variables
+
+6. **Test the fix:**
+   - Refresh your Vercel app
+   - Check browser console for errors
+   - Satellites should now load successfully
+
+### Alternative: Allow Multiple Domains
+
+If you want to support both domains (for development and production), set `ALLOWED_DOMAIN` to:
+```
+https://satellite-l0wy4j6yc-abhis-projects-a01fea32.vercel.app,https://db206876-4992-4720-8f1f-11cdcdfaaedd.lovableproject.com,http://localhost:5173
+```
+
 ## 🚀 Quick Deployment to Vercel (Recommended)
 
 ### Step 1: Deploy to Vercel
