@@ -19,8 +19,8 @@ export const useSatelliteData = () => {
       
       // Test connectivity first
       try {
-        console.log('Testing connectivity to Supabase...');
-        const testResponse = await fetch('https://dnjhvmwznqsunjpabacg.supabase.co/functions/v1/space-track-proxy', {
+        console.log('Testing connectivity to API...');
+        const testResponse = await fetch('/api/space-track-proxy', {
           method: 'OPTIONS'
         });
         console.log('Connectivity test result:', testResponse.status);
