@@ -1,0 +1,269 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #000;
+  color: #fff;
+  font:
+    13px/1.4 system-ui,
+    sans-serif;
+}
+
+a {
+  color: #8cf;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.box {
+  position: absolute;
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+.muted {
+  color: #999;
+}
+
+#canvas {
+  position: absolute;
+  inset: 0;
+}
+
+#menu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 8px 10px;
+  pointer-events: none;
+}
+
+#menu > * {
+  pointer-events: auto;
+}
+
+#menu .item.open,
+#menu .item:hover {
+  color: #8cf;
+}
+
+#search {
+  width: 220px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid #fff;
+  outline: none;
+  padding: 2px 0;
+}
+
+#search-results {
+  top: 34px;
+  left: 10px;
+  width: 300px;
+  max-width: calc(100% - 22px);
+  max-height: calc(100% - 70px);
+  padding: 0;
+  overflow-y: auto;
+}
+
+.result {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  padding: 0 8px;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.result:hover,
+.result.selected {
+  background: #234;
+}
+
+.result .name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-item {
+  position: relative;
+}
+
+.dropdown {
+  top: 26px;
+  left: -10px;
+  width: 240px;
+}
+
+.dropdown h3 {
+  margin: 8px 0 4px;
+  font-size: 12px;
+  font-weight: normal;
+  color: #999;
+}
+
+.dropdown h3:first-child {
+  margin-top: 0;
+}
+
+.dropdown label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.dropdown select {
+  width: 100%;
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  margin-bottom: 4px;
+}
+
+.dropdown ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.count {
+  margin-left: auto;
+  color: #999;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+#info {
+  top: 34px;
+  right: 10px;
+  width: 260px;
+}
+
+#info .title {
+  display: flex;
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+#info .title span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.row > :first-child {
+  color: #999;
+}
+
+.label {
+  margin: -26px 0 0 8px;
+  padding: 2px 6px;
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+#status {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  color: #999;
+}
+
+#message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+#table {
+  position: absolute;
+  top: 34px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000;
+  overflow: auto;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 240px 70px 120px 160px 50px 90px 80px 90px 60px 170px;
+  height: 100%;
+  align-items: center;
+  border-bottom: 1px solid #222;
+  text-align: left;
+  width: max-content;
+}
+
+.table-row > * {
+  padding: 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-row .num {
+  text-align: right;
+}
+
+.table-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 28px;
+  background: #000;
+  color: #999;
+  border-bottom: 1px solid #444;
+}
+
+.table-head button {
+  text-align: left;
+}
+
+.table-head button.num {
+  text-align: right;
+}
+
+.table-head button:hover,
+button.table-row:hover {
+  background: #111;
+  color: #fff;
+}
