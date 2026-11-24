@@ -1,6 +1,6 @@
 # Satellite Map
 
-A 3D globe of every active satellite, where it is right now. Click one to see its orbit and details.
+A 3D globe of every active satellite with its orbit and details.
 
 Live at [satellitemaplive.com](https://www.satellitemaplive.com).
 
