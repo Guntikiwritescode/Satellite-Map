@@ -19,7 +19,3 @@ npm run dev      # http://localhost:8080
 ## Credits
 
 Orbit data and owners from [CelesTrak](https://celestrak.org). Positions computed with [satellite.js](https://github.com/shashwatak/satellite-js). Earth image is [Blue Marble](https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/) by NASA Earth Observatory.
-
-## License
-
-MIT
